@@ -262,7 +262,17 @@ function createDevSSRMiddleware(
         server.ssrLoadModule(VIACT_SERVER_MODULE_ID),
       ]);
 
-      const webRequest = await nodeToWebRequest(req);
+      let webRequest: Request;
+      try {
+        webRequest = await nodeToWebRequest(req);
+      } catch (err) {
+        if (err instanceof Error && err.message === "Request body too large") {
+          res.statusCode = 413;
+          res.end("Payload Too Large");
+          return;
+        }
+        throw err;
+      }
       const response = await framework.handleViactRequest({
         app: serverMod.resolvedApp,
         registry: serverMod.registry,
@@ -322,9 +332,17 @@ async function nodeToWebRequest(req: IncomingMessage): Promise<Request> {
   const init: RequestInit = { method, headers };
 
   if (!BODYLESS_METHODS.has(method.toUpperCase())) {
+    const MAX_BODY_SIZE = 1024 * 1024; // 1 MB
     const chunks: Uint8Array[] = [];
+    let totalSize = 0;
     for await (const chunk of req) {
-      chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+      const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+      totalSize += buf.byteLength;
+      if (totalSize > MAX_BODY_SIZE) {
+        req.destroy();
+        throw new Error("Request body too large");
+      }
+      chunks.push(buf);
     }
     const body = Buffer.concat(chunks);
     if (body.byteLength > 0) {

@@ -280,7 +280,12 @@ async function preview() {
     }
 
     // Try static file first
-    const filePath = join(clientDir, url);
+    const filePath = resolve(clientDir, "." + url);
+    if (!filePath.startsWith(clientDir + "/") && filePath !== clientDir) {
+      res.statusCode = 403;
+      res.end("Forbidden");
+      return;
+    }
     if (existsSync(filePath) && statSync(filePath).isFile()) {
       const ext = extname(filePath);
       const headers = {

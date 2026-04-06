@@ -43,7 +43,17 @@ export function createNodeRequestHandler<TContext = unknown>(
   const staticDir = options.staticDir;
 
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const request = await createWebRequest(req);
+    let request: Request;
+    try {
+      request = await createWebRequest(req);
+    } catch (err) {
+      if (err instanceof Error && err.message === "Request body too large") {
+        res.statusCode = 413;
+        res.end("Payload Too Large");
+        return;
+      }
+      throw err;
+    }
     const url = new URL(request.url);
 
     // --- ISG stale-while-revalidate for GET requests ---
@@ -225,16 +235,20 @@ function createHeaders(headers: IncomingMessage["headers"]): Headers {
   return result;
 }
 
+const MAX_BODY_SIZE = 1024 * 1024; // 1 MB
+
 async function readRequestBody(req: IncomingMessage): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
+  let totalSize = 0;
 
   for await (const chunk of req) {
-    if (typeof chunk === "string") {
-      chunks.push(Buffer.from(chunk));
-      continue;
+    const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+    totalSize += buf.byteLength;
+    if (totalSize > MAX_BODY_SIZE) {
+      req.destroy();
+      throw new Error("Request body too large");
     }
-
-    chunks.push(chunk);
+    chunks.push(buf);
   }
 
   return Buffer.concat(chunks);
