@@ -96,7 +96,7 @@ server.listen(3000);
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `app` | `PlyonApp` | The resolved app |
+| `app` | `ViactApp` | The resolved app |
 | `registry` | `ModuleRegistry` | Module importers |
 | `createContext` | `(args: CloudflareContextArgs) => TContext` | Context with `env` and `executionContext` |
 
@@ -104,21 +104,39 @@ server.listen(3000);
 
 - **Asset serving**: uses `env.ASSETS.fetch()` binding for static files
   (Cloudflare handles caching and CDN distribution).
-- **ISG revalidation**: in-memory cache with stale-while-revalidate semantics.
-  Uses `executionContext.waitUntil()` for background regeneration.
-- **KV support**: context factory receives `env` for KV, D1, R2 bindings.
-- **Edge execution**: runs in Cloudflare's global network, low latency.
+- **Default request context**: generated worker entries pass `{ env,
+  executionContext }` to viact so loaders, actions, and middleware can access
+  bindings without extra wiring.
+- **Build output**: `viact({ adapter: "cloudflare" })` makes `viact build`
+  emit a Worker bundle in `dist/server/server.js` and a deployable
+  `dist/server/wrangler.json` that points at `dist/client/` assets.
+- **KV/D1/R2 support**: custom context factories and the default build entry both
+  surface the Cloudflare `env` object.
 
 ### Entry module
 
 ```javascript
-// virtual:viact/cloudflare-worker (generated)
-import { createCloudflareFetchHandler } from "@viact/adapter-cloudflare";
+// virtual:viact/server (generated in cloudflare mode)
+import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";
 import { app } from "./src/routes.ts";
 
-const handler = createCloudflareFetchHandler({ app, registry, ... });
+const resolvedApp = resolveApp(app);
+const apiRoutes = resolveApiRoutes(Object.keys(apiModules), "/src/api");
 
-export default { fetch: handler };
+export default {
+  async fetch(request, env, executionContext) {
+    const assetResponse = await env.ASSETS.fetch(request);
+    if (assetResponse.status !== 404) return assetResponse;
+
+    return handleViactRequest({
+      app: resolvedApp,
+      registry,
+      request,
+      context: { env, executionContext },
+      apiRoutes,
+    });
+  },
+};
 ```
 
 ---

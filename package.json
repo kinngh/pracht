@@ -11,12 +11,18 @@
     "viact": "node ./packages/cli/bin/viact.js",
     "format": "oxfmt --write .",
     "lint": "oxlint . --fix",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
     "e2e": "playwright test",
     "dev:example": "cd examples/basic && node ../../packages/cli/bin/viact.js dev",
     "build:example": "cd examples/basic && node ../../packages/cli/bin/viact.js build",
     "preview:example": "cd examples/basic && node ../../packages/cli/bin/viact.js preview"
   },
+  "packageManager": "pnpm@10.28.1",
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
     "@playwright/test": "^1.52.0",
     "@preact/preset-vite": "^2.9.4",
     "@types/node": "^22.15.21",

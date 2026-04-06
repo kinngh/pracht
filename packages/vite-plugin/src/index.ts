@@ -1,4 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { resolve } from "node:path";
 import type { Connect, Plugin, ViteDevServer } from "vite";
 
 export const VIACT_CLIENT_MODULE_ID = "virtual:viact/client";
@@ -31,7 +33,11 @@ export interface ViactPluginOptions {
   shellsDir?: string;
   middlewareDir?: string;
   apiDir?: string;
+  adapter?: ViactAdapter;
+  cloudflareAssetsBinding?: string;
 }
+
+export type ViactAdapter = "node" | "cloudflare";
 
 const DEFAULTS: Required<ViactPluginOptions> = {
   appFile: "/src/routes.ts",
@@ -39,10 +45,13 @@ const DEFAULTS: Required<ViactPluginOptions> = {
   routesDir: "/src/routes",
   shellsDir: "/src/shells",
   apiDir: "/src/api",
+  adapter: "node",
+  cloudflareAssetsBinding: "ASSETS",
 };
 
 export function viact(options: ViactPluginOptions = {}): Plugin {
   const resolved = resolveOptions(options);
+  let root = process.cwd();
 
   return {
     name: "viact",
@@ -50,6 +59,10 @@ export function viact(options: ViactPluginOptions = {}): Plugin {
 
     config() {
       return { appType: "custom" as const };
+    },
+
+    configResolved(config) {
+      root = config.root;
     },
 
     resolveId(id) {
@@ -63,7 +76,7 @@ export function viact(options: ViactPluginOptions = {}): Plugin {
         return createViactClientModuleSource(resolved);
       }
       if (isServerModule(id)) {
-        return createViactServerModuleSource(resolved);
+        return createViactServerModuleSource(resolved, { root });
       }
       return null;
     },
@@ -72,6 +85,30 @@ export function viact(options: ViactPluginOptions = {}): Plugin {
       return () => {
         server.middlewares.use(createDevSSRMiddleware(server, resolved));
       };
+    },
+
+    handleHotUpdate({ file, server }) {
+      const root = server.config.root;
+      const relative = file.startsWith(root) ? file.slice(root.length) : file;
+
+      // App manifest changed — full reload (route definitions may have changed)
+      if (relative === resolved.appFile) {
+        const serverMod = server.moduleGraph.getModuleById(VIACT_SERVER_MODULE_ID);
+        const clientMod = server.moduleGraph.getModuleById(VIACT_CLIENT_MODULE_ID);
+        if (serverMod) server.moduleGraph.invalidateModule(serverMod);
+        if (clientMod) server.moduleGraph.invalidateModule(clientMod);
+        server.hot.send({ type: "full-reload" });
+        return [];
+      }
+
+      // Route/shell/middleware/API file changed — invalidate server module
+      // so the registry re-evaluates on next request.
+      const dirs = [resolved.routesDir, resolved.shellsDir, resolved.middlewareDir, resolved.apiDir];
+      if (dirs.some((dir) => relative.startsWith(dir))) {
+        const serverMod = server.moduleGraph.getModuleById(VIACT_SERVER_MODULE_ID);
+        if (serverMod) server.moduleGraph.invalidateModule(serverMod);
+        // Don't return [] — let Vite's default HMR handle the component update
+      }
     },
   };
 }
@@ -121,20 +158,41 @@ export function createViactClientModuleSource(
 
 export function createViactServerModuleSource(
   options: ViactPluginOptions = {},
+  buildOptions: {
+    root?: string;
+  } = {},
 ): string {
   const resolved = resolveOptions(options);
   const registrySource = createViactRegistryModuleSource(resolved);
+  const clientBuild = readClientBuildAssets(buildOptions.root);
+  const viactImport =
+    resolved.adapter === "cloudflare"
+      ? 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";'
+      : 'import { resolveApp, resolveApiRoutes } from "viact";';
 
-  return [
-    'import { resolveApp, resolveApiRoutes } from "viact";',
+  const source = [
+    viactImport,
     `import { app } from ${JSON.stringify(resolved.appFile)};`,
     "",
     registrySource,
     "",
     "export const resolvedApp = resolveApp(app);",
     `export const apiRoutes = resolveApiRoutes(Object.keys(apiModules), ${JSON.stringify(resolved.apiDir)});`,
+    `export const buildTarget = ${JSON.stringify(resolved.adapter)};`,
+    `export const clientEntryUrl = ${JSON.stringify(clientBuild.clientEntryUrl)};`,
+    `export const cssUrls = ${JSON.stringify(clientBuild.cssUrls)};`,
     "",
-  ].join("\n");
+  ];
+
+  if (resolved.adapter === "cloudflare") {
+    source.push(
+      createCloudflareServerEntryModule({
+        assetsBinding: resolved.cloudflareAssetsBinding,
+      }),
+    );
+  }
+
+  return source.join("\n");
 }
 
 export function createViactRegistryModuleSource(
@@ -265,4 +323,74 @@ function resolveOptions(
     ...DEFAULTS,
     ...options,
   };
+}
+
+function readClientBuildAssets(root = process.cwd()): {
+  clientEntryUrl: string | null;
+  cssUrls: string[];
+} {
+  const manifestPath = resolve(root, "dist/client/.vite/manifest.json");
+  if (!existsSync(manifestPath)) {
+    return { clientEntryUrl: null, cssUrls: [] };
+  }
+
+  const rawManifest = readFileSync(manifestPath, "utf-8");
+  const manifest = JSON.parse(rawManifest) as Record<string, ViteManifestEntry>;
+  const clientEntry = manifest[VIACT_CLIENT_MODULE_ID];
+
+  return {
+    clientEntryUrl: clientEntry ? `/${clientEntry.file}` : null,
+    cssUrls: (clientEntry?.css ?? []).map((file) => `/${file}`),
+  };
+}
+
+interface ViteManifestEntry {
+  file: string;
+  css?: string[];
+}
+
+function createCloudflareServerEntryModule(
+  options: {
+    assetsBinding?: string;
+  } = {},
+): string {
+  const assetsBinding = options.assetsBinding ?? "ASSETS";
+
+  return [
+    `export const cloudflareAssetsBinding = ${JSON.stringify(assetsBinding)};`,
+    "",
+    "async function maybeServeViactAsset(request, env) {",
+    '  if (request.method !== "GET" && request.method !== "HEAD") {',
+    "    return null;",
+    "  }",
+    "",
+    `  const assets = env?.[${JSON.stringify(assetsBinding)}];`,
+    '  if (!assets || typeof assets.fetch !== "function") {',
+    "    return null;",
+    "  }",
+    "",
+    "  const response = await assets.fetch(request);",
+    "  return response.status === 404 ? null : response;",
+    "}",
+    "",
+    "async function fetch(request, env, executionContext) {",
+    "  const assetResponse = await maybeServeViactAsset(request, env);",
+    "  if (assetResponse) {",
+    "    return assetResponse;",
+    "  }",
+    "",
+    "  return handleViactRequest({",
+    "    app: resolvedApp,",
+    "    registry,",
+    "    request,",
+    "    context: { env, executionContext },",
+    "    apiRoutes,",
+    "    clientEntryUrl: clientEntryUrl ?? undefined,",
+    "    cssUrls,",
+    "  });",
+    "}",
+    "",
+    "export default { fetch };",
+    "",
+  ].join("\n");
 }
