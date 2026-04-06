@@ -14,11 +14,62 @@ const NAV = [
   },
 ];
 
-function NavLink({ href, icon, title }: { href: string; icon: string; title: string }) {
-  const [active, setActive] = useState(false);
+/**
+ * Track the current pathname reactively, including after client-side navigation.
+ *
+ * Starts as '' to match the SSG prerendered HTML (no active links), then updates
+ * via useEffect after hydration and on every subsequent pushState / popstate.
+ */
+// TODO: this should be part of the client-side router, and exposed as a hook like usePathname or useLocation
+function useCurrentPath(): string {
+  const [path, setPath] = useState("");
+
   useEffect(() => {
-    setActive(window.location.pathname === href);
-  }, [href]);
+    // Set immediately on mount (after hydration)
+    setPath(window.location.pathname);
+
+    // Patch history.pushState so client-side navigations fire a custom event.
+    // The viact router calls pushState before calling render(), so by the time
+    // our handler runs, window.location.pathname is already updated.
+    const origPush = history.pushState.bind(history);
+    const origReplace = history.replaceState.bind(history);
+
+    history.pushState = function (...args) {
+      origPush(...args);
+      window.dispatchEvent(new Event("viact:navigate"));
+    };
+    history.replaceState = function (...args) {
+      origReplace(...args);
+      window.dispatchEvent(new Event("viact:navigate"));
+    };
+
+    const handler = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", handler);
+    window.addEventListener("viact:navigate", handler);
+
+    return () => {
+      history.pushState = origPush;
+      history.replaceState = origReplace;
+      window.removeEventListener("popstate", handler);
+      window.removeEventListener("viact:navigate", handler);
+    };
+  }, []);
+
+  return path;
+}
+
+function NavLink({
+  href,
+  icon,
+  title,
+  currentPath,
+}: {
+  href: string;
+  icon: string;
+  title: string;
+  currentPath: string;
+}) {
+  const active = currentPath === href;
   return (
     <a href={href} class={active ? "active" : ""}>
       <span class="sidebar-icon">{icon}</span>
@@ -27,19 +78,10 @@ function NavLink({ href, icon, title }: { href: string; icon: string; title: str
   );
 }
 
-function HeaderLink({ href, children }: { href: string; children: any }) {
-  const [active, setActive] = useState(false);
-  useEffect(() => {
-    setActive(window.location.pathname === href || window.location.pathname.startsWith("/docs"));
-  }, [href]);
-  return (
-    <a href={href} class={active ? "active" : ""}>
-      {children}
-    </a>
-  );
-}
-
 export function Shell({ children }: ShellProps) {
+  const currentPath = useCurrentPath();
+  const docsActive = currentPath.startsWith("/docs");
+
   return (
     <div class="docs-layout">
       <header class="site-header">
@@ -49,11 +91,13 @@ export function Shell({ children }: ShellProps) {
             viact
           </a>
           <nav class="header-nav">
-            <HeaderLink href="/docs/routing">Docs</HeaderLink>
+            <a href="/docs/routing" class={docsActive ? "active" : ""}>
+              Docs
+            </a>
           </nav>
           <div class="header-right">
             <a
-              href="https://github.com/preactjs/viact"
+              href="https://github.com/JoviDeCroock/viact"
               class="github-link"
               target="_blank"
               rel="noopener"
@@ -73,7 +117,7 @@ export function Shell({ children }: ShellProps) {
               <div class="sidebar-label">{section.label}</div>
               <nav class="sidebar-nav">
                 {section.links.map((link) => (
-                  <NavLink key={link.href} {...link} />
+                  <NavLink key={link.href} {...link} currentPath={currentPath} />
                 ))}
               </nav>
             </div>

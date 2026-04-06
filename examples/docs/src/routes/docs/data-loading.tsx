@@ -1,3 +1,5 @@
+import { CodeBlock } from "../../components/CodeBlock";
+
 export function head() {
   return { title: "Data Loading — viact docs" };
 }
@@ -15,27 +17,21 @@ export function Component() {
 
       <h1 class="doc-title">Data Loading</h1>
       <p class="doc-lead">
-        viact provides a unified data model that works across all rendering modes. Loaders fetch
-        data on the server, actions handle mutations, and client hooks give reactive access to route
-        data — all with full TypeScript inference.
+        viact provides a unified data model that works across all rendering
+        modes. Loaders fetch data on the server, actions handle mutations, and
+        client hooks give reactive access to route data — all with full
+        TypeScript inference.
       </p>
 
       <h2>Loaders</h2>
       <p>
-        A <strong>loader</strong> is an async function exported from a route module. It runs
-        server-side and returns serializable data that flows into the route component.
+        A <strong>loader</strong> is an async function exported from a route
+        module. It runs server-side and returns serializable data that flows
+        into the route component.
       </p>
-      <div class="code-block">
-        <div class="code-block-header">
-          <div class="code-block-dots">
-            <span />
-            <span />
-            <span />
-          </div>
-          <span class="code-block-title">src/routes/dashboard.tsx</span>
-        </div>
-        <pre>
-          <code>{`import type { LoaderArgs, RouteComponentProps } from "viact";
+      <CodeBlock
+        filename="src/routes/dashboard.tsx"
+        code={`import type { LoaderArgs, RouteComponentProps } from "viact";
 
 export async function loader({ request, params, context }: LoaderArgs) {
   const user = await getUser(request);
@@ -53,53 +49,22 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
       </ul>
     </div>
   );
-}`}</code>
-        </pre>
-      </div>
+}`}
+      />
 
       <h3>LoaderArgs</h3>
       <div class="doc-table-wrap">
         <table class="doc-table">
           <thead>
-            <tr>
-              <th>Field</th>
-              <th>Type</th>
-              <th>Description</th>
-            </tr>
+            <tr><th>Field</th><th>Type</th><th>Description</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>request</td>
-              <td>Request</td>
-              <td>The incoming Web Request</td>
-            </tr>
-            <tr>
-              <td>params</td>
-              <td>RouteParams</td>
-              <td>
-                Dynamic URL params, e.g. <code>{`{ slug: "hello" }`}</code>
-              </td>
-            </tr>
-            <tr>
-              <td>context</td>
-              <td>TContext</td>
-              <td>App-level context from the adapter's context factory</td>
-            </tr>
-            <tr>
-              <td>signal</td>
-              <td>AbortSignal</td>
-              <td>Cancellation signal for timeouts</td>
-            </tr>
-            <tr>
-              <td>url</td>
-              <td>URL</td>
-              <td>Parsed URL object</td>
-            </tr>
-            <tr>
-              <td>route</td>
-              <td>ResolvedRoute</td>
-              <td>Matched route metadata</td>
-            </tr>
+            <tr><td>request</td><td>Request</td><td>The incoming Web Request</td></tr>
+            <tr><td>params</td><td>RouteParams</td><td>Dynamic URL params, e.g. <code>{`{ slug: "hello" }`}</code></td></tr>
+            <tr><td>context</td><td>TContext</td><td>App-level context from the adapter's context factory</td></tr>
+            <tr><td>signal</td><td>AbortSignal</td><td>Cancellation signal for timeouts</td></tr>
+            <tr><td>url</td><td>URL</td><td>Parsed URL object</td></tr>
+            <tr><td>route</td><td>ResolvedRoute</td><td>Matched route metadata</td></tr>
           </tbody>
         </table>
       </div>
@@ -108,32 +73,14 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
       <div class="doc-table-wrap">
         <table class="doc-table">
           <thead>
-            <tr>
-              <th>Scenario</th>
-              <th>Loader runs on</th>
-            </tr>
+            <tr><th>Scenario</th><th>Loader runs on</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>SSG build</td>
-              <td>Build machine, once per path</td>
-            </tr>
-            <tr>
-              <td>SSR request</td>
-              <td>Server, every request</td>
-            </tr>
-            <tr>
-              <td>ISG initial</td>
-              <td>Build machine, then server on revalidation</td>
-            </tr>
-            <tr>
-              <td>SPA</td>
-              <td>Server, during client navigation fetch</td>
-            </tr>
-            <tr>
-              <td>Client navigation</td>
-              <td>Server (fetched as JSON)</td>
-            </tr>
+            <tr><td>SSG build</td><td>Build machine, once per path</td></tr>
+            <tr><td>SSR request</td><td>Server, every request</td></tr>
+            <tr><td>ISG initial</td><td>Build machine, then server on revalidation</td></tr>
+            <tr><td>SPA</td><td>Server, during client navigation fetch</td></tr>
+            <tr><td>Client navigation</td><td>Server (fetched as JSON)</td></tr>
           </tbody>
         </table>
       </div>
@@ -141,15 +88,14 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
       <div class="callout callout-note">
         <span class="callout-icon">🔒</span>
         <span>
-          Loaders <strong>never</strong> run in the browser. Database connections, API keys, and
-          secrets in loader code stay server-side permanently.
+          Loaders <strong>never</strong> run in the browser. Database
+          connections, API keys, and secrets in loader code stay server-side
+          permanently.
         </span>
       </div>
 
       <h3>Error handling</h3>
-      <div class="code-block">
-        <pre>
-          <code>{`import { ViactHttpError } from "viact";
+      <CodeBlock code={`import { ViactHttpError } from "viact";
 
 export async function loader({ params }: LoaderArgs) {
   const post = await getPost(params.slug);
@@ -160,20 +106,16 @@ export async function loader({ params }: LoaderArgs) {
 // Optional: render an error boundary for this route
 export function ErrorBoundary({ error }: ErrorBoundaryProps) {
   return <p>Error: {error.message}</p>;
-}`}</code>
-        </pre>
-      </div>
+}`} />
 
       <div class="doc-sep" />
 
       <h2>Actions</h2>
       <p>
-        Actions handle form submissions and mutations. They receive POST, PUT, PATCH, or DELETE
-        requests to the current route's URL.
+        Actions handle form submissions and mutations. They receive POST, PUT,
+        PATCH, or DELETE requests to the current route's URL.
       </p>
-      <div class="code-block">
-        <pre>
-          <code>{`export async function action({ request, context }: ActionArgs) {
+      <CodeBlock code={`export async function action({ request, context }: ActionArgs) {
   const form = await request.formData();
   const name = String(form.get("name") || "").trim();
 
@@ -181,67 +123,38 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
 
   await context.db.projects.create({ name });
   return { ok: true, revalidate: ["route:self"] };
-}`}</code>
-        </pre>
-      </div>
+}`} />
 
       <h3>Return values</h3>
       <div class="doc-table-wrap">
         <table class="doc-table">
           <thead>
-            <tr>
-              <th>Return</th>
-              <th>Effect</th>
-            </tr>
+            <tr><th>Return</th><th>Effect</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Plain data</td>
-              <td>Serialized to the client as JSON</td>
-            </tr>
-            <tr>
-              <td>
-                <code>{`{ ok, data, revalidate }`}</code>
-              </td>
-              <td>Structured result with revalidation hints</td>
-            </tr>
-            <tr>
-              <td>
-                <code>{`{ redirect: "/path" }`}</code>
-              </td>
-              <td>Server-side redirect after the action</td>
-            </tr>
-            <tr>
-              <td>
-                <code>{`{ data, headers }`}</code>
-              </td>
-              <td>Custom response headers (cookies, cache-control)</td>
-            </tr>
+            <tr><td>Plain data</td><td>Serialized to the client as JSON</td></tr>
+            <tr><td><code>{`{ ok, data, revalidate }`}</code></td><td>Structured result with revalidation hints</td></tr>
+            <tr><td><code>{`{ redirect: "/path" }`}</code></td><td>Server-side redirect after the action</td></tr>
+            <tr><td><code>{`{ data, headers }`}</code></td><td>Custom response headers (cookies, cache-control)</td></tr>
           </tbody>
         </table>
       </div>
 
       <h3>Revalidation hints</h3>
-      <div class="code-block">
-        <pre>
-          <code>{`return {
+      <CodeBlock code={`return {
   ok: true,
   revalidate: ["route:self"],          // Re-run this route's loader
   // revalidate: ["route:dashboard"],  // Re-run a specific route by ID
-};`}</code>
-        </pre>
-      </div>
+};`} />
 
       <div class="doc-sep" />
 
       <h2>Head Metadata</h2>
       <p>
-        The <code>head</code> export controls <code>&lt;head&gt;</code> content for the route. It
-        receives the loader data as its argument:
+        The <code>head</code> export controls <code>&lt;head&gt;</code> content
+        for the route. It receives the loader data as its argument:
       </p>
-      <div class="code-block">
-        <pre>
-          <code>{`export function head({ data }: HeadArgs<typeof loader>) {
+      <CodeBlock code={`export function head({ data }: HeadArgs<typeof loader>) {
   return {
     title: \`\${data.post.title} — My Blog\`,
     meta: [
@@ -253,9 +166,7 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
       { rel: "canonical", href: \`https://example.com/blog/\${data.post.slug}\` },
     ],
   };
-}`}</code>
-        </pre>
-      </div>
+}`} />
 
       <div class="doc-sep" />
 
@@ -263,43 +174,32 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
 
       <h3>useRouteData()</h3>
       <p>
-        Access the current route's loader data reactively. Updates automatically on navigation and
-        revalidation.
+        Access the current route's loader data reactively. Updates
+        automatically on navigation and revalidation.
       </p>
-      <div class="code-block">
-        <pre>
-          <code>{`export function Component() {
+      <CodeBlock code={`export function Component() {
   const data = useRouteData<typeof loader>();
   return <span>{data.user.name}</span>;
-}`}</code>
-        </pre>
-      </div>
+}`} />
 
       <h3>useRevalidateRoute()</h3>
       <p>Imperatively re-run the current route's loader:</p>
-      <div class="code-block">
-        <pre>
-          <code>{`export function Component() {
+      <CodeBlock code={`export function Component() {
   const revalidate = useRevalidateRoute();
   return <button onClick={() => revalidate()}>Refresh</button>;
-}`}</code>
-        </pre>
-      </div>
+}`} />
 
       <h3>useSubmitAction()</h3>
       <p>Submit an action programmatically (without a form element):</p>
-      <div class="code-block">
-        <pre>
-          <code>{`const submit = useSubmitAction();
-await submit({ method: "POST", body: formData });`}</code>
-        </pre>
-      </div>
+      <CodeBlock code={`const submit = useSubmitAction();
+await submit({ method: "POST", body: formData });`} />
 
       <h3>&lt;Form&gt; Component</h3>
-      <p>Declarative form submission that calls the route's action with progressive enhancement:</p>
-      <div class="code-block">
-        <pre>
-          <code>{`import { Form } from "viact";
+      <p>
+        Declarative form submission that calls the route's action with
+        progressive enhancement:
+      </p>
+      <CodeBlock code={`import { Form } from "viact";
 
 export function Component() {
   return (
@@ -308,33 +208,24 @@ export function Component() {
       <button type="submit">Create</button>
     </Form>
   );
-}`}</code>
-        </pre>
-      </div>
+}`} />
       <p>
-        The <code>&lt;Form&gt;</code> component intercepts submit and sends via <code>fetch</code>{" "}
-        (no full page reload), automatically revalidates based on action response hints, and falls
-        back to native submission if JavaScript fails.
+        The <code>&lt;Form&gt;</code> component intercepts submit and sends via{" "}
+        <code>fetch</code> (no full page reload), automatically revalidates
+        based on action response hints, and falls back to native submission if
+        JavaScript fails.
       </p>
 
       <div class="doc-sep" />
 
       <h2>API Routes</h2>
       <p>
-        Standalone server endpoints for REST APIs, webhooks, and health checks. Files in{" "}
-        <code>src/api/</code> are auto-discovered and mapped to URLs:
+        Standalone server endpoints for REST APIs, webhooks, and health checks.
+        Files in <code>src/api/</code> are auto-discovered and mapped to URLs:
       </p>
-      <div class="code-block">
-        <div class="code-block-header">
-          <div class="code-block-dots">
-            <span />
-            <span />
-            <span />
-          </div>
-          <span class="code-block-title">src/api/users/[id].ts</span>
-        </div>
-        <pre>
-          <code>{`// src/api/health.ts  → GET /api/health
+      <CodeBlock
+        filename="src/api/users/[id].ts"
+        code={`// src/api/health.ts  → GET /api/health
 // src/api/users/[id].ts → GET /api/users/:id
 
 export async function GET({ params, context }: ApiRouteArgs) {
@@ -346,12 +237,12 @@ export async function GET({ params, context }: ApiRouteArgs) {
 export async function DELETE({ params, context }: ApiRouteArgs) {
   await context.db.users.delete(params.id);
   return new Response(null, { status: 204 });
-}`}</code>
-        </pre>
-      </div>
+}`}
+      />
       <p>
-        API routes export named HTTP method handlers, return <code>Response</code> objects directly,
-        share the same context system as page routes, and are excluded from client bundles entirely.
+        API routes export named HTTP method handlers, return{" "}
+        <code>Response</code> objects directly, share the same context system
+        as page routes, and are excluded from client bundles entirely.
       </p>
 
       <div class="doc-nav">

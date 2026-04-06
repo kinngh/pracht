@@ -1,15 +1,12 @@
 import type { RouteComponentProps } from "viact";
+import { CodeBlock } from "../components/CodeBlock";
 
 export async function loader() {
-  return {
-    version: "0.1.0",
-  };
+  return { version: "0.1.0" };
 }
 
 export function head() {
-  return {
-    title: "viact — Preact-first. Vite-native. Explicit routing.",
-  };
+  return { title: "viact — Preact-first. Vite-native. Explicit routing." };
 }
 
 const FEATURES = [
@@ -82,7 +79,8 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
         <div class="hero-inner">
           <div class="hero-badge">
             <span class="badge">
-              <span class="badge-dot" />v{data.version} · Cloudflare-ready
+              <span class="badge-dot" />
+              v{data.version} · Cloudflare-ready
             </span>
           </div>
 
@@ -93,8 +91,9 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
           </h1>
 
           <p class="hero-sub">
-            <strong>viact</strong> is a Preact framework with <strong>explicit routing</strong>,
-            per-route render modes, and thin adapters for Cloudflare, Vercel, and Node.js.
+            <strong>viact</strong> is a Preact framework with{" "}
+            <strong>explicit routing</strong>, per-route render modes, and thin
+            adapters for Cloudflare, Vercel, and Node.js.
           </p>
 
           <div class="hero-actions">
@@ -108,17 +107,9 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 
           <div class="hero-code">
             <p class="hero-code-label">src/routes.ts</p>
-            <div class="code-block">
-              <div class="code-block-header">
-                <div class="code-block-dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <span class="code-block-title">routes.ts</span>
-              </div>
-              <pre>
-                <code>{`import { defineApp, group, route, timeRevalidate } from "viact";
+            <CodeBlock
+              filename="routes.ts"
+              code={`import { defineApp, group, route, timeRevalidate } from "viact";
 
 export const app = defineApp({
   shells: {
@@ -138,9 +129,8 @@ export const app = defineApp({
       route("/settings",  "./routes/settings.tsx",  { render: "spa" }),
     ]),
   ],
-});`}</code>
-              </pre>
-            </div>
+});`}
+            />
           </div>
         </div>
       </section>
@@ -151,8 +141,8 @@ export const app = defineApp({
           <p class="section-eyebrow">Why viact</p>
           <h2 class="section-title">Everything you need, nothing you don't</h2>
           <p class="section-sub">
-            A focused framework that gives you the primitives to build fast, maintainable Preact
-            applications — without magic.
+            A focused framework that gives you the primitives to build fast,
+            maintainable Preact applications — without magic.
           </p>
           <div class="features-grid">
             {FEATURES.map((f) => (
@@ -172,8 +162,8 @@ export const app = defineApp({
           <p class="section-eyebrow">Rendering</p>
           <h2 class="section-title">One app, four rendering strategies</h2>
           <p class="section-sub">
-            Configure render mode per route. Mix and match in the same app without extra wiring or
-            separate deployments.
+            Configure render mode per route. Mix and match in the same app
+            without extra wiring or separate deployments.
           </p>
           <div class="modes-grid">
             {MODES.map((m) => (
@@ -199,29 +189,22 @@ export const app = defineApp({
               Loaders stay on the server
             </h2>
             <p style="color:var(--text-3);line-height:1.75;margin-bottom:16px;">
-              Loader functions run server-side only — during the build for SSG, on each request for
-              SSR. Secrets, database connections, and API keys never reach the client bundle.
+              Loader functions run server-side only — during the build for SSG,
+              on each request for SSR. Secrets, database connections, and API
+              keys never reach the client bundle.
             </p>
             <p style="color:var(--text-3);line-height:1.75;margin-bottom:24px;">
-              After hydration, client navigation fetches only the loader data as JSON — the
-              component tree updates without a full page reload.
+              After hydration, client navigation fetches only the loader data as
+              JSON — the component tree updates without a full page reload.
             </p>
             <a href="/docs/data-loading" class="btn btn-secondary" style="display:inline-flex;">
               Data loading guide →
             </a>
           </div>
           <div>
-            <div class="code-block">
-              <div class="code-block-header">
-                <div class="code-block-dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <span class="code-block-title">routes/dashboard.tsx</span>
-              </div>
-              <pre>
-                <code>{`import type { LoaderArgs, RouteComponentProps } from "viact";
+            <CodeBlock
+              filename="routes/dashboard.tsx"
+              code={`import type { LoaderArgs, RouteComponentProps } from "viact";
 
 export async function loader({ request, context }: LoaderArgs) {
   const user = await getUser(request);
@@ -235,9 +218,8 @@ export function head({ data }) {
 export function Component({ data }: RouteComponentProps<typeof loader>) {
   // data is typed: { user: User; projects: Project[] }
   return <h1>Welcome, {data.user.name}</h1>;
-}`}</code>
-              </pre>
-            </div>
+}`}
+            />
           </div>
         </div>
       </section>
@@ -251,8 +233,8 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
           <p class="section-eyebrow">Get Started</p>
           <h2 class="section-title">Ready to build?</h2>
           <p class="section-sub" style="margin:0 auto;">
-            Install viact and the Vite plugin, wire up your adapter, and ship to Cloudflare Workers
-            or Vercel in minutes.
+            Install viact and the Vite plugin, wire up your adapter, and ship
+            to Cloudflare Workers or Vercel in minutes.
           </p>
           <div class="install-block">
             <span class="install-prompt">$</span>
@@ -260,30 +242,10 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
           </div>
           <div class="docs-links">
             {[
-              {
-                href: "/docs/routing",
-                icon: "🗺",
-                title: "Routing",
-                sub: "Manifest API, groups, paths",
-              },
-              {
-                href: "/docs/rendering",
-                icon: "⚡",
-                title: "Rendering",
-                sub: "SSG, SSR, ISG, SPA",
-              },
-              {
-                href: "/docs/data-loading",
-                icon: "📡",
-                title: "Data Loading",
-                sub: "Loaders, actions, hooks",
-              },
-              {
-                href: "/docs/adapters",
-                icon: "🌐",
-                title: "Adapters",
-                sub: "Cloudflare, Vercel, Node",
-              },
+              { href: "/docs/routing", icon: "🗺", title: "Routing", sub: "Manifest API, groups, paths" },
+              { href: "/docs/rendering", icon: "⚡", title: "Rendering", sub: "SSG, SSR, ISG, SPA" },
+              { href: "/docs/data-loading", icon: "📡", title: "Data Loading", sub: "Loaders, actions, hooks" },
+              { href: "/docs/adapters", icon: "🌐", title: "Adapters", sub: "Cloudflare, Vercel, Node" },
             ].map((l) => (
               <a key={l.href} href={l.href} class="doc-link-card">
                 <span style="font-size:20px;">{l.icon}</span>

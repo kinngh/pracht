@@ -12,14 +12,10 @@ export function Shell({ children }: ShellProps) {
           </a>
           <nav class="header-nav">
             <a href="/docs/routing">Docs</a>
-            <a href="/docs/routing">Routing</a>
-            <a href="/docs/rendering">Rendering</a>
-            <a href="/docs/data-loading">Data Loading</a>
-            <a href="/docs/adapters">Adapters</a>
           </nav>
           <div class="header-right">
             <a
-              href="https://github.com/preactjs/viact"
+              href="https://github.com/JoviDeCroock/viact"
               class="github-link"
               target="_blank"
               rel="noopener"
@@ -39,7 +35,7 @@ export function Shell({ children }: ShellProps) {
           <div class="footer-links">
             <a href="/docs/routing">Docs</a>
             <a href="/docs/adapters">Adapters</a>
-            <a href="https://github.com/preactjs/viact" target="_blank" rel="noopener">
+            <a href="https://github.com/JoviDeCroock/viact" target="_blank" rel="noopener">
               GitHub
             </a>
           </div>
