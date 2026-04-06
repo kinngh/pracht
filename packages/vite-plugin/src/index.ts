@@ -134,7 +134,7 @@ export function createViactClientModuleSource(
   const resolved = resolveOptions(options);
 
   return [
-    'import { resolveApp, initClientRouter } from "viact";',
+    'import { resolveApp, initClientRouter, readHydrationState } from "viact";',
     `import { app } from ${JSON.stringify(resolved.appFile)};`,
     "",
     `const routeModules = import.meta.glob(${JSON.stringify(`${resolved.routesDir}/**/*.{ts,tsx,js,jsx}`)});`,
@@ -151,7 +151,7 @@ export function createViactClientModuleSource(
     "  return null;",
     "}",
     "",
-    "const state = window.__VIACT_STATE__;",
+    "const state = readHydrationState();",
     'const root = document.getElementById("viact-root");',
     "if (state && root) {",
     "  initClientRouter({",

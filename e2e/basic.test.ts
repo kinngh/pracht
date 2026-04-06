@@ -25,9 +25,19 @@ test("home page HTML includes hydration state", async ({ request }) => {
   const response = await request.get("/");
   const html = await response.text();
 
-  expect(html).toContain("window.__VIACT_STATE__=");
+  expect(html).toContain('id="viact-state" type="application/json"');
   expect(html).toContain('"routeId":"home"');
   expect(html).toContain("Hybrid route manifest");
+});
+
+test("home page includes default security headers", async ({ request }) => {
+  const response = await request.get("/");
+
+  expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  expect(response.headers()["x-frame-options"]).toBe("SAMEORIGIN");
+  expect(response.headers()["referrer-policy"]).toBe(
+    "strict-origin-when-cross-origin",
+  );
 });
 
 test("home page has correct head metadata", async ({ request }) => {

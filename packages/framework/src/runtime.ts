@@ -57,6 +57,7 @@ declare global {
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
+const HYDRATION_STATE_ELEMENT_ID = "viact-state";
 
 const RouteDataContext = createContext<unknown>(undefined);
 
@@ -84,7 +85,37 @@ export function startApp<TData = unknown>(
     return options.initialData;
   }
 
-  return window.__VIACT_STATE__?.data as TData | undefined;
+  return readHydrationState<TData>()?.data;
+}
+
+export function readHydrationState<TData = unknown>():
+  | ViactHydrationState<TData>
+  | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  if (window.__VIACT_STATE__) {
+    return window.__VIACT_STATE__ as ViactHydrationState<TData>;
+  }
+
+  const element = document.getElementById(HYDRATION_STATE_ELEMENT_ID);
+  if (!(element instanceof HTMLScriptElement)) {
+    return undefined;
+  }
+
+  const raw = element.textContent;
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    const state = JSON.parse(raw) as ViactHydrationState<TData>;
+    window.__VIACT_STATE__ = state as ViactHydrationState;
+    return state;
+  } catch {
+    return undefined;
+  }
 }
 
 export function useRouteData<TData = unknown>(): TData {
@@ -143,46 +174,53 @@ export async function handleViactRequest<TContext>(
       );
 
       if (!apiModule) {
-        return new Response("API route module not found", {
+        return withDefaultSecurityHeaders(new Response("API route module not found", {
           status: 500,
           headers: { "content-type": "text/plain; charset=utf-8" },
-        });
+        }));
       }
 
       const method = options.request.method.toUpperCase() as HttpMethod;
       const handler = apiModule[method];
 
       if (!handler) {
-        return new Response("Method not allowed", {
+        return withDefaultSecurityHeaders(new Response("Method not allowed", {
           status: 405,
           headers: { "content-type": "text/plain; charset=utf-8" },
-        });
+        }));
       }
 
-      return handler({
+      return withDefaultSecurityHeaders(await handler({
         request: options.request,
         params: apiMatch.params,
         context: (options.context ?? {}) as TContext,
         signal: AbortSignal.timeout(30_000),
         url,
         route: apiMatch.route as any,
-      });
+      }));
     }
   }
 
   const match = matchAppRoute(options.app, url.pathname);
 
   if (!match) {
-    return new Response("Not found", {
+    return withDefaultSecurityHeaders(new Response("Not found", {
       status: 404,
       headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+    }));
   }
 
   const registry = options.registry ?? {};
   const isRouteStateRequest =
     options.request.headers.get("x-viact-route-state-request") === "1";
   const isAction = !SAFE_METHODS.has(options.request.method);
+
+  if (isAction) {
+    const csrfError = validateActionCsrfRequest(options.request, url);
+    if (csrfError) {
+      return csrfError;
+    }
+  }
 
   // --- Middleware chain ---
   let context = (options.context ?? {}) as TContext;
@@ -203,12 +241,12 @@ export async function handleViactRequest<TContext>(
     });
 
     if (!result) continue;
-    if (result instanceof Response) return result;
+    if (result instanceof Response) return withDefaultSecurityHeaders(result);
     if ("redirect" in result) {
-      return new Response(null, {
+      return withDefaultSecurityHeaders(new Response(null, {
         status: 302,
         headers: { location: result.redirect },
-      });
+      }));
     }
     if ("context" in result) {
       context = { ...context, ...result.context } as TContext;
@@ -233,15 +271,15 @@ export async function handleViactRequest<TContext>(
   // --- Handle actions (POST/PUT/PATCH/DELETE) ---
   if (isAction) {
     if (!routeModule?.action) {
-      return new Response("Method not allowed", {
+      return withDefaultSecurityHeaders(new Response("Method not allowed", {
         status: 405,
         headers: { "content-type": "text/plain; charset=utf-8" },
-      });
+      }));
     }
     const actionResult = await routeModule.action(routeArgs);
-    return Response.json(actionResult, {
+    return withDefaultSecurityHeaders(Response.json(actionResult, {
       headers: { "content-type": "application/json" },
-    });
+    }));
   }
 
   // --- Execute loader ---
@@ -251,7 +289,7 @@ export async function handleViactRequest<TContext>(
 
   // --- Route state request (client navigation): return JSON ---
   if (isRouteStateRequest) {
-    return Response.json({ data });
+    return withDefaultSecurityHeaders(Response.json({ data }));
   }
 
   // --- Load shell module ---
@@ -284,10 +322,10 @@ export async function handleViactRequest<TContext>(
 
   // --- SSR / SSG / ISG: render Preact tree to string ---
   if (!routeModule?.Component) {
-    return new Response("Route has no Component export", {
+    return withDefaultSecurityHeaders(new Response("Route has no Component export", {
       status: 500,
       headers: { "content-type": "text/plain; charset=utf-8" },
-    });
+    }));
   }
 
   const { renderToString } = (await import(
@@ -401,7 +439,7 @@ function buildHtmlDocument(options: {
     .map((url) => `<link rel="stylesheet" href="${escapeHtml(url)}">`)
     .join("\n    ");
 
-  const stateScript = `<script>window.__VIACT_STATE__=${JSON.stringify(hydrationState)}</script>`;
+  const stateScript = `<script id="${HYDRATION_STATE_ELEMENT_ID}" type="application/json">${serializeJsonForHtml(hydrationState)}</script>`;
   const entryScript = clientEntryUrl
     ? `<script type="module" src="${escapeHtml(clientEntryUrl)}"></script>`
     : "";
@@ -424,8 +462,40 @@ function buildHtmlDocument(options: {
 }
 
 function htmlResponse(html: string): Response {
-  return new Response(html, {
+  return withDefaultSecurityHeaders(new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8" },
+  }));
+}
+
+export function applyDefaultSecurityHeaders(headers: Headers): Headers {
+  if (!headers.has("permissions-policy")) {
+    headers.set(
+      "permissions-policy",
+      "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+    );
+  }
+
+  if (!headers.has("referrer-policy")) {
+    headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  }
+
+  if (!headers.has("x-content-type-options")) {
+    headers.set("x-content-type-options", "nosniff");
+  }
+
+  if (!headers.has("x-frame-options")) {
+    headers.set("x-frame-options", "SAMEORIGIN");
+  }
+
+  return headers;
+}
+
+function withDefaultSecurityHeaders(response: Response): Response {
+  const headers = applyDefaultSecurityHeaders(new Headers(response.headers));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   });
 }
 
@@ -435,6 +505,44 @@ function escapeHtml(str: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function serializeJsonForHtml(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
+function validateActionCsrfRequest(request: Request, url: URL): Response | null {
+  const origin = request.headers.get("origin");
+  if (origin) {
+    return isSameOrigin(origin, url.origin) ? null : createCsrfErrorResponse();
+  }
+
+  const referer = request.headers.get("referer");
+  if (referer) {
+    return isSameOrigin(referer, url.origin) ? null : createCsrfErrorResponse();
+  }
+
+  return createCsrfErrorResponse();
+}
+
+function isSameOrigin(candidate: string, expectedOrigin: string): boolean {
+  try {
+    return new URL(candidate).origin === expectedOrigin;
+  } catch {
+    return false;
+  }
+}
+
+function createCsrfErrorResponse(): Response {
+  return withDefaultSecurityHeaders(new Response("Cross-site action blocked", {
+    status: 403,
+    headers: { "content-type": "text/plain; charset=utf-8" },
+  }));
 }
 
 // ---------------------------------------------------------------------------

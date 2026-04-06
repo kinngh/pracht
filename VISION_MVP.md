@@ -66,7 +66,7 @@ Standalone server endpoints independent of the page rendering pipeline:
 - Export named HTTP method handlers: `export function GET(args)`, `POST(args)`, etc.
 - Receive the same `LoaderArgs`-style context (request, params, context, signal).
 - Return `Response` objects directly — full control over status, headers, body.
-- Middleware applies via the route manifest or dedicated API middleware config.
+- API routes are independent of page-route middleware. Auth and policy checks live in the handler today.
 
 ### Deployment Adapters
 

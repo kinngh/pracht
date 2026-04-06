@@ -115,8 +115,12 @@ return {
 
 ### CSRF protection
 
-Actions validate same-origin requests automatically. Cross-origin POSTs are
-rejected unless explicitly allowed.
+Page actions validate same-origin requests automatically. Unsafe requests must
+send an `Origin` or `Referer` header that matches the current route origin or
+they are rejected with `403`.
+
+API routes are separate endpoints. They do not inherit page-route middleware or
+page-action CSRF behavior automatically.
 
 ---
 
@@ -231,5 +235,6 @@ API routes:
 - Live in `src/api/` with file-based path mapping
 - Export named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
 - Return `Response` objects directly
-- Share the same context and middleware system as page routes
+- Share the same request context shape as page routes
+- Do not inherit page-route middleware automatically
 - Are excluded from client bundles entirely

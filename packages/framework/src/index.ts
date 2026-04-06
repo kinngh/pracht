@@ -9,9 +9,11 @@ export {
   timeRevalidate,
 } from "./app.ts";
 export {
+  applyDefaultSecurityHeaders,
   Form,
   handleViactRequest,
   prerenderApp,
+  readHydrationState,
   startApp,
   useRevalidateRoute,
   useRouteData,

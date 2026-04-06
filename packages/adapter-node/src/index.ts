@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
 
 import {
+  applyDefaultSecurityHeaders,
   handleViactRequest,
   type HandleViactRequestOptions,
   type ISGManifestEntry,
@@ -64,12 +65,13 @@ export function createNodeRequestHandler<TContext = unknown>(
         // Serve the cached file
         const html = await readFile(htmlPath, "utf-8");
         res.statusCode = 200;
-        res.setHeader("content-type", "text/html; charset=utf-8");
-        if (isStale) {
-          res.setHeader("x-viact-isg", "stale");
-        } else {
-          res.setHeader("x-viact-isg", "fresh");
-        }
+        const headers = applyDefaultSecurityHeaders(new Headers({
+          "content-type": "text/html; charset=utf-8",
+          "x-viact-isg": isStale ? "stale" : "fresh",
+        }));
+        headers.forEach((value, key) => {
+          res.setHeader(key, value);
+        });
         res.end(html);
 
         // Background regeneration if stale

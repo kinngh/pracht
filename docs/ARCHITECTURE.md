@@ -206,7 +206,7 @@ Browser request
   → Execute loader
   → Render Preact component tree to string
   → Merge head metadata (shell + route)
-  → Inject hydration state as window.__VIACT_STATE__
+  → Inject escaped hydration state into a JSON script tag
   → Inject asset tags from Vite manifest
   → Return HTML Response
   → Browser hydrates, client router takes over
@@ -387,10 +387,11 @@ client side as well.
 
 ## Hydration
 
-Server-rendered HTML includes a script tag with serialized state:
+Server-rendered HTML includes a non-executable JSON script tag with serialized
+state:
 
 ```html
-<script>window.__VIACT_STATE__ = {"url":"/dashboard","routeId":"dashboard","data":{...}}</script>
+<script id="viact-state" type="application/json">{"url":"/dashboard","routeId":"dashboard","data":{...}}</script>
 ```
 
 The client runtime reads this state to:

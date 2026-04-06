@@ -5,6 +5,13 @@ import { resolve, join, dirname, extname } from "node:path";
 import { existsSync, statSync, mkdirSync, writeFileSync, createReadStream, readFileSync, rmSync, cpSync } from "node:fs";
 import { createServer, build as viteBuild } from "vite";
 
+const DEFAULT_SECURITY_HEADERS = {
+  "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+  "referrer-policy": "strict-origin-when-cross-origin",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "SAMEORIGIN",
+};
+
 const VERSION = "0.0.0";
 const command = process.argv[2];
 
@@ -209,8 +216,10 @@ async function preview() {
           entry.revalidate.kind === "time" &&
           ageMs > entry.revalidate.seconds * 1000;
 
-        res.setHeader("content-type", "text/html; charset=utf-8");
-        res.setHeader("x-viact-isg", isStale ? "stale" : "fresh");
+        setDefaultSecurityHeaders(res, {
+          "content-type": "text/html; charset=utf-8",
+          "x-viact-isg": isStale ? "stale" : "fresh",
+        });
         createReadStream(htmlPath).pipe(res);
 
         if (isStale) {
@@ -243,10 +252,16 @@ async function preview() {
     const filePath = join(clientDir, url);
     if (existsSync(filePath) && statSync(filePath).isFile()) {
       const ext = extname(filePath);
-      res.setHeader(
-        "content-type",
-        MIME_TYPES[ext] || "application/octet-stream",
-      );
+      const headers = {
+        "content-type": MIME_TYPES[ext] || "application/octet-stream",
+      };
+      if (ext === ".html") {
+        setDefaultSecurityHeaders(res, headers);
+      } else {
+        for (const [key, value] of Object.entries(headers)) {
+          res.setHeader(key, value);
+        }
+      }
       createReadStream(filePath).pipe(res);
       return;
     }
@@ -357,6 +372,15 @@ function sanitizeCloudflareWorkerName(value) {
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "") || "viact-app"
   );
+}
+
+function setDefaultSecurityHeaders(res, headers = {}) {
+  for (const [key, value] of Object.entries({
+    ...DEFAULT_SECURITY_HEADERS,
+    ...headers,
+  })) {
+    res.setHeader(key, value);
+  }
 }
 
 function writeVercelBuildOutput({
