@@ -18,6 +18,9 @@
       "@viact/adapter-node": ["./packages/adapter-node/src/index.ts"],
       "@viact/adapter-cloudflare": [
         "./packages/adapter-cloudflare/src/index.ts"
+      ],
+      "@viact/adapter-vercel": [
+        "./packages/adapter-vercel/src/index.ts"
       ]
     }
   },

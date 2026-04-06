@@ -2,7 +2,7 @@
 
 import { createServer as createHttpServer } from "node:http";
 import { resolve, join, dirname, extname } from "node:path";
-import { existsSync, statSync, mkdirSync, writeFileSync, createReadStream, readFileSync } from "node:fs";
+import { existsSync, statSync, mkdirSync, writeFileSync, createReadStream, readFileSync, rmSync, cpSync } from "node:fs";
 import { createServer, build as viteBuild } from "vite";
 
 const VERSION = "0.0.0";
@@ -124,6 +124,20 @@ async function build() {
       });
 
       console.log(`\n  Cloudflare config → ${outputPath}\n`);
+    }
+
+    if (serverMod.buildTarget === "vercel") {
+      const outputPath = writeVercelBuildOutput({
+        functionName: serverMod.vercelFunctionName,
+        regions: serverMod.vercelRegions,
+        root,
+        staticRoutes: pages
+          .map((page) => page.path)
+          .filter((path) => !(path in isgManifest)),
+        isgRoutes: Object.keys(isgManifest),
+      });
+
+      console.log(`\n  Vercel build output → ${outputPath}\n`);
     }
   }
 
@@ -343,4 +357,101 @@ function sanitizeCloudflareWorkerName(value) {
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "") || "viact-app"
   );
+}
+
+function writeVercelBuildOutput({
+  functionName,
+  regions,
+  root,
+  staticRoutes,
+  isgRoutes,
+}) {
+  const outputDir = join(root, ".vercel/output");
+  const staticDir = join(outputDir, "static");
+  const functionDir = join(outputDir, "functions", `${functionName || "render"}.func`);
+
+  rmSync(outputDir, { force: true, recursive: true });
+  mkdirSync(outputDir, { recursive: true });
+  cpSync(join(root, "dist/client"), staticDir, { recursive: true });
+  cpSync(join(root, "dist/server"), functionDir, { recursive: true });
+
+  writeFileSync(
+    join(outputDir, "config.json"),
+    `${JSON.stringify(createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }), null, 2)}\n`,
+    "utf-8",
+  );
+  writeFileSync(
+    join(functionDir, ".vc-config.json"),
+    `${JSON.stringify(createVercelFunctionConfig({ regions }), null, 2)}\n`,
+    "utf-8",
+  );
+
+  return ".vercel/output";
+}
+
+function createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }) {
+  const target = `/${functionName || "render"}`;
+  const routes = [];
+
+  for (const route of sortStaticRoutes(staticRoutes)) {
+    routes.push({
+      src: routeToRouteExpression(route),
+      dest: routeToStaticHtmlPath(route),
+    });
+  }
+
+  for (const route of isgRoutes) {
+    routes.push({
+      src: routeToRouteExpression(route),
+      dest: target,
+    });
+  }
+
+  routes.push({ handle: "filesystem" });
+  routes.push({ src: "/(.*)", dest: target });
+
+  return {
+    version: 3,
+    routes,
+    framework: {
+      version: VERSION,
+    },
+  };
+}
+
+function createVercelFunctionConfig({ regions }) {
+  const config = {
+    runtime: "edge",
+    entrypoint: "server.js",
+  };
+
+  if (regions) {
+    config.regions = regions;
+  }
+
+  return config;
+}
+
+function sortStaticRoutes(routes) {
+  return [...new Set(routes)].sort((left, right) => right.length - left.length);
+}
+
+function routeToRouteExpression(route) {
+  if (route === "/") {
+    return "^/$";
+  }
+
+  return `^${escapeRegex(route)}/?$`;
+}
+
+function routeToStaticHtmlPath(route) {
+  if (route === "/") {
+    return "/index.html";
+  }
+
+  return `${route}/index.html`;
+}
+
+function escapeRegex(value) {
+  return value.replace(/[|\\{}()[\]^$+*?.-]/g, "\\$&");
 }

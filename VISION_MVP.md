@@ -76,7 +76,7 @@ Platform adapters export a request handler shaped for their runtime:
 |---------|---------|-------|
 | `adapter-node` | Node.js `http` | Static file serving, ISG mtime check |
 | `adapter-cloudflare` | Workers `fetch` | `env.ASSETS`, KV, execution context |
-| `adapter-vercel` | Serverless / Edge | (planned) |
+| `adapter-vercel` | Serverless / Edge | Build Output API v3 + edge handler |
 | `adapter-deno` | Deno.serve | (planned) |
 
 Each adapter:
@@ -182,7 +182,8 @@ viact/
     framework/        # Core: routing, rendering, runtime, types
     vite-plugin/      # Vite integration, virtual modules, build
     adapter-node/     # Node.js server adapter
-    adapter-cloudflare/  # (Phase 2)
+    adapter-cloudflare/  # Cloudflare Workers adapter
+    adapter-vercel/      # Vercel Edge adapter
     cli/              # Dev/build/preview commands
     create-viact/     # (Phase 2) Starter scaffolding
   example/            # Working example app

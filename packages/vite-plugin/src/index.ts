@@ -3,6 +3,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { resolve } from "node:path";
 import type { Connect, Plugin, ViteDevServer } from "vite";
 
+import { createCloudflareServerEntryModule } from "@viact/adapter-cloudflare";
+import { createVercelServerEntryModule } from "@viact/adapter-vercel";
+
 export const VIACT_CLIENT_MODULE_ID = "virtual:viact/client";
 export const VIACT_SERVER_MODULE_ID = "virtual:viact/server";
 
@@ -35,11 +38,17 @@ export interface ViactPluginOptions {
   apiDir?: string;
   adapter?: ViactAdapter;
   cloudflareAssetsBinding?: string;
+  vercelFunctionName?: string;
+  vercelRegions?: string | string[];
 }
 
-export type ViactAdapter = "node" | "cloudflare";
+export type ViactAdapter = "node" | "cloudflare" | "vercel";
 
-const DEFAULTS: Required<ViactPluginOptions> = {
+type ResolvedViactPluginOptions = Omit<Required<ViactPluginOptions>, "vercelRegions"> & {
+  vercelRegions: string | string[] | undefined;
+};
+
+const DEFAULTS: ResolvedViactPluginOptions = {
   appFile: "/src/routes.ts",
   middlewareDir: "/src/middleware",
   routesDir: "/src/routes",
@@ -47,6 +56,8 @@ const DEFAULTS: Required<ViactPluginOptions> = {
   apiDir: "/src/api",
   adapter: "node",
   cloudflareAssetsBinding: "ASSETS",
+  vercelFunctionName: "render",
+  vercelRegions: undefined as string | string[] | undefined,
 };
 
 export function viact(options: ViactPluginOptions = {}): Plugin {
@@ -166,7 +177,7 @@ export function createViactServerModuleSource(
   const registrySource = createViactRegistryModuleSource(resolved);
   const clientBuild = readClientBuildAssets(buildOptions.root);
   const viactImport =
-    resolved.adapter === "cloudflare"
+    resolved.adapter === "cloudflare" || resolved.adapter === "vercel"
       ? 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";'
       : 'import { resolveApp, resolveApiRoutes } from "viact";';
 
@@ -188,6 +199,15 @@ export function createViactServerModuleSource(
     source.push(
       createCloudflareServerEntryModule({
         assetsBinding: resolved.cloudflareAssetsBinding,
+      }),
+    );
+  }
+
+  if (resolved.adapter === "vercel") {
+    source.push(
+      createVercelServerEntryModule({
+        functionName: resolved.vercelFunctionName,
+        regions: resolved.vercelRegions,
       }),
     );
   }
@@ -221,7 +241,7 @@ export function createViactRegistryModuleSource(
 
 function createDevSSRMiddleware(
   server: ViteDevServer,
-  _pluginOptions: Required<ViactPluginOptions>,
+  _pluginOptions: ResolvedViactPluginOptions,
 ): Connect.NextHandleFunction {
   return async (
     req: IncomingMessage,
@@ -318,7 +338,7 @@ async function nodeToWebRequest(req: IncomingMessage): Promise<Request> {
 
 function resolveOptions(
   options: ViactPluginOptions,
-): Required<ViactPluginOptions> {
+): ResolvedViactPluginOptions {
   return {
     ...DEFAULTS,
     ...options,
@@ -347,50 +367,4 @@ function readClientBuildAssets(root = process.cwd()): {
 interface ViteManifestEntry {
   file: string;
   css?: string[];
-}
-
-function createCloudflareServerEntryModule(
-  options: {
-    assetsBinding?: string;
-  } = {},
-): string {
-  const assetsBinding = options.assetsBinding ?? "ASSETS";
-
-  return [
-    `export const cloudflareAssetsBinding = ${JSON.stringify(assetsBinding)};`,
-    "",
-    "async function maybeServeViactAsset(request, env) {",
-    '  if (request.method !== "GET" && request.method !== "HEAD") {',
-    "    return null;",
-    "  }",
-    "",
-    `  const assets = env?.[${JSON.stringify(assetsBinding)}];`,
-    '  if (!assets || typeof assets.fetch !== "function") {',
-    "    return null;",
-    "  }",
-    "",
-    "  const response = await assets.fetch(request);",
-    "  return response.status === 404 ? null : response;",
-    "}",
-    "",
-    "async function fetch(request, env, executionContext) {",
-    "  const assetResponse = await maybeServeViactAsset(request, env);",
-    "  if (assetResponse) {",
-    "    return assetResponse;",
-    "  }",
-    "",
-    "  return handleViactRequest({",
-    "    app: resolvedApp,",
-    "    registry,",
-    "    request,",
-    "    context: { env, executionContext },",
-    "    apiRoutes,",
-    "    clientEntryUrl: clientEntryUrl ?? undefined,",
-    "    cssUrls,",
-    "  });",
-    "}",
-    "",
-    "export default { fetch };",
-    "",
-  ].join("\n");
 }

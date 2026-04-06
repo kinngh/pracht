@@ -2,6 +2,9 @@
 
 This example is wired to Viact's Cloudflare build target.
 
+Set `VIACT_ADAPTER=vercel` before `node ../../packages/cli/bin/viact.js build`
+to emit Vercel's `.vercel/output/` directory instead.
+
 ## Commands
 
 - `pnpm viact dev` starts the app with the regular Viact/Vite development server.

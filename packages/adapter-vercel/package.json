@@ -1,5 +1,5 @@
 {
-  "name": "@viact/vite-plugin",
+  "name": "@viact/adapter-vercel",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -13,11 +13,6 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@viact/adapter-cloudflare": "workspace:*",
-    "@viact/adapter-vercel": "workspace:*",
     "viact": "workspace:*"
-  },
-  "peerDependencies": {
-    "vite": "^8.0.0"
   }
 }

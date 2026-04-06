@@ -143,13 +143,52 @@ export default {
 
 ## Vercel Adapter (Phase 2)
 
-Planned. Will support:
+### `createVercelEdgeHandler(options)`
 
-- Serverless functions for SSR routes
-- Edge functions for lightweight SSR
-- `_static/` output for SSG/ISG pages
-- Vercel's built-in ISG revalidation (`revalidate` return value)
-- `vercel.json` output generation
+| Option | Type | Description |
+|--------|------|-------------|
+| `app` | `ViactApp` | The resolved app |
+| `registry` | `ModuleRegistry` | Module importers |
+| `createContext` | `(args: VercelContextArgs) => TContext` | Context with the incoming edge-function context |
+
+### Features
+
+- **Edge runtime handler**: generated server entries export a default `fetch`-style
+  handler that Vercel bundles as an Edge Function.
+- **Build Output API v3**: `viact({ adapter: "vercel" })` makes `viact build`
+  emit `.vercel/output/config.json`, `.vercel/output/static/`, and
+  `.vercel/output/functions/render.func/`.
+- **Clean URL routing**: prerendered SSG pages are copied into
+  `.vercel/output/static` and exposed through `config.json` rewrites so `/about`
+  resolves to `/about/index.html`.
+- **Dynamic fallback**: SSR, API, and ISG routes are routed to the generated edge
+  function. ISG paths currently bypass the static fallback so freshness stays
+  correct even without native Vercel ISR integration yet.
+
+### Entry module
+
+```javascript
+// virtual:viact/server (generated in vercel mode)
+import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";
+import { app } from "./src/routes.ts";
+
+const resolvedApp = resolveApp(app);
+const apiRoutes = resolveApiRoutes(Object.keys(apiModules), "/src/api");
+
+export const vercelFunctionName = "render";
+
+export default async function handle(request, context) {
+  return handleViactRequest({
+    app: resolvedApp,
+    registry,
+    request,
+    context,
+    apiRoutes,
+    clientEntryUrl: clientEntryUrl ?? undefined,
+    cssUrls,
+  });
+}
+```
 
 ---
 

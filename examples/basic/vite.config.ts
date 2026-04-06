@@ -3,5 +3,10 @@ import preact from "@preact/preset-vite";
 import { viact } from "@viact/vite-plugin";
 
 export default defineConfig({
-  plugins: [preact(), viact({ adapter: "cloudflare" })],
+  plugins: [
+    preact(),
+    viact({
+      adapter: process.env.VIACT_ADAPTER === "vercel" ? "vercel" : "cloudflare",
+    }),
+  ],
 });
