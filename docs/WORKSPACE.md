@@ -12,7 +12,6 @@ described in `VISION_MVP.md`.
 | `packages/adapter-node` | `@viact/adapter-node` | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate |
 | `packages/adapter-cloudflare` | `@viact/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source |
 | `packages/cli` | `@viact/cli` | `viact dev`, `build` (with ISG manifest and Cloudflare output), and `preview` (with ISG revalidation) |
-| `packages/start` | `create-viact` | Interactive starter CLI that prompts for a folder, infers the package manager, and scaffolds a Node.js or Cloudflare starter |
 | `examples/basic` | `@viact/example-basic` | Example app with SSG, ISG, SSR, SPA routes, auth middleware, API routes, and Cloudflare build output |
 
 ## What Exists Today
@@ -57,10 +56,6 @@ described in `VISION_MVP.md`.
   ISG manifest output, and Cloudflare `wrangler.json` generation when the app
   targets Cloudflare), and `viact preview` serves the production build with
   static-file fallback and ISG revalidation.
-- **Starter CLI** — `create-viact` scaffolds a fresh app, prompts for the
-  target directory, infers the active package manager, and offers Node.js or
-  Cloudflare adapter setup. The generated app includes a minimal route manifest,
-  shell, first page, and sample API route.
 - **Package builds** — `tsdown` compiles `viact`, `@viact/vite-plugin`,
   `@viact/adapter-node`, and `@viact/adapter-cloudflare` from TypeScript to
   ESM (`dist/index.mjs` + `.d.mts`). The CLI remains plain JS.

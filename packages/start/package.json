@@ -1,0 +1,16 @@
+{
+  "name": "create-viact",
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "create-viact": "./bin/create-viact.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node -e \"\""
+  }
+}
