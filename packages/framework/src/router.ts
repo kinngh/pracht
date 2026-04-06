@@ -41,8 +41,6 @@ export async function initClientRouter(
 ): Promise<void> {
   const { app, routeModules, shellModules, root, findModuleKey } = options;
 
-  let isFirstRender = true;
-
   // ------------------------------------------------------------------
   // Build a Preact VNode tree for a matched route
   // ------------------------------------------------------------------
@@ -149,7 +147,6 @@ export async function initClientRouter(
     const tree = await buildRouteTree(initialMatch, options.initialState.data);
     if (tree) {
       hydrate(tree, root);
-      isFirstRender = false;
     }
   }
 

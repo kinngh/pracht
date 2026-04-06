@@ -51,12 +51,6 @@ This repo now has the first pass of the Phase 1 monorepo layout described in
 
 The current loop is runnable end-to-end. The next priorities are:
 
-1. Client-side navigation — implement the client router that intercepts `<a>`
-   clicks, fetches route-state JSON, and swaps the Preact tree without a full
-   page reload. This is the biggest user-facing gap.
-1. SSG prerendering — the Vite plugin needs a build hook that calls `prerender()`
-   on each `render: "ssg"` route, runs loaders, and writes static HTML files to
-   `dist/client/<path>/index.html`.
 1. ISG revalidation — implement time-based revalidation in the Node adapter
    using file mtime checks against the route's `revalidate.seconds`.
 1. HMR — ensure route/shell/middleware module changes propagate via Vite's HMR
