@@ -36,8 +36,11 @@ This repo now has the first pass of the Phase 1 monorepo layout described in
   lazy-loads the route and shell modules via `import.meta.glob()`, and calls
   `hydrate()` from Preact.
 - **CLI** — `viact dev` starts a Vite dev server with SSR, `viact build` runs
-  client + server builds, and `viact preview` serves the production build with
-  static-file fallback.
+  client + server builds (with Vite manifest generation), and `viact preview`
+  serves the production build with static-file fallback.
+- **Package builds** — `tsdown` compiles `viact`, `@viact/vite-plugin`, and
+  `@viact/adapter-node` from TypeScript to ESM (`dist/index.mjs` + `.d.mts`).
+  The CLI remains plain JS.
 - **Node adapter** — Translates Node requests to Web `Request` objects and calls
   `handleViactRequest()`.
 - **E2E tests** — Playwright tests cover SSR rendering, loader data, head
@@ -48,16 +51,13 @@ This repo now has the first pass of the Phase 1 monorepo layout described in
 
 The current loop is runnable end-to-end. The next priorities are:
 
-1. Production build output verification — confirm the `viact build` + `viact
-   preview` pipeline produces working client/server bundles. The virtual module
-   entry names may not resolve correctly through Rolldown's output.
-2. Client-side navigation — implement the client router that intercepts `<a>`
+1. Client-side navigation — implement the client router that intercepts `<a>`
    clicks, fetches route-state JSON, and swaps the Preact tree without a full
    page reload. This is the biggest user-facing gap.
-3. SSG prerendering — the Vite plugin needs a build hook that calls `prerender()`
+1. SSG prerendering — the Vite plugin needs a build hook that calls `prerender()`
    on each `render: "ssg"` route, runs loaders, and writes static HTML files to
    `dist/client/<path>/index.html`.
-4. ISG revalidation — implement time-based revalidation in the Node adapter
+1. ISG revalidation — implement time-based revalidation in the Node adapter
    using file mtime checks against the route's `revalidate.seconds`.
-5. HMR — ensure route/shell/middleware module changes propagate via Vite's HMR
+1. HMR — ensure route/shell/middleware module changes propagate via Vite's HMR
    without a full page reload.

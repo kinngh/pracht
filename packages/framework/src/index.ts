@@ -15,6 +15,7 @@ export {
   useSubmitAction,
   ViactRuntimeProvider,
 } from "./runtime.ts";
+export { initClientRouter, useNavigate } from "./router.ts";
 export { ViactHttpError } from "./types.ts";
 export type {
   ActionArgs,
@@ -60,3 +61,4 @@ export type {
   SubmitActionOptions,
   ViactHydrationState,
 } from "./runtime.ts";
+export type { InitClientRouterOptions, NavigateFn } from "./router.ts";

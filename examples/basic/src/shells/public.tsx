@@ -5,6 +5,10 @@ export function Shell({ children }: ShellProps) {
     <div class="public-shell">
       <header>
         <strong>Viact</strong>
+        <nav>
+          <a href="/">Home</a>
+          <a href="/pricing">Pricing</a>
+        </nav>
       </header>
       <main>{children}</main>
       <footer>Preact-first. Vite-native. Explicit routing.</footer>

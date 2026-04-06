@@ -120,6 +120,118 @@ test("unmatched route returns 404", async ({ request }) => {
 // Hydration
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Client-side navigation
+// ---------------------------------------------------------------------------
+
+test("clicking a link navigates without full page reload", async ({ page }) => {
+  await page.goto("/");
+  // Wait for hydration
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  // Capture a page-level reference to detect full reloads
+  await page.evaluate(() => {
+    (window as any).__NAV_TOKEN__ = true;
+  });
+
+  // Click the pricing link
+  await page.click('a[href="/pricing"]');
+
+  // The URL should update
+  await page.waitForURL("/pricing");
+
+  // The token should still exist (no full reload)
+  const tokenSurvived = await page.evaluate(
+    () => (window as any).__NAV_TOKEN__ === true,
+  );
+  expect(tokenSurvived).toBe(true);
+
+  // Pricing content should render
+  await expect(page.locator("h1")).toContainText("MVP plan");
+});
+
+test("client-side navigation updates shell when crossing shell boundaries", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: "session", value: "abc123", domain: "localhost", path: "/" },
+  ]);
+
+  await page.goto("/dashboard");
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  // We're in the app shell
+  await expect(page.locator(".app-shell")).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as any).__NAV_TOKEN__ = true;
+  });
+
+  // Navigate to home (public shell)
+  await page.click('a[href="/"]');
+  await page.waitForURL("/");
+
+  // Should now be in public shell
+  await expect(page.locator(".public-shell")).toBeVisible();
+
+  // Still a client-side navigation
+  const tokenSurvived = await page.evaluate(
+    () => (window as any).__NAV_TOKEN__ === true,
+  );
+  expect(tokenSurvived).toBe(true);
+});
+
+test("back button works with client-side navigation", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  await page.evaluate(() => {
+    (window as any).__NAV_TOKEN__ = true;
+  });
+
+  // Navigate to pricing
+  await page.click('a[href="/pricing"]');
+  await page.waitForURL("/pricing");
+  await expect(page.locator("h1")).toContainText("MVP plan");
+
+  // Go back
+  await page.goBack();
+  await page.waitForURL("/");
+
+  // Home content should render
+  await expect(page.locator("h1")).toContainText("explicit app manifest");
+
+  // Token still alive — no full reload during back navigation either
+  const tokenSurvived = await page.evaluate(
+    () => (window as any).__NAV_TOKEN__ === true,
+  );
+  expect(tokenSurvived).toBe(true);
+});
+
+test("same-shell navigation preserves shell and updates route content", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  // Verify we're on home in public shell
+  await expect(page.locator(".public-shell")).toBeVisible();
+  await expect(page.locator("h1")).toContainText("explicit app manifest");
+
+  // Navigate to pricing (same public shell)
+  await page.click('a[href="/pricing"]');
+  await page.waitForURL("/pricing");
+
+  // Shell still present, content changed
+  await expect(page.locator(".public-shell")).toBeVisible();
+  await expect(page.locator("h1")).toContainText("MVP plan");
+});
+
+// ---------------------------------------------------------------------------
+// Hydration
+// ---------------------------------------------------------------------------
+
 test("page hydrates without console errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (msg) => {
@@ -130,9 +242,7 @@ test("page hydrates without console errors", async ({ page }) => {
 
   await page.goto("/");
   // Wait for hydration to complete
-  await page.waitForFunction(
-    () => document.getElementById("viact-root")?.children.length ?? 0 > 0,
-  );
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
 
   // Filter out known non-critical warnings
   const criticalErrors = errors.filter(
