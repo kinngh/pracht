@@ -1,6 +1,5 @@
 import { execFileSync, spawn } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,14 +10,16 @@ test("viact build emits a deployable Node server entry", async () => {
 
   const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
   const fixtureDir = resolve(repoRoot, "examples/basic");
-  const tempDir = mkdtempSync(resolve(tmpdir(), "viact-node-build-"));
+  const tempRoot = resolve(repoRoot, ".tmp");
+  mkdirSync(tempRoot, { recursive: true });
+  const tempDir = mkdtempSync(resolve(tempRoot, "viact-node-build-"));
   const exampleDir = resolve(tempDir, "project");
   const distDir = resolve(exampleDir, "dist");
   const serverEntryPath = resolve(exampleDir, "dist/server/server.js");
 
   cpSync(fixtureDir, exampleDir, {
     filter(source) {
-      return ![".vercel", "dist", "node_modules", "test-results"].some((entry) =>
+      return ![".vercel", "dist", "test-results"].some((entry) =>
         source.includes(`/examples/basic/${entry}`),
       );
     },
@@ -26,7 +27,7 @@ test("viact build emits a deployable Node server entry", async () => {
   });
   rmSync(distDir, { force: true, recursive: true });
 
-  execFileSync(process.execPath, ["../../packages/cli/bin/viact.js", "build"], {
+  execFileSync(process.execPath, [resolve(repoRoot, "packages/cli/bin/viact.js"), "build"], {
     cwd: exampleDir,
     env: {
       ...process.env,
