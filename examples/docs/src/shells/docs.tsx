@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useLocation } from "viact";
 import type { ShellProps } from "viact";
 import "../styles/global.css";
 
@@ -13,50 +13,6 @@ const NAV = [
     ],
   },
 ];
-
-/**
- * Track the current pathname reactively, including after client-side navigation.
- *
- * Starts as '' to match the SSG prerendered HTML (no active links), then updates
- * via useEffect after hydration and on every subsequent pushState / popstate.
- */
-// TODO: this should be part of the client-side router, and exposed as a hook like usePathname or useLocation
-function useCurrentPath(): string {
-  const [path, setPath] = useState("");
-
-  useEffect(() => {
-    // Set immediately on mount (after hydration)
-    setPath(window.location.pathname);
-
-    // Patch history.pushState so client-side navigations fire a custom event.
-    // The viact router calls pushState before calling render(), so by the time
-    // our handler runs, window.location.pathname is already updated.
-    const origPush = history.pushState.bind(history);
-    const origReplace = history.replaceState.bind(history);
-
-    history.pushState = function (...args) {
-      origPush(...args);
-      window.dispatchEvent(new Event("viact:navigate"));
-    };
-    history.replaceState = function (...args) {
-      origReplace(...args);
-      window.dispatchEvent(new Event("viact:navigate"));
-    };
-
-    const handler = () => setPath(window.location.pathname);
-    window.addEventListener("popstate", handler);
-    window.addEventListener("viact:navigate", handler);
-
-    return () => {
-      history.pushState = origPush;
-      history.replaceState = origReplace;
-      window.removeEventListener("popstate", handler);
-      window.removeEventListener("viact:navigate", handler);
-    };
-  }, []);
-
-  return path;
-}
 
 function NavLink({
   href,
@@ -79,7 +35,7 @@ function NavLink({
 }
 
 export function Shell({ children }: ShellProps) {
-  const currentPath = useCurrentPath();
+  const { pathname: currentPath } = useLocation();
   const docsActive = currentPath.startsWith("/docs");
 
   return (

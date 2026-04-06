@@ -141,6 +141,15 @@ export function useRouteData<TData = unknown>(): TData {
   return useContext(RouteDataContext)?.data as TData;
 }
 
+export interface Location {
+  pathname: string;
+}
+
+export function useLocation(): Location {
+  const url = useContext(RouteDataContext)?.url ?? (typeof window !== "undefined" ? window.location.pathname : "/");
+  return { pathname: url };
+}
+
 export function useRevalidateRoute() {
   const runtime = useContext(RouteDataContext);
 
