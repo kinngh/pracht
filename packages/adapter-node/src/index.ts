@@ -42,8 +42,6 @@ export function createNodeRequestHandler<TContext = unknown>(
       context,
       registry: options.registry,
       request,
-      staticDir: options.staticDir,
-      viteManifest: options.viteManifest,
     } satisfies HandleViactRequestOptions<TContext>);
 
     await writeWebResponse(res, response);

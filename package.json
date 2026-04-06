@@ -7,12 +7,24 @@
     "check": "pnpm typecheck && pnpm test",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "viact": "node ./packages/cli/bin/viact.js"
+    "viact": "node ./packages/cli/bin/viact.js",
+    "format": "oxfmt --write .",
+    "lint": "oxlint . --fix",
+    "e2e": "playwright test",
+    "dev:example": "cd examples/basic && node ../../packages/cli/bin/viact.js dev",
+    "build:example": "cd examples/basic && node ../../packages/cli/bin/viact.js build",
+    "preview:example": "cd examples/basic && node ../../packages/cli/bin/viact.js preview"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@preact/preset-vite": "^2.9.4",
     "@types/node": "^22.15.21",
+    "oxfmt": "^0.43.0",
+    "oxlint": "^1.58.0",
     "preact": "^10.26.9",
+    "preact-render-to-string": "^6.5.13",
     "typescript": "^5.8.3",
+    "vite": "^8.0.0",
     "vitest": "^3.2.4"
   }
 }

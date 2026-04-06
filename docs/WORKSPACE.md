@@ -7,34 +7,55 @@ This repo now has the first pass of the Phase 1 monorepo layout described in
 
 | Path | Package | Current role |
 |------|---------|--------------|
-| `packages/framework` | `viact` | Core manifest API, route resolution, route matching, runtime contracts |
-| `packages/vite-plugin` | `@viact/vite-plugin` | Virtual module IDs and generated module source for client/server registries |
+| `packages/framework` | `viact` | Core manifest API, route resolution, route matching, SSR rendering, client runtime |
+| `packages/vite-plugin` | `@viact/vite-plugin` | Virtual modules, `import.meta.glob()` registries, dev SSR middleware |
 | `packages/adapter-node` | `@viact/adapter-node` | Node `IncomingMessage`/`ServerResponse` bridge into `handleViactRequest()` |
-| `packages/cli` | `@viact/cli` | `viact dev`, `build`, and `preview` command surface |
-| `examples/basic` | `@viact/example-basic` | Example app manifest, shells, middleware, and route modules |
+| `packages/cli` | `@viact/cli` | `viact dev`, `build`, and `preview` backed by Vite |
+| `examples/basic` | `@viact/example-basic` | Example app with SSG, ISG, SSR, and SPA routes plus auth middleware |
 
 ## What Exists Today
 
-- The `viact` package already defines the public MVP surface for `defineApp()`,
-  `route()`, `group()`, `timeRevalidate()`, `resolveApp()`, and
-  `matchAppRoute()`.
-- Route groups now flatten into resolved routes with inherited shell,
-  middleware, render mode, and path prefix metadata.
-- Dynamic segment and catch-all matching are implemented so the router can be
-  exercised independently of rendering.
-- The Vite plugin package now defines the `virtual:viact/client` and
-  `virtual:viact/server` module boundaries plus generated `import.meta.glob()`
-  registries.
-- The Node adapter translates Node requests into Web `Request` objects and hands
-  them to the framework entry point.
-- The CLI currently defines the user-facing command shape while the real dev,
-  build, and preview workflows are still to be implemented.
+- **Route manifest** — `defineApp()`, `route()`, `group()`, `resolveApp()`, and
+  `matchAppRoute()` are fully implemented with dynamic-segment and catch-all
+  matching.
+- **Server rendering** — `handleViactRequest()` executes the full request
+  lifecycle: middleware chain → loader → Preact `renderToString` → HTML document
+  assembly with hydration state (`window.__VIACT_STATE__`), head metadata
+  merging, and client entry injection.
+- **Render modes** — SSR, SSG, and ISG routes render server-side; SPA routes
+  return a minimal shell with no SSR content; route-state JSON responses are
+  returned when the `x-viact-route-state-request` header is present.
+- **Middleware** — Named middleware from the manifest runs before loaders and can
+  redirect, return a Response, or augment the context.
+- **Actions** — POST/PUT/PATCH/DELETE requests are routed to the route module's
+  `action` export and return JSON.
+- **Vite plugin** — Generates `virtual:viact/client` (hydration entry) and
+  `virtual:viact/server` (resolved app + module registry) virtual modules. The
+  `configureServer` hook adds SSR middleware to the Vite dev server.
+- **Client hydration** — The generated client module matches the current route,
+  lazy-loads the route and shell modules via `import.meta.glob()`, and calls
+  `hydrate()` from Preact.
+- **CLI** — `viact dev` starts a Vite dev server with SSR, `viact build` runs
+  client + server builds, and `viact preview` serves the production build with
+  static-file fallback.
+- **Node adapter** — Translates Node requests to Web `Request` objects and calls
+  `handleViactRequest()`.
+- **E2E tests** — Playwright tests cover SSR rendering, loader data, head
+  metadata, middleware redirects, auth-gated routes, SPA mode, route-state JSON,
+  404 handling, and hydration.
 
 ## Next Layer
 
-The next meaningful slice is to make the current package boundaries executable:
+The current loop is runnable end-to-end. The next priorities are:
 
-1. Execute loaders and shell rendering inside `handleViactRequest()`.
-2. Hydrate the example app through the generated client and server virtual modules.
-3. Replace the CLI placeholders with real Vite-backed `dev`, `build`, and `preview` commands.
-4. Add Playwright coverage around the example app once the loop is runnable.
+1. Production build output verification — confirm the `viact build` + `viact
+   preview` pipeline produces working client/server bundles.
+2. Client-side navigation — implement the client router that intercepts link
+   clicks, fetches route-state JSON, and updates the Preact tree without a full
+   page reload.
+3. SSG prerendering — run loaders and render static HTML to disk at build time
+   for routes with `render: "ssg"`.
+4. ISG revalidation — implement time-based revalidation in the Node adapter
+   using file modification timestamps.
+5. HMR — ensure route/shell/middleware module changes propagate via Vite's HMR
+   without a full reload.

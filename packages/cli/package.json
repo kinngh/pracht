@@ -4,5 +4,8 @@
   "type": "module",
   "bin": {
     "viact": "./bin/viact.js"
+  },
+  "dependencies": {
+    "viact": "workspace:*"
   }
 }
