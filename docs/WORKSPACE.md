@@ -46,12 +46,16 @@ This repo now has the first pass of the Phase 1 monorepo layout described in
 - **E2E tests** — Playwright tests cover SSR rendering, loader data, head
   metadata, middleware redirects, auth-gated routes, SPA mode, route-state JSON,
   404 handling, and hydration.
+- **Custom Vite plugins** — Users bring their own Vite plugins (MDX, Tailwind,
+  image tools, PWA, etc.) alongside `viact()` in `vite.config.ts`. No special
+  integration required — plugins participate in the full Vite pipeline for both
+  client and SSR builds.
 
-## Next Layer
+## Later
 
 The current loop is runnable end-to-end. The next priorities are:
 
 1. ISG revalidation — implement time-based revalidation in the Node adapter
    using file mtime checks against the route's `revalidate.seconds`.
 1. HMR — ensure route/shell/middleware module changes propagate via Vite's HMR
-   without a full page reload.
+   without a full page reload. Same for the route-definitions, ...

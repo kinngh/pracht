@@ -11,6 +11,34 @@ export interface TimeRevalidatePolicy {
 
 export type RouteRevalidate = TimeRevalidatePolicy;
 
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
+
+export type ApiRouteHandler<TContext = unknown> = (
+  args: BaseRouteArgs<TContext>,
+) => MaybePromise<Response>;
+
+export interface ApiRouteModule<TContext = unknown> {
+  GET?: ApiRouteHandler<TContext>;
+  POST?: ApiRouteHandler<TContext>;
+  PUT?: ApiRouteHandler<TContext>;
+  PATCH?: ApiRouteHandler<TContext>;
+  DELETE?: ApiRouteHandler<TContext>;
+  HEAD?: ApiRouteHandler<TContext>;
+  OPTIONS?: ApiRouteHandler<TContext>;
+}
+
+export interface ResolvedApiRoute {
+  path: string;
+  file: string;
+  segments: RouteSegment[];
+}
+
+export interface ApiRouteMatch {
+  route: ResolvedApiRoute;
+  params: RouteParams;
+  pathname: string;
+}
+
 export interface RouteMeta {
   id?: string;
   shell?: string;
@@ -84,6 +112,7 @@ export interface ResolvedRoute extends Omit<RouteMeta, "middleware"> {
 
 export interface ResolvedViactApp extends Omit<ViactApp, "routes"> {
   routes: ResolvedRoute[];
+  apiRoutes: ResolvedApiRoute[];
 }
 
 export interface RouteMatch {
@@ -201,6 +230,7 @@ export interface ModuleRegistry {
   routeModules?: Record<string, ModuleImporter<RouteModule>>;
   shellModules?: Record<string, ModuleImporter<ShellModule>>;
   middlewareModules?: Record<string, ModuleImporter<MiddlewareModule>>;
+  apiModules?: Record<string, ModuleImporter<ApiRouteModule>>;
 }
 
 export class ViactHttpError extends Error {

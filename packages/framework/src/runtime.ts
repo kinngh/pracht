@@ -2,13 +2,16 @@ import { createContext, h } from "preact";
 import type { ComponentChildren, JSX, VNode } from "preact";
 import { useContext } from "preact/hooks";
 
-import { matchAppRoute } from "./app.ts";
+import { matchApiRoute, matchAppRoute } from "./app.ts";
 import type {
+  ApiRouteModule,
   BaseRouteArgs,
   HeadMetadata,
+  HttpMethod,
   MiddlewareModule,
   ModuleImporter,
   ModuleRegistry,
+  ResolvedApiRoute,
   RouteModule,
   ShellModule,
   ViactApp,
@@ -31,6 +34,7 @@ export interface HandleViactRequestOptions<TContext = unknown> {
   registry?: ModuleRegistry;
   clientEntryUrl?: string;
   cssUrls?: string[];
+  apiRoutes?: ResolvedApiRoute[];
 }
 
 export interface SubmitActionOptions {
@@ -127,6 +131,45 @@ export async function handleViactRequest<TContext>(
   options: HandleViactRequestOptions<TContext>,
 ): Promise<Response> {
   const url = new URL(options.request.url);
+
+  // --- API route dispatch (before page routes) ---
+  if (options.apiRoutes?.length) {
+    const apiMatch = matchApiRoute(options.apiRoutes, url.pathname);
+    if (apiMatch) {
+      const registry = options.registry ?? {};
+      const apiModule = await resolveRegistryModule<ApiRouteModule>(
+        registry.apiModules,
+        apiMatch.route.file,
+      );
+
+      if (!apiModule) {
+        return new Response("API route module not found", {
+          status: 500,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+
+      const method = options.request.method.toUpperCase() as HttpMethod;
+      const handler = apiModule[method];
+
+      if (!handler) {
+        return new Response("Method not allowed", {
+          status: 405,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+
+      return handler({
+        request: options.request,
+        params: apiMatch.params,
+        context: (options.context ?? {}) as TContext,
+        signal: AbortSignal.timeout(30_000),
+        url,
+        route: apiMatch.route as any,
+      });
+    }
+  }
+
   const match = matchAppRoute(options.app, url.pathname);
 
   if (!match) {
@@ -403,6 +446,15 @@ export interface PrerenderResult {
   html: string;
 }
 
+export interface ISGManifestEntry {
+  revalidate: import("./types.ts").RouteRevalidate;
+}
+
+export interface PrerenderAppResult {
+  pages: PrerenderResult[];
+  isgManifest: Record<string, ISGManifestEntry>;
+}
+
 export interface PrerenderAppOptions {
   app: ViactApp;
   registry?: ModuleRegistry;
@@ -412,13 +464,20 @@ export interface PrerenderAppOptions {
 
 export async function prerenderApp(
   options: PrerenderAppOptions,
-): Promise<PrerenderResult[]> {
+): Promise<PrerenderResult[]>;
+export async function prerenderApp(
+  options: PrerenderAppOptions & { withISGManifest: true },
+): Promise<PrerenderAppResult>;
+export async function prerenderApp(
+  options: PrerenderAppOptions & { withISGManifest?: boolean },
+): Promise<PrerenderResult[] | PrerenderAppResult> {
   const { resolveApp } = await import("./app.ts");
   const resolved = resolveApp(options.app);
   const results: PrerenderResult[] = [];
+  const isgManifest: Record<string, ISGManifestEntry> = {};
 
   for (const route of resolved.routes) {
-    if (route.render !== "ssg") continue;
+    if (route.render !== "ssg" && route.render !== "isg") continue;
 
     const paths = await collectSSGPaths(route, options.registry);
 
@@ -436,14 +495,22 @@ export async function prerenderApp(
 
       if (response.status !== 200) {
         console.warn(
-          `  Warning: SSG route "${pathname}" returned status ${response.status}, skipping.`,
+          `  Warning: ${route.render!.toUpperCase()} route "${pathname}" returned status ${response.status}, skipping.`,
         );
         continue;
       }
 
       const html = await response.text();
       results.push({ path: pathname, html });
+
+      if (route.render === "isg" && route.revalidate) {
+        isgManifest[pathname] = { revalidate: route.revalidate };
+      }
     }
+  }
+
+  if (options.withISGManifest) {
+    return { pages: results, isgManifest };
   }
 
   return results;

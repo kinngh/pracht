@@ -25,7 +25,7 @@ adapters, and Claude Code skills for framework operation.
 
 ## Feature Overview
 
-### Routing (from plyon)
+### Routing
 
 - **Hybrid file-based routing**: route modules live in `src/routes/`, wired via an
   explicit `src/routes.ts` manifest using `defineApp()`, `route()`, `group()`.

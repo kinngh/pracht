@@ -1,9 +1,14 @@
+import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { dirname, join } from "node:path";
 
 import {
   handleViactRequest,
   type HandleViactRequestOptions,
+  type ISGManifestEntry,
   type ModuleRegistry,
+  type ResolvedApiRoute,
   type ViactApp,
 } from "viact";
 
@@ -18,6 +23,10 @@ export interface NodeAdapterOptions<TContext = unknown> {
   registry?: ModuleRegistry;
   staticDir?: string;
   viteManifest?: unknown;
+  isgManifest?: Record<string, ISGManifestEntry>;
+  apiRoutes?: ResolvedApiRoute[];
+  clientEntryUrl?: string;
+  cssUrls?: string[];
   createContext?: (
     args: NodeAdapterContextArgs,
   ) => TContext | Promise<TContext>;
@@ -31,8 +40,49 @@ export interface NodeServerEntryModuleOptions {
 export function createNodeRequestHandler<TContext = unknown>(
   options: NodeAdapterOptions<TContext>,
 ) {
+  const isgManifest = options.isgManifest ?? {};
+  const staticDir = options.staticDir;
+
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const request = await createWebRequest(req);
+    const url = new URL(request.url);
+
+    // --- ISG stale-while-revalidate for GET requests ---
+    if (staticDir && request.method === "GET" && url.pathname in isgManifest) {
+      const entry = isgManifest[url.pathname];
+      const htmlPath = url.pathname === "/"
+        ? join(staticDir, "index.html")
+        : join(staticDir, url.pathname, "index.html");
+
+      if (existsSync(htmlPath)) {
+        const stat = statSync(htmlPath);
+        const ageMs = Date.now() - stat.mtimeMs;
+        const isStale =
+          entry.revalidate.kind === "time" &&
+          ageMs > entry.revalidate.seconds * 1000;
+
+        // Serve the cached file
+        const html = await readFile(htmlPath, "utf-8");
+        res.statusCode = 200;
+        res.setHeader("content-type", "text/html; charset=utf-8");
+        if (isStale) {
+          res.setHeader("x-viact-isg", "stale");
+        } else {
+          res.setHeader("x-viact-isg", "fresh");
+        }
+        res.end(html);
+
+        // Background regeneration if stale
+        if (isStale) {
+          regenerateISGPage(options, url.pathname, htmlPath).catch((err) => {
+            console.error(`ISG regeneration failed for ${url.pathname}:`, err);
+          });
+        }
+
+        return;
+      }
+    }
+
     const context = options.createContext
       ? await options.createContext({ request, req, res })
       : undefined;
@@ -42,10 +92,51 @@ export function createNodeRequestHandler<TContext = unknown>(
       context,
       registry: options.registry,
       request,
+      apiRoutes: options.apiRoutes,
+      clientEntryUrl: options.clientEntryUrl,
+      cssUrls: options.cssUrls,
     } satisfies HandleViactRequestOptions<TContext>);
+
+    // Cache ISG responses on first render
+    if (
+      staticDir &&
+      request.method === "GET" &&
+      url.pathname in isgManifest &&
+      response.status === 200
+    ) {
+      const html = await response.clone().text();
+      const htmlPath = url.pathname === "/"
+        ? join(staticDir, "index.html")
+        : join(staticDir, url.pathname, "index.html");
+      mkdirSync(dirname(htmlPath), { recursive: true });
+      writeFileSync(htmlPath, html, "utf-8");
+    }
 
     await writeWebResponse(res, response);
   };
+}
+
+async function regenerateISGPage<TContext>(
+  options: NodeAdapterOptions<TContext>,
+  pathname: string,
+  htmlPath: string,
+): Promise<void> {
+  const url = new URL(pathname, "http://localhost");
+  const request = new Request(url, { method: "GET" });
+
+  const response = await handleViactRequest({
+    app: options.app,
+    registry: options.registry,
+    request,
+    clientEntryUrl: options.clientEntryUrl,
+    cssUrls: options.cssUrls,
+  });
+
+  if (response.status === 200) {
+    const html = await response.text();
+    mkdirSync(dirname(htmlPath), { recursive: true });
+    writeFileSync(htmlPath, html, "utf-8");
+  }
 }
 
 export function createNodeServerEntryModule(

@@ -30,6 +30,7 @@ export interface ViactPluginOptions {
   routesDir?: string;
   shellsDir?: string;
   middlewareDir?: string;
+  apiDir?: string;
 }
 
 const DEFAULTS: Required<ViactPluginOptions> = {
@@ -37,6 +38,7 @@ const DEFAULTS: Required<ViactPluginOptions> = {
   middlewareDir: "/src/middleware",
   routesDir: "/src/routes",
   shellsDir: "/src/shells",
+  apiDir: "/src/api",
 };
 
 export function viact(options: ViactPluginOptions = {}): Plugin {
@@ -124,12 +126,13 @@ export function createViactServerModuleSource(
   const registrySource = createViactRegistryModuleSource(resolved);
 
   return [
-    'import { resolveApp } from "viact";',
+    'import { resolveApp, resolveApiRoutes } from "viact";',
     `import { app } from ${JSON.stringify(resolved.appFile)};`,
     "",
     registrySource,
     "",
     "export const resolvedApp = resolveApp(app);",
+    `export const apiRoutes = resolveApiRoutes(Object.keys(apiModules), ${JSON.stringify(resolved.apiDir)});`,
     "",
   ].join("\n");
 }
@@ -143,11 +146,13 @@ export function createViactRegistryModuleSource(
     `export const routeModules = import.meta.glob(${JSON.stringify(`${resolved.routesDir}/**/*.{ts,tsx,js,jsx}`)});`,
     `export const shellModules = import.meta.glob(${JSON.stringify(`${resolved.shellsDir}/**/*.{ts,tsx,js,jsx}`)});`,
     `export const middlewareModules = import.meta.glob(${JSON.stringify(`${resolved.middlewareDir}/**/*.{ts,tsx,js,jsx}`)});`,
+    `export const apiModules = import.meta.glob(${JSON.stringify(`${resolved.apiDir}/**/*.{ts,js}`)});`,
     "",
     "export const registry = {",
     "  routeModules,",
     "  shellModules,",
     "  middlewareModules,",
+    "  apiModules,",
     "};",
   ].join("\n");
 }
@@ -180,12 +185,13 @@ function createDevSSRMiddleware(
         server.ssrLoadModule(VIACT_SERVER_MODULE_ID),
       ]);
 
-      const webRequest = nodeToWebRequest(req);
+      const webRequest = await nodeToWebRequest(req);
       const response = await framework.handleViactRequest({
         app: serverMod.resolvedApp,
         registry: serverMod.registry,
         request: webRequest,
         clientEntryUrl: CLIENT_BROWSER_PATH,
+        apiRoutes: serverMod.apiRoutes,
       });
 
       // If the framework returned 404, fall through to Vite's default handling
@@ -215,13 +221,16 @@ function createDevSSRMiddleware(
   };
 }
 
-function nodeToWebRequest(req: IncomingMessage): Request {
+const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
+
+async function nodeToWebRequest(req: IncomingMessage): Promise<Request> {
   const protocol =
     (Array.isArray(req.headers["x-forwarded-proto"])
       ? req.headers["x-forwarded-proto"][0]
       : req.headers["x-forwarded-proto"]) ?? "http";
   const host = req.headers.host ?? "localhost";
   const url = new URL(req.url ?? "/", `${protocol}://${host}`);
+  const method = req.method ?? "GET";
 
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
@@ -233,10 +242,20 @@ function nodeToWebRequest(req: IncomingMessage): Request {
     }
   }
 
-  return new Request(url, {
-    method: req.method ?? "GET",
-    headers,
-  });
+  const init: RequestInit = { method, headers };
+
+  if (!BODYLESS_METHODS.has(method.toUpperCase())) {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of req) {
+      chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    }
+    const body = Buffer.concat(chunks);
+    if (body.byteLength > 0) {
+      init.body = body;
+    }
+  }
+
+  return new Request(url, init);
 }
 
 function resolveOptions(

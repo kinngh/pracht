@@ -88,15 +88,16 @@ async function build() {
     const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;
     const cssUrls = (clientEntry?.css ?? []).map((f) => `/${f}`);
 
-    const pages = await prerenderApp({
+    const { pages, isgManifest } = await prerenderApp({
       app: serverMod.resolvedApp,
       registry: serverMod.registry,
       clientEntryUrl,
       cssUrls,
+      withISGManifest: true,
     });
 
     if (pages.length > 0) {
-      console.log(`\n  Prerendering ${pages.length} SSG route(s)...\n`);
+      console.log(`\n  Prerendering ${pages.length} SSG/ISG route(s)...\n`);
       for (const page of pages) {
         const filePath =
           page.path === "/"
@@ -107,6 +108,13 @@ async function build() {
         writeFileSync(filePath, page.html, "utf-8");
         console.log(`    ${page.path} → ${filePath.replace(root + "/", "")}`);
       }
+    }
+
+    // Write ISG manifest for the preview/production server
+    if (Object.keys(isgManifest).length > 0) {
+      const isgManifestPath = resolve(root, "dist/server/isg-manifest.json");
+      writeFileSync(isgManifestPath, JSON.stringify(isgManifest, null, 2), "utf-8");
+      console.log(`\n  ISG manifest → dist/server/isg-manifest.json (${Object.keys(isgManifest).length} route(s))\n`);
     }
   }
 
@@ -127,6 +135,12 @@ async function preview() {
 
   const serverMod = await import(serverEntry);
   const { handleViactRequest } = await import("viact");
+
+  // Load ISG manifest if it exists
+  const isgManifestPath = resolve(root, "dist/server/isg-manifest.json");
+  const isgManifest = existsSync(isgManifestPath)
+    ? JSON.parse(readFileSync(isgManifestPath, "utf-8"))
+    : {};
 
   // Read the Vite manifest for asset URLs
   const manifestPath = resolve(clientDir, ".vite/manifest.json");
@@ -155,6 +169,52 @@ async function preview() {
 
   const server = createHttpServer(async (req, res) => {
     const url = req.url ?? "/";
+
+    const parsedUrl = new URL(url, "http://localhost");
+
+    // ISG stale-while-revalidate check
+    if (req.method === "GET" && parsedUrl.pathname in isgManifest) {
+      const entry = isgManifest[parsedUrl.pathname];
+      const htmlPath = parsedUrl.pathname === "/"
+        ? join(clientDir, "index.html")
+        : join(clientDir, parsedUrl.pathname, "index.html");
+
+      if (existsSync(htmlPath) && statSync(htmlPath).isFile()) {
+        const stat = statSync(htmlPath);
+        const ageMs = Date.now() - stat.mtimeMs;
+        const isStale =
+          entry.revalidate.kind === "time" &&
+          ageMs > entry.revalidate.seconds * 1000;
+
+        res.setHeader("content-type", "text/html; charset=utf-8");
+        res.setHeader("x-viact-isg", isStale ? "stale" : "fresh");
+        createReadStream(htmlPath).pipe(res);
+
+        if (isStale) {
+          // Background regeneration
+          const regenRequest = new Request(
+            new URL(parsedUrl.pathname, "http://localhost"),
+            { method: "GET" },
+          );
+          handleViactRequest({
+            app: serverMod.resolvedApp,
+            registry: serverMod.registry,
+            request: regenRequest,
+            clientEntryUrl,
+            cssUrls,
+          }).then(async (response) => {
+            if (response.status === 200) {
+              const { mkdirSync, writeFileSync } = await import("node:fs");
+              mkdirSync(dirname(htmlPath), { recursive: true });
+              writeFileSync(htmlPath, await response.text(), "utf-8");
+            }
+          }).catch((err) => {
+            console.error(`ISG regeneration failed for ${parsedUrl.pathname}:`, err);
+          });
+        }
+        return;
+      }
+    }
 
     // Try static file first
     const filePath = join(clientDir, url);
@@ -193,6 +253,7 @@ async function preview() {
         request: webRequest,
         clientEntryUrl,
         cssUrls,
+        apiRoutes: serverMod.apiRoutes,
       });
 
       res.statusCode = response.status;

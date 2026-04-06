@@ -1,6 +1,8 @@
 import type {
+  ApiRouteMatch,
   GroupDefinition,
   GroupMeta,
+  ResolvedApiRoute,
   ResolvedRoute,
   ResolvedViactApp,
   RouteDefinition,
@@ -79,6 +81,7 @@ export function resolveApp(app: ViactApp): ResolvedViactApp {
     shells: app.shells,
     middleware: app.middleware,
     routes,
+    apiRoutes: [],
   };
 }
 
@@ -245,6 +248,70 @@ function normalizeRoutePath(path: string): string {
   return collapsed.length > 1 && collapsed.endsWith("/")
     ? collapsed.slice(0, -1)
     : collapsed;
+}
+
+// ---------------------------------------------------------------------------
+// API Routes — file-based auto-discovery
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a list of file paths from `import.meta.glob` into resolved API routes.
+ *
+ * Example: `"/src/api/health.ts"` → path `/api/health`
+ *          `"/src/api/users/[id].ts"` → path `/api/users/:id`
+ *          `"/src/api/index.ts"` → path `/api`
+ */
+export function resolveApiRoutes(
+  files: string[],
+  apiDir: string = "/src/api",
+): ResolvedApiRoute[] {
+  const normalizedDir = apiDir.replace(/\/$/, "");
+
+  return files.map((file) => {
+    // Strip the apiDir prefix and file extension
+    let relative = file;
+    if (relative.startsWith(normalizedDir)) {
+      relative = relative.slice(normalizedDir.length);
+    }
+    relative = relative.replace(/\.(ts|tsx|js|jsx)$/, "");
+
+    // index files map to the parent directory
+    if (relative.endsWith("/index")) {
+      relative = relative.slice(0, -"/index".length) || "/";
+    }
+
+    // Convert [param] to :param for consistency with page routes
+    relative = relative.replace(/\[([^\]]+)\]/g, ":$1");
+
+    const path = normalizeRoutePath(`/api${relative}`);
+
+    return {
+      path,
+      file,
+      segments: parseRouteSegments(path),
+    };
+  });
+}
+
+export function matchApiRoute(
+  apiRoutes: ResolvedApiRoute[],
+  pathname: string,
+): ApiRouteMatch | undefined {
+  const normalizedPathname = normalizeRoutePath(pathname);
+  const targetSegments = splitPathSegments(normalizedPathname);
+
+  for (const route of apiRoutes) {
+    const params = matchRouteSegments(route.segments, targetSegments);
+    if (params) {
+      return {
+        route,
+        params,
+        pathname: normalizedPathname,
+      };
+    }
+  }
+
+  return undefined;
 }
 
 function createRouteId(path: string): string {

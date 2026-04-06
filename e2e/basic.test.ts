@@ -229,6 +229,38 @@ test("same-shell navigation preserves shell and updates route content", async ({
 });
 
 // ---------------------------------------------------------------------------
+// API Routes
+// ---------------------------------------------------------------------------
+
+test("GET /api/health returns JSON", async ({ request }) => {
+  const response = await request.get("/api/health");
+  expect(response.status()).toBe(200);
+
+  const json = await response.json();
+  expect(json).toEqual({ status: "ok" });
+});
+
+test("POST /api/echo echoes the request body", async ({ request }) => {
+  const response = await request.post("/api/echo", {
+    data: { message: "hello" },
+  });
+  expect(response.status()).toBe(200);
+
+  const json = await response.json();
+  expect(json).toEqual({ echo: { message: "hello" } });
+});
+
+test("PUT /api/health returns 405", async ({ request }) => {
+  const response = await request.put("/api/health");
+  expect(response.status()).toBe(405);
+});
+
+test("GET /api/nonexistent falls through to 404", async ({ request }) => {
+  const response = await request.get("/api/nonexistent");
+  expect(response.status()).toBe(404);
+});
+
+// ---------------------------------------------------------------------------
 // Hydration
 // ---------------------------------------------------------------------------
 

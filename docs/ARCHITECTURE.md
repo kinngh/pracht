@@ -310,6 +310,60 @@ See [docs/ADAPTERS.md](ADAPTERS.md) for per-platform details.
 
 ---
 
+## Custom Vite Plugins
+
+Viact builds on Vite, and users can bring their own Vite plugins alongside the
+viact plugin. Add them in `vite.config.ts`:
+
+```typescript
+import { defineConfig } from "vite";
+import preact from "@preact/preset-vite";
+import { viact } from "@viact/vite-plugin";
+import mdx from "@mdx-js/rollup";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [
+    preact(),
+    viact(),
+    mdx(),
+    tailwindcss(),
+  ],
+});
+```
+
+User plugins run alongside viact's plugin with no special integration needed.
+They participate in the full Vite pipeline — transforms, virtual modules, dev
+server middleware, build hooks — for both client and SSR builds.
+
+### Common use cases
+
+| Plugin | Purpose |
+|--------|---------|
+| `@mdx-js/rollup` | MDX content in route modules |
+| `@tailwindcss/vite` | Tailwind CSS integration |
+| `vite-plugin-pwa` | Service worker / PWA support |
+| `vite-imagetools` | Image optimization and transforms |
+| Custom Rollup plugins | Any Rollup-compatible transform |
+
+### Plugin ordering
+
+Viact's plugin uses `enforce: "pre"` to resolve virtual modules before other
+plugins. User plugins run at normal priority by default. If a plugin needs to
+run before viact (e.g. to transform source before viact sees it), set
+`enforce: "pre"` on that plugin as well — Vite respects declaration order within
+the same enforcement level.
+
+### SSR considerations
+
+Plugins that only target the browser (e.g. injecting `<script>` tags) may need
+conditional logic for SSR. Vite passes `{ ssr: true }` to plugin hooks during
+the server build. See Vite's
+[SSR plugin guide](https://vite.dev/guide/ssr#ssr-specific-plugin-logic) for
+details.
+
+---
+
 ## Type Safety
 
 Viact provides end-to-end type inference from loader to component:
