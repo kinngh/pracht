@@ -1,10 +1,11 @@
 import { createContext, h } from "preact";
-import type { ComponentChildren, JSX, VNode } from "preact";
-import { useContext } from "preact/hooks";
+import type { ComponentChildren, JSX } from "preact";
+import { useContext, useEffect, useState } from "preact/hooks";
 
 import { matchApiRoute, matchAppRoute } from "./app.ts";
 import type {
   ApiRouteModule,
+  ActionEnvelope,
   BaseRouteArgs,
   HeadMetadata,
   HttpMethod,
@@ -44,8 +45,7 @@ export interface SubmitActionOptions {
   headers?: HeadersInit;
 }
 
-export interface FormProps
-  extends Omit<JSX.HTMLAttributes<HTMLFormElement>, "action" | "method"> {
+export interface FormProps extends Omit<JSX.HTMLAttributes<HTMLFormElement>, "action" | "method"> {
   action?: string;
   method?: string;
 }
@@ -53,30 +53,51 @@ export interface FormProps
 declare global {
   interface Window {
     __VIACT_STATE__?: ViactHydrationState;
+    __VIACT_NAVIGATE__?: (to: string, options?: { replace?: boolean }) => Promise<void>;
   }
 }
 
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
 const HYDRATION_STATE_ELEMENT_ID = "viact-state";
 
-const RouteDataContext = createContext<unknown>(undefined);
+interface ViactRuntimeValue {
+  data: unknown;
+  routeId: string;
+  url: string;
+  setData: (data: unknown) => void;
+}
+
+const RouteDataContext = createContext<ViactRuntimeValue | undefined>(undefined);
 
 export function ViactRuntimeProvider<TData>({
   children,
   data,
+  routeId,
+  url,
 }: {
   children: ComponentChildren;
   data: TData;
+  routeId: string;
+  url: string;
 }) {
+  const [routeData, setRouteData] = useState<TData>(data);
+
+  useEffect(() => {
+    setRouteData(data);
+  }, [data, routeId, url]);
+
   return h(RouteDataContext.Provider, {
-    value: data,
+    value: {
+      data: routeData,
+      routeId,
+      setData: setRouteData as (data: unknown) => void,
+      url,
+    },
     children,
   });
 }
 
-export function startApp<TData = unknown>(
-  options: StartAppOptions<TData> = {},
-): TData | undefined {
+export function startApp<TData = unknown>(options: StartAppOptions<TData> = {}): TData | undefined {
   if (typeof window === "undefined") {
     return options.initialData;
   }
@@ -88,9 +109,7 @@ export function startApp<TData = unknown>(
   return readHydrationState<TData>()?.data;
 }
 
-export function readHydrationState<TData = unknown>():
-  | ViactHydrationState<TData>
-  | undefined {
+export function readHydrationState<TData = unknown>(): ViactHydrationState<TData> | undefined {
   if (typeof window === "undefined") {
     return undefined;
   }
@@ -119,26 +138,33 @@ export function readHydrationState<TData = unknown>():
 }
 
 export function useRouteData<TData = unknown>(): TData {
-  return useContext(RouteDataContext) as TData;
+  return useContext(RouteDataContext)?.data as TData;
 }
 
 export function useRevalidateRoute() {
+  const runtime = useContext(RouteDataContext);
+
   return async () => {
     if (typeof window === "undefined") {
       return undefined;
     }
 
-    const response = await fetch(window.location.pathname, {
-      headers: {
-        "x-viact-route-state-request": "1",
-      },
-    });
+    const path = runtime?.url || window.location.pathname + window.location.search;
+    const result = await fetchViactRouteState(path);
 
-    return readResponseBody(response);
+    if (result.type === "redirect") {
+      await navigateToClientLocation(result.location);
+      return undefined;
+    }
+
+    runtime?.setData(result.data);
+    return result.data;
   };
 }
 
 export function useSubmitAction() {
+  const runtime = useContext(RouteDataContext);
+
   return async (options: SubmitActionOptions = {}) => {
     if (typeof window === "undefined") {
       throw new Error("useSubmitAction can only be used in the browser.");
@@ -148,71 +174,174 @@ export function useSubmitAction() {
       method: options.method ?? "POST",
       body: options.body ?? null,
       headers: options.headers,
+      redirect: "manual",
     });
 
-    return readResponseBody(response);
+    if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+      const location = response.headers.get("location");
+      if (location) {
+        await navigateToClientLocation(location);
+        return undefined;
+      }
+
+      window.location.href = options.action ?? window.location.pathname;
+      return undefined;
+    }
+
+    const result = await readResponseBody(response);
+    if (!isActionEnvelope(result)) {
+      return result;
+    }
+
+    if (result.redirect) {
+      await navigateToClientLocation(result.redirect);
+      return result;
+    }
+
+    if (shouldRevalidateCurrentRoute(result.revalidate, runtime?.routeId)) {
+      await useRevalidateResult(runtime, window.location.pathname + window.location.search);
+    }
+
+    return result;
   };
 }
 
 export function Form(props: FormProps) {
-  return h("form", props as JSX.HTMLAttributes<HTMLFormElement>);
+  const submitAction = useSubmitAction();
+  const { onSubmit, method, ...rest } = props;
+
+  return h("form", {
+    ...rest,
+    method,
+    onSubmit: async (event: Event) => {
+      onSubmit?.(event as never);
+      if (event.defaultPrevented) {
+        return;
+      }
+
+      const form = event.currentTarget;
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+
+      const formMethod = (method ?? form.method ?? "post").toUpperCase();
+      if (SAFE_METHODS.has(formMethod)) {
+        return;
+      }
+
+      event.preventDefault();
+      await submitAction({
+        action: props.action ?? form.action,
+        body: new FormData(form),
+        method: formMethod,
+      });
+    },
+  } as JSX.HTMLAttributes<HTMLFormElement>);
+}
+
+export type RouteStateResult =
+  | { type: "data"; data: unknown }
+  | { type: "redirect"; location: string };
+
+export async function fetchViactRouteState(url: string): Promise<RouteStateResult> {
+  const response = await fetch(url, {
+    headers: { "x-viact-route-state-request": "1" },
+    redirect: "manual",
+  });
+
+  if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
+    const location = response.headers.get("location");
+    return {
+      location: location ?? url,
+      type: "redirect",
+    };
+  }
+
+  const json = (await response.json()) as { data: unknown };
+  return {
+    data: json.data,
+    type: "data",
+  };
 }
 
 export async function handleViactRequest<TContext>(
   options: HandleViactRequestOptions<TContext>,
 ): Promise<Response> {
   const url = new URL(options.request.url);
+  const registry = options.registry ?? {};
 
   // --- API route dispatch (before page routes) ---
   if (options.apiRoutes?.length) {
     const apiMatch = matchApiRoute(options.apiRoutes, url.pathname);
     if (apiMatch) {
-      const registry = options.registry ?? {};
+      const apiMiddlewareFiles = (options.app.api.middleware ?? []).flatMap((name) => {
+        const middlewareFile = options.app.middleware[name];
+        return middlewareFile ? [middlewareFile] : [];
+      });
+      const middlewareResult = await runMiddlewareChain({
+        context: (options.context ?? {}) as TContext,
+        middlewareFiles: apiMiddlewareFiles,
+        params: apiMatch.params,
+        registry,
+        request: options.request,
+        route: apiMatch.route,
+        url,
+      });
+      if (middlewareResult.response) {
+        return middlewareResult.response;
+      }
+
       const apiModule = await resolveRegistryModule<ApiRouteModule>(
         registry.apiModules,
         apiMatch.route.file,
       );
 
       if (!apiModule) {
-        return withDefaultSecurityHeaders(new Response("API route module not found", {
-          status: 500,
-          headers: { "content-type": "text/plain; charset=utf-8" },
-        }));
+        return withDefaultSecurityHeaders(
+          new Response("API route module not found", {
+            status: 500,
+            headers: { "content-type": "text/plain; charset=utf-8" },
+          }),
+        );
       }
 
       const method = options.request.method.toUpperCase() as HttpMethod;
       const handler = apiModule[method];
 
       if (!handler) {
-        return withDefaultSecurityHeaders(new Response("Method not allowed", {
-          status: 405,
-          headers: { "content-type": "text/plain; charset=utf-8" },
-        }));
+        return withDefaultSecurityHeaders(
+          new Response("Method not allowed", {
+            status: 405,
+            headers: { "content-type": "text/plain; charset=utf-8" },
+          }),
+        );
       }
 
-      return withDefaultSecurityHeaders(await handler({
-        request: options.request,
-        params: apiMatch.params,
-        context: (options.context ?? {}) as TContext,
-        signal: AbortSignal.timeout(30_000),
-        url,
-        route: apiMatch.route as any,
-      }));
+      return withDefaultSecurityHeaders(
+        await handler({
+          request: options.request,
+          params: apiMatch.params,
+          context: middlewareResult.context,
+          signal: AbortSignal.timeout(30_000),
+          url,
+          route: apiMatch.route as any,
+        }),
+      );
     }
   }
 
   const match = matchAppRoute(options.app, url.pathname);
 
   if (!match) {
-    return withDefaultSecurityHeaders(new Response("Not found", {
-      status: 404,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    }));
+    return withDefaultSecurityHeaders(
+      new Response("Not found", {
+        status: 404,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      }),
+    );
   }
 
-  const registry = options.registry ?? {};
-  const isRouteStateRequest =
-    options.request.headers.get("x-viact-route-state-request") === "1";
+  const isRouteStateRequest = options.request.headers.get("x-viact-route-state-request") === "1";
   const isAction = !SAFE_METHODS.has(options.request.method);
 
   if (isAction) {
@@ -223,35 +352,19 @@ export async function handleViactRequest<TContext>(
   }
 
   // --- Middleware chain ---
-  let context = (options.context ?? {}) as TContext;
-  for (const mwFile of match.route.middlewareFiles) {
-    const mwModule = await resolveRegistryModule<MiddlewareModule>(
-      registry.middlewareModules,
-      mwFile,
-    );
-    if (!mwModule?.middleware) continue;
-
-    const result = await mwModule.middleware({
-      request: options.request,
-      params: match.params,
-      context,
-      signal: AbortSignal.timeout(30_000),
-      url,
-      route: match.route,
-    });
-
-    if (!result) continue;
-    if (result instanceof Response) return withDefaultSecurityHeaders(result);
-    if ("redirect" in result) {
-      return withDefaultSecurityHeaders(new Response(null, {
-        status: 302,
-        headers: { location: result.redirect },
-      }));
-    }
-    if ("context" in result) {
-      context = { ...context, ...result.context } as TContext;
-    }
+  const middlewareResult = await runMiddlewareChain({
+    context: (options.context ?? {}) as TContext,
+    middlewareFiles: match.route.middlewareFiles,
+    params: match.params,
+    registry,
+    request: options.request,
+    route: match.route,
+    url,
+  });
+  if (middlewareResult.response) {
+    return middlewareResult.response;
   }
+  const context = middlewareResult.context;
 
   // --- Load route module ---
   const routeModule = await resolveRegistryModule<RouteModule>(
@@ -271,21 +384,19 @@ export async function handleViactRequest<TContext>(
   // --- Handle actions (POST/PUT/PATCH/DELETE) ---
   if (isAction) {
     if (!routeModule?.action) {
-      return withDefaultSecurityHeaders(new Response("Method not allowed", {
-        status: 405,
-        headers: { "content-type": "text/plain; charset=utf-8" },
-      }));
+      return withDefaultSecurityHeaders(
+        new Response("Method not allowed", {
+          status: 405,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        }),
+      );
     }
     const actionResult = await routeModule.action(routeArgs);
-    return withDefaultSecurityHeaders(Response.json(actionResult, {
-      headers: { "content-type": "application/json" },
-    }));
+    return actionResultToResponse(actionResult);
   }
 
   // --- Execute loader ---
-  const data = routeModule?.loader
-    ? await routeModule.loader(routeArgs)
-    : undefined;
+  const data = routeModule?.loader ? await routeModule.loader(routeArgs) : undefined;
 
   // --- Route state request (client navigation): return JSON ---
   if (isRouteStateRequest) {
@@ -294,10 +405,7 @@ export async function handleViactRequest<TContext>(
 
   // --- Load shell module ---
   const shellModule = match.route.shellFile
-    ? await resolveRegistryModule<ShellModule>(
-        registry.shellModules,
-        match.route.shellFile,
-      )
+    ? await resolveRegistryModule<ShellModule>(registry.shellModules, match.route.shellFile)
     : undefined;
 
   // --- Merge head metadata ---
@@ -322,15 +430,15 @@ export async function handleViactRequest<TContext>(
 
   // --- SSR / SSG / ISG: render Preact tree to string ---
   if (!routeModule?.Component) {
-    return withDefaultSecurityHeaders(new Response("Route has no Component export", {
-      status: 500,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    }));
+    return withDefaultSecurityHeaders(
+      new Response("Route has no Component export", {
+        status: 500,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      }),
+    );
   }
 
-  const { renderToString } = (await import(
-    "preact-render-to-string"
-  )) as { renderToString: (vnode: VNode<any>) => string };
+  const { renderToStringAsync } = await import("preact-render-to-string");
 
   const Component = routeModule.Component as any;
   const Shell = shellModule?.Shell;
@@ -340,8 +448,16 @@ export async function handleViactRequest<TContext>(
     ? h(Shell, null, h(Component, componentProps))
     : h(Component, componentProps);
 
-  const tree = h(ViactRuntimeProvider as any, { data }, componentTree);
-  const ssrContent = renderToString(tree);
+  const tree = h(
+    ViactRuntimeProvider as any,
+    {
+      data,
+      routeId: match.route.id ?? "",
+      url: url.pathname,
+    },
+    componentTree,
+  );
+  const ssrContent = await renderToStringAsync(tree);
 
   return htmlResponse(
     buildHtmlDocument({
@@ -361,6 +477,146 @@ export async function handleViactRequest<TContext>(
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+async function useRevalidateResult(
+  runtime: ViactRuntimeValue | undefined,
+  url: string,
+): Promise<void> {
+  const result = await fetchViactRouteState(url);
+  if (result.type === "redirect") {
+    await navigateToClientLocation(result.location);
+    return;
+  }
+
+  runtime?.setData(result.data);
+}
+
+async function navigateToClientLocation(
+  location: string,
+  options?: { replace?: boolean },
+): Promise<void> {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const targetUrl = new URL(location, window.location.href);
+  const target = targetUrl.pathname + targetUrl.search + targetUrl.hash;
+  if (targetUrl.origin === window.location.origin && window.__VIACT_NAVIGATE__) {
+    await window.__VIACT_NAVIGATE__(target, options);
+    return;
+  }
+
+  if (options?.replace) {
+    window.location.replace(targetUrl.toString());
+    return;
+  }
+
+  window.location.href = targetUrl.toString();
+}
+
+function shouldRevalidateCurrentRoute(
+  revalidate: string[] | undefined,
+  routeId: string | undefined,
+): boolean {
+  if (!revalidate?.length) {
+    return false;
+  }
+
+  return revalidate.some((value) => {
+    if (value === "route:self") {
+      return true;
+    }
+
+    return Boolean(routeId) && value === `route:${routeId}`;
+  });
+}
+
+function isActionEnvelope(value: unknown): value is ActionEnvelope {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return "headers" in value || "ok" in value || "redirect" in value || "revalidate" in value;
+}
+
+function actionResultToResponse(actionResult: unknown): Response {
+  if (actionResult instanceof Response) {
+    return withDefaultSecurityHeaders(actionResult);
+  }
+
+  if (isActionEnvelope(actionResult) && actionResult.redirect) {
+    const headers = new Headers(actionResult.headers);
+    headers.set("location", actionResult.redirect);
+    return withDefaultSecurityHeaders(
+      new Response(null, {
+        status: 302,
+        headers,
+      }),
+    );
+  }
+
+  const headers = new Headers(isActionEnvelope(actionResult) ? actionResult.headers : undefined);
+  if (!headers.has("content-type")) {
+    headers.set("content-type", "application/json; charset=utf-8");
+  }
+
+  return withDefaultSecurityHeaders(
+    new Response(JSON.stringify(actionResult), {
+      headers,
+    }),
+  );
+}
+
+async function runMiddlewareChain<TContext>(options: {
+  context: TContext;
+  middlewareFiles: string[];
+  params: Record<string, string>;
+  registry: ModuleRegistry;
+  request: Request;
+  route: BaseRouteArgs<TContext>["route"] | ResolvedApiRoute;
+  url: URL;
+}): Promise<
+  { context: TContext; response?: undefined } | { response: Response; context?: undefined }
+> {
+  let context = options.context;
+
+  for (const mwFile of options.middlewareFiles) {
+    const mwModule = await resolveRegistryModule<MiddlewareModule>(
+      options.registry.middlewareModules,
+      mwFile,
+    );
+    if (!mwModule?.middleware) continue;
+
+    const result = await mwModule.middleware({
+      request: options.request,
+      params: options.params,
+      context,
+      signal: AbortSignal.timeout(30_000),
+      url: options.url,
+      route: options.route as BaseRouteArgs<TContext>["route"],
+    });
+
+    if (!result) continue;
+    if (result instanceof Response) {
+      return { response: withDefaultSecurityHeaders(result) };
+    }
+    if ("redirect" in result) {
+      return {
+        response: withDefaultSecurityHeaders(
+          new Response(null, {
+            status: 302,
+            headers: { location: result.redirect },
+          }),
+        ),
+      };
+    }
+    if ("context" in result) {
+      context = { ...context, ...result.context } as TContext;
+    }
+  }
+
+  return { context };
+}
 
 async function resolveRegistryModule<T>(
   modules: Record<string, ModuleImporter> | undefined,
@@ -390,12 +646,8 @@ async function mergeHeadMetadata(
   routeArgs: BaseRouteArgs<unknown>,
   data: unknown,
 ): Promise<HeadMetadata> {
-  const shellHead =
-    shellModule?.head ? await shellModule.head(routeArgs) : {};
-  const routeHead =
-    routeModule?.head
-      ? await routeModule.head({ ...routeArgs, data } as any)
-      : {};
+  const shellHead = shellModule?.head ? await shellModule.head(routeArgs) : {};
+  const routeHead = routeModule?.head ? await routeModule.head({ ...routeArgs, data } as any) : {};
 
   return {
     title: routeHead.title ?? shellHead.title,
@@ -413,9 +665,7 @@ function buildHtmlDocument(options: {
 }): string {
   const { head, body, hydrationState, clientEntryUrl, cssUrls = [] } = options;
 
-  const titleTag = head.title
-    ? `<title>${escapeHtml(head.title)}</title>`
-    : "";
+  const titleTag = head.title ? `<title>${escapeHtml(head.title)}</title>` : "";
 
   const metaTags = (head.meta ?? [])
     .map(
@@ -462,9 +712,11 @@ function buildHtmlDocument(options: {
 }
 
 function htmlResponse(html: string): Response {
-  return withDefaultSecurityHeaders(new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8" },
-  }));
+  return withDefaultSecurityHeaders(
+    new Response(html, {
+      headers: { "content-type": "text/html; charset=utf-8" },
+    }),
+  );
 }
 
 export function applyDefaultSecurityHeaders(headers: Headers): Headers {
@@ -539,10 +791,12 @@ function isSameOrigin(candidate: string, expectedOrigin: string): boolean {
 }
 
 function createCsrfErrorResponse(): Response {
-  return withDefaultSecurityHeaders(new Response("Cross-site action blocked", {
-    status: 403,
-    headers: { "content-type": "text/plain; charset=utf-8" },
-  }));
+  return withDefaultSecurityHeaders(
+    new Response("Cross-site action blocked", {
+      status: 403,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -570,9 +824,7 @@ export interface PrerenderAppOptions {
   cssUrls?: string[];
 }
 
-export async function prerenderApp(
-  options: PrerenderAppOptions,
-): Promise<PrerenderResult[]>;
+export async function prerenderApp(options: PrerenderAppOptions): Promise<PrerenderResult[]>;
 export async function prerenderApp(
   options: PrerenderAppOptions & { withISGManifest: true },
 ): Promise<PrerenderAppResult>;
@@ -637,10 +889,7 @@ async function collectSSGPaths(
   }
 
   // Dynamic route — must export prerender() to enumerate paths
-  const routeModule = await resolveRegistryModule<RouteModule>(
-    registry?.routeModules,
-    route.file,
-  );
+  const routeModule = await resolveRegistryModule<RouteModule>(registry?.routeModules, route.file);
 
   if (!routeModule?.prerender) {
     console.warn(

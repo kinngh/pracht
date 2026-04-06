@@ -33,16 +33,14 @@ Each adapter exports two things:
 ```typescript
 // Example: Node adapter
 export function createNodeRequestHandler<TContext>(
-  options: NodeAdapterOptions<TContext>
-): (req: IncomingMessage, res: ServerResponse) => Promise<void>
+  options: NodeAdapterOptions<TContext>,
+): (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 ```
 
 ### 2. Entry module generator (for the Vite plugin)
 
 ```typescript
-export function createNodeServerEntryModule(
-  options?: NodeServerEntryModuleOptions
-): string
+export function createNodeServerEntryModule(options?: NodeServerEntryModuleOptions): string;
 ```
 
 The Vite plugin calls the entry module generator to create a virtual module
@@ -54,13 +52,13 @@ The Vite plugin calls the entry module generator to create a virtual module
 
 ### `createNodeRequestHandler(options)`
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `app` | `PlyonApp` | The resolved app from `defineApp()` |
-| `registry` | `ModuleRegistry` | Lazy module importers |
-| `staticDir` | `string` | Path to `dist/client/` |
-| `viteManifest` | `ViteManifest` | Client asset manifest for injection |
-| `createContext` | `(args) => TContext` | App-level context factory |
+| Option          | Type                 | Description                         |
+| --------------- | -------------------- | ----------------------------------- |
+| `app`           | `PlyonApp`           | The resolved app from `defineApp()` |
+| `registry`      | `ModuleRegistry`     | Lazy module importers               |
+| `staticDir`     | `string`             | Path to `dist/client/`              |
+| `viteManifest`  | `ViteManifest`       | Client asset manifest for injection |
+| `createContext` | `(args) => TContext` | App-level context factory           |
 
 ### Features
 
@@ -94,10 +92,10 @@ server.listen(3000);
 
 ### `createCloudflareFetchHandler(options)`
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `app` | `ViactApp` | The resolved app |
-| `registry` | `ModuleRegistry` | Module importers |
+| Option          | Type                                        | Description                               |
+| --------------- | ------------------------------------------- | ----------------------------------------- |
+| `app`           | `ViactApp`                                  | The resolved app                          |
+| `registry`      | `ModuleRegistry`                            | Module importers                          |
 | `createContext` | `(args: CloudflareContextArgs) => TContext` | Context with `env` and `executionContext` |
 
 ### Features
@@ -105,7 +103,7 @@ server.listen(3000);
 - **Asset serving**: uses `env.ASSETS.fetch()` binding for static files
   (Cloudflare handles caching and CDN distribution).
 - **Default request context**: generated worker entries pass `{ env,
-  executionContext }` to viact so loaders, actions, and middleware can access
+executionContext }` to viact so loaders, actions, and middleware can access
   bindings without extra wiring.
 - **Build output**: `viact({ adapter: "cloudflare" })` makes `viact build`
   emit a Worker bundle in `dist/server/server.js` and a deployable
@@ -145,10 +143,10 @@ export default {
 
 ### `createVercelEdgeHandler(options)`
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `app` | `ViactApp` | The resolved app |
-| `registry` | `ModuleRegistry` | Module importers |
+| Option          | Type                                    | Description                                     |
+| --------------- | --------------------------------------- | ----------------------------------------------- |
+| `app`           | `ViactApp`                              | The resolved app                                |
+| `registry`      | `ModuleRegistry`                        | Module importers                                |
 | `createContext` | `(args: VercelContextArgs) => TContext` | Context with the incoming edge-function context |
 
 ### Features
@@ -218,14 +216,14 @@ and actions:
 createContext: ({ request }) => ({
   db: pool,
   ip: request.headers.get("x-forwarded-for"),
-})
+});
 
 // Cloudflare: inject env bindings
 createContext: ({ request, env, executionContext }) => ({
-  db: env.DB,        // D1 binding
-  kv: env.CACHE,     // KV binding
+  db: env.DB, // D1 binding
+  kv: env.CACHE, // KV binding
   waitUntil: executionContext.waitUntil.bind(executionContext),
-})
+});
 ```
 
 This context is available in every loader, action, and middleware as `args.context`.

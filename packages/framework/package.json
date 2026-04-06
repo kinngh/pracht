@@ -1,6 +1,9 @@
 {
   "name": "viact",
   "version": "0.0.0",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "exports": {
     ".": {
@@ -8,9 +11,11 @@
       "default": "./dist/index.mjs"
     }
   },
-  "files": ["dist"],
   "scripts": {
     "build": "tsdown"
+  },
+  "dependencies": {
+    "preact-suspense": "^0.2.0"
   },
   "peerDependencies": {
     "preact": "^10.0.0",

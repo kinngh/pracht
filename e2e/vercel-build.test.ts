@@ -13,10 +13,7 @@ test("viact build emits a deployable Vercel Build Output setup", async () => {
   const distDir = resolve(exampleDir, "dist");
   const vercelDir = resolve(exampleDir, ".vercel/output");
   const configPath = resolve(vercelDir, "config.json");
-  const functionConfigPath = resolve(
-    vercelDir,
-    "functions/render.func/.vc-config.json",
-  );
+  const functionConfigPath = resolve(vercelDir, "functions/render.func/.vc-config.json");
   const serverEntryPath = resolve(vercelDir, "functions/render.func/server.js");
   const staticIndexPath = resolve(vercelDir, "static/index.html");
 

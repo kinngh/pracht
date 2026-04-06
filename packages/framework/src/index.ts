@@ -8,6 +8,7 @@ export {
   route,
   timeRevalidate,
 } from "./app.ts";
+export { Suspense, lazy } from "preact-suspense";
 export {
   applyDefaultSecurityHeaders,
   Form,
@@ -27,6 +28,7 @@ export type {
   ActionEnvelope,
   ActionFn,
   ActionResult,
+  ApiConfig,
   ApiRouteHandler,
   ApiRouteMatch,
   ApiRouteModule,

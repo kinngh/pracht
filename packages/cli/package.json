@@ -1,10 +1,10 @@
 {
   "name": "@viact/cli",
   "version": "0.0.0",
-  "type": "module",
   "bin": {
     "viact": "./bin/viact.js"
   },
+  "type": "module",
   "dependencies": {
     "viact": "workspace:*"
   }

@@ -54,6 +54,10 @@ export interface GroupMeta {
   pathPrefix?: string;
 }
 
+export interface ApiConfig {
+  middleware?: string[];
+}
+
 export interface RouteDefinition extends RouteMeta {
   kind: "route";
   path: string;
@@ -71,12 +75,14 @@ export type RouteTreeNode = RouteDefinition | GroupDefinition;
 export interface ViactAppConfig {
   shells?: Record<string, string>;
   middleware?: Record<string, string>;
+  api?: ApiConfig;
   routes: RouteTreeNode[];
 }
 
 export interface ViactApp {
   shells: Record<string, string>;
   middleware: Record<string, string>;
+  api: ApiConfig;
   routes: RouteTreeNode[];
 }
 
@@ -95,10 +101,7 @@ export interface CatchAllRouteSegment {
   name: "*";
 }
 
-export type RouteSegment =
-  | StaticRouteSegment
-  | ParamRouteSegment
-  | CatchAllRouteSegment;
+export type RouteSegment = StaticRouteSegment | ParamRouteSegment | CatchAllRouteSegment;
 
 export interface ResolvedRoute extends Omit<RouteMeta, "middleware"> {
   path: string;
@@ -130,14 +133,11 @@ export interface BaseRouteArgs<TContext = unknown> {
   route: ResolvedRoute;
 }
 
-export interface LoaderArgs<TContext = unknown>
-  extends BaseRouteArgs<TContext> {}
+export interface LoaderArgs<TContext = unknown> extends BaseRouteArgs<TContext> {}
 
-export interface ActionArgs<TContext = unknown>
-  extends BaseRouteArgs<TContext> {}
+export interface ActionArgs<TContext = unknown> extends BaseRouteArgs<TContext> {}
 
-export interface MiddlewareArgs<TContext = unknown>
-  extends BaseRouteArgs<TContext> {}
+export interface MiddlewareArgs<TContext = unknown> extends BaseRouteArgs<TContext> {}
 
 export interface HeadMetadata {
   title?: string;
@@ -193,10 +193,7 @@ export type ActionFn<TContext = unknown, TData = unknown> = (
   args: ActionArgs<TContext>,
 ) => MaybePromise<ActionResult<TData>>;
 
-export interface RouteModule<
-  TContext = unknown,
-  TLoader extends LoaderLike = undefined,
-> {
+export interface RouteModule<TContext = unknown, TLoader extends LoaderLike = undefined> {
   loader?: LoaderFn<TContext>;
   action?: ActionFn<TContext>;
   head?: (args: HeadArgs<TLoader, TContext>) => MaybePromise<HeadMetadata>;

@@ -8,7 +8,8 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
   },
   webServer: {
-    command: "cd examples/cloudflare && NODE_OPTIONS='--experimental-strip-types' node ../../packages/cli/bin/viact.js dev",
+    command:
+      "cd examples/cloudflare && NODE_OPTIONS='--experimental-strip-types' node ../../packages/cli/bin/viact.js dev",
     port: 3000,
     reuseExistingServer: !process.env.CI,
     timeout: 15_000,

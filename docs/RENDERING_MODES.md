@@ -7,19 +7,19 @@ how and when its HTML is generated.
 
 ## Overview
 
-| Mode | HTML generated | Loader runs | Best for |
-|------|---------------|-------------|----------|
-| **SSG** | Build time | Build time | Static content: marketing, docs, blog |
-| **SSR** | Every request | Every request | Personalized/dynamic pages |
-| **ISG** | Build + revalidation | Build + on stale request | Semi-static: pricing, catalogs |
-| **SPA** | Client only | Client navigation | Auth-gated dashboards, admin UI |
+| Mode    | HTML generated       | Loader runs              | Best for                              |
+| ------- | -------------------- | ------------------------ | ------------------------------------- |
+| **SSG** | Build time           | Build time               | Static content: marketing, docs, blog |
+| **SSR** | Every request        | Every request            | Personalized/dynamic pages            |
+| **ISG** | Build + revalidation | Build + on stale request | Semi-static: pricing, catalogs        |
+| **SPA** | Client only          | Client navigation        | Auth-gated dashboards, admin UI       |
 
 ---
 
 ## SSG — Static Site Generation
 
 ```typescript
-route("/about", "./routes/about.tsx", { render: "ssg" })
+route("/about", "./routes/about.tsx", { render: "ssg" });
 ```
 
 HTML is generated at build time. The loader runs once during the build, and the
@@ -34,7 +34,7 @@ For routes with dynamic segments, export a `prerender` function:
 // src/routes/blog-post.tsx
 export async function prerender(): Promise<string[]> {
   const posts = await getAllPosts();
-  return posts.map(p => `/blog/${p.slug}`);
+  return posts.map((p) => `/blog/${p.slug}`);
 }
 
 export async function loader({ params }: LoaderArgs) {
@@ -52,7 +52,7 @@ Prerendering runs concurrently (default: 6 parallel renders).
 ## SSR — Server-Side Rendering
 
 ```typescript
-route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" })
+route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" });
 ```
 
 HTML is generated fresh on every request. The loader runs server-side, the
@@ -75,7 +75,7 @@ fetch only the loader data as JSON, not full HTML.
 route("/pricing", "./routes/pricing.tsx", {
   render: "isg",
   revalidate: timeRevalidate(3600), // revalidate every hour
-})
+});
 ```
 
 ISG generates HTML at build time (like SSG) but regenerates it after a
@@ -87,7 +87,9 @@ the stale page is served while a new version is generated in the background.
 ```typescript
 import { timeRevalidate } from "viact";
 
-{ revalidate: timeRevalidate(3600) }  // seconds
+{
+  revalidate: timeRevalidate(3600);
+} // seconds
 ```
 
 The adapter checks the file's mtime (Node) or cache timestamp (Cloudflare)
@@ -98,7 +100,9 @@ against the revalidation window. If stale, it triggers regeneration.
 ```typescript
 import { webhookRevalidate } from "viact";
 
-{ revalidate: webhookRevalidate({ key: "pricing-update" }) }
+{
+  revalidate: webhookRevalidate({ key: "pricing-update" });
+}
 ```
 
 An external system POSTs to a revalidation endpoint to trigger regeneration.
@@ -109,7 +113,7 @@ Useful for CMS-driven content where you know exactly when data changes.
 ## SPA — Single Page Application
 
 ```typescript
-route("/settings", "./routes/settings.tsx", { render: "spa" })
+route("/settings", "./routes/settings.tsx", { render: "spa" });
 ```
 
 No server-side rendering. The server returns a minimal HTML shell, and the
@@ -136,15 +140,16 @@ export const app = defineApp({
   },
   routes: [
     group({ shell: "public" }, [
-      route("/", "./routes/home.tsx", { render: "ssg" }),           // Static
+      route("/", "./routes/home.tsx", { render: "ssg" }), // Static
       route("/pricing", "./routes/pricing.tsx", {
-        render: "isg", revalidate: timeRevalidate(3600),            // Revalidating
+        render: "isg",
+        revalidate: timeRevalidate(3600), // Revalidating
       }),
-      route("/login", "./routes/login.tsx", { render: "ssr" }),     // Dynamic
+      route("/login", "./routes/login.tsx", { render: "ssr" }), // Dynamic
     ]),
     group({ shell: "app", middleware: ["auth"] }, [
-      route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }),  // Dynamic
-      route("/settings", "./routes/settings.tsx", { render: "spa" }),    // Client-only
+      route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }), // Dynamic
+      route("/settings", "./routes/settings.tsx", { render: "spa" }), // Client-only
     ]),
   ],
 });

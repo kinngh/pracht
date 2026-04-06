@@ -34,9 +34,7 @@ export interface CloudflareAdapterOptions<
   clientEntryUrl?: string;
   cssUrls?: string[];
   assetsBinding?: string;
-  createContext?: (
-    args: CloudflareContextArgs<TEnv>,
-  ) => TContext | Promise<TContext>;
+  createContext?: (args: CloudflareContextArgs<TEnv>) => TContext | Promise<TContext>;
 }
 
 export interface CloudflareServerEntryModuleOptions {

@@ -16,9 +16,7 @@ test("home page renders SSR HTML with loader data", async ({ page }) => {
 
   // Route component renders with loader data
   await expect(page.locator("h1")).toContainText("explicit app manifest");
-  await expect(page.locator("li").first()).toContainText(
-    "Hybrid route manifest",
-  );
+  await expect(page.locator("li").first()).toContainText("Hybrid route manifest");
 });
 
 test("home page HTML includes hydration state", async ({ request }) => {
@@ -35,9 +33,7 @@ test("home page includes default security headers", async ({ request }) => {
 
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   expect(response.headers()["x-frame-options"]).toBe("SAMEORIGIN");
-  expect(response.headers()["referrer-policy"]).toBe(
-    "strict-origin-when-cross-origin",
-  );
+  expect(response.headers()["referrer-policy"]).toBe("strict-origin-when-cross-origin");
 });
 
 test("home page has correct head metadata", async ({ request }) => {
@@ -73,9 +69,7 @@ test("dashboard redirects to / without session cookie", async ({ page }) => {
 });
 
 test("dashboard renders with session cookie", async ({ page, context }) => {
-  await context.addCookies([
-    { name: "session", value: "abc123", domain: "localhost", path: "/" },
-  ]);
+  await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
 
   await page.goto("/dashboard");
   await expect(page.locator(".app-shell")).toBeVisible();
@@ -83,17 +77,35 @@ test("dashboard renders with session cookie", async ({ page, context }) => {
   await expect(page.locator("p")).toContainText("Projects: 3");
 });
 
+test("dashboard form submits in-app and keeps the current route hydrated", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
+
+  await page.goto("/dashboard");
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  await page.evaluate(() => {
+    (window as any).__ACTION_TOKEN__ = true;
+  });
+
+  await page.click('button[type="submit"]');
+
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.locator("h1")).toContainText("Ada Lovelace");
+  await expect(page.locator("p")).toContainText("Projects: 3");
+
+  const tokenSurvived = await page.evaluate(() => (window as any).__ACTION_TOKEN__ === true);
+  expect(tokenSurvived).toBe(true);
+});
+
 // ---------------------------------------------------------------------------
 // SPA route: Settings
 // ---------------------------------------------------------------------------
 
-test("settings returns SPA shell without SSR content", async ({
-  page,
-  context,
-}) => {
-  await context.addCookies([
-    { name: "session", value: "abc123", domain: "localhost", path: "/" },
-  ]);
+test("settings returns SPA shell without SSR content", async ({ page, context }) => {
+  await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
 
   const response = await page.goto("/settings");
   expect(response?.status()).toBe(200);
@@ -101,6 +113,16 @@ test("settings returns SPA shell without SSR content", async ({
   // SPA mode: viact-root should be empty in the initial HTML
   const html = await response?.text();
   expect(html).toContain('<div id="viact-root"></div>');
+});
+
+test("settings hydrates correctly on a direct authenticated load", async ({ page, context }) => {
+  await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
+
+  await page.goto("/settings");
+  await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
+
+  await expect(page.locator("h1")).toContainText("Settings");
+  await expect(page.locator("li")).toHaveCount(3);
 });
 
 // ---------------------------------------------------------------------------
@@ -151,9 +173,7 @@ test("clicking a link navigates without full page reload", async ({ page }) => {
   await page.waitForURL("/pricing");
 
   // The token should still exist (no full reload)
-  const tokenSurvived = await page.evaluate(
-    () => (window as any).__NAV_TOKEN__ === true,
-  );
+  const tokenSurvived = await page.evaluate(() => (window as any).__NAV_TOKEN__ === true);
   expect(tokenSurvived).toBe(true);
 
   // Pricing content should render
@@ -164,9 +184,7 @@ test("client-side navigation updates shell when crossing shell boundaries", asyn
   page,
   context,
 }) => {
-  await context.addCookies([
-    { name: "session", value: "abc123", domain: "localhost", path: "/" },
-  ]);
+  await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
 
   await page.goto("/dashboard");
   await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
@@ -186,9 +204,7 @@ test("client-side navigation updates shell when crossing shell boundaries", asyn
   await expect(page.locator(".public-shell")).toBeVisible();
 
   // Still a client-side navigation
-  const tokenSurvived = await page.evaluate(
-    () => (window as any).__NAV_TOKEN__ === true,
-  );
+  const tokenSurvived = await page.evaluate(() => (window as any).__NAV_TOKEN__ === true);
   expect(tokenSurvived).toBe(true);
 });
 
@@ -213,15 +229,11 @@ test("back button works with client-side navigation", async ({ page }) => {
   await expect(page.locator("h1")).toContainText("explicit app manifest");
 
   // Token still alive — no full reload during back navigation either
-  const tokenSurvived = await page.evaluate(
-    () => (window as any).__NAV_TOKEN__ === true,
-  );
+  const tokenSurvived = await page.evaluate(() => (window as any).__NAV_TOKEN__ === true);
   expect(tokenSurvived).toBe(true);
 });
 
-test("same-shell navigation preserves shell and updates route content", async ({
-  page,
-}) => {
+test("same-shell navigation preserves shell and updates route content", async ({ page }) => {
   await page.goto("/");
   await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
 
@@ -287,8 +299,6 @@ test("page hydrates without console errors", async ({ page }) => {
   await page.waitForFunction(() => (window as any).__VIACT_ROUTER_READY__);
 
   // Filter out known non-critical warnings
-  const criticalErrors = errors.filter(
-    (e) => !e.includes("[vite]") && !e.includes("404"),
-  );
+  const criticalErrors = errors.filter((e) => !e.includes("[vite]") && !e.includes("404"));
   expect(criticalErrors).toHaveLength(0);
 });

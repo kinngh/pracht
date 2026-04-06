@@ -5,21 +5,19 @@ import type { VNode } from "preact";
 
 import { matchAppRoute } from "./app.ts";
 import type { ResolvedViactApp, RouteMatch } from "./types.ts";
-import { ViactRuntimeProvider } from "./runtime.ts";
+import { fetchViactRouteState, ViactRuntimeProvider } from "./runtime.ts";
 import type { ViactHydrationState } from "./runtime.ts";
 
 declare global {
   interface Window {
+    __VIACT_NAVIGATE__?: NavigateFn;
     __VIACT_ROUTER_READY__?: boolean;
   }
 }
 
 type ModuleMap = Record<string, () => Promise<any>>;
 
-export type NavigateFn = (
-  to: string,
-  options?: { replace?: boolean },
-) => Promise<void>;
+export type NavigateFn = (to: string, options?: { replace?: boolean }) => Promise<void>;
 
 const NavigateContext = createContext<NavigateFn>(async () => {});
 
@@ -36,19 +34,14 @@ export interface InitClientRouterOptions {
   findModuleKey: (modules: ModuleMap, file: string) => string | null;
 }
 
-export async function initClientRouter(
-  options: InitClientRouterOptions,
-): Promise<void> {
+export async function initClientRouter(options: InitClientRouterOptions): Promise<void> {
   const { app, routeModules, shellModules, root, findModuleKey } = options;
 
   // ------------------------------------------------------------------
   // Build a Preact VNode tree for a matched route
   // ------------------------------------------------------------------
 
-  async function buildRouteTree(
-    match: RouteMatch,
-    data: unknown,
-  ): Promise<VNode<any> | null> {
+  async function buildRouteTree(match: RouteMatch, data: unknown): Promise<VNode<any> | null> {
     const routeKey = findModuleKey(routeModules, match.route.file);
     if (!routeKey) return null;
     const routeMod = await routeModules[routeKey]();
@@ -65,14 +58,20 @@ export async function initClientRouter(
 
     const Component = routeMod.Component;
     const props = { data, params: match.params };
-    const componentTree = Shell
-      ? h(Shell, null, h(Component, props))
-      : h(Component, props);
+    const componentTree = Shell ? h(Shell, null, h(Component, props)) : h(Component, props);
 
     return h(
       NavigateContext.Provider as any,
       { value: navigate },
-      h(ViactRuntimeProvider as any, { data }, componentTree),
+      h(
+        ViactRuntimeProvider as any,
+        {
+          data,
+          routeId: match.route.id ?? "",
+          url: match.pathname,
+        },
+        componentTree,
+      ),
     );
   }
 
@@ -94,27 +93,17 @@ export async function initClientRouter(
     // Fetch route state from server
     let data: unknown;
     try {
-      const response = await fetch(to, {
-        headers: { "x-viact-route-state-request": "1" },
-        redirect: "manual",
-      });
-
-      // Handle redirects — opaqueredirect or 3xx with Location header
-      if (
-        response.type === "opaqueredirect" ||
-        (response.status >= 300 && response.status < 400)
-      ) {
-        const location = response.headers.get("location");
-        if (location) {
-          await navigate(location, opts);
+      const result = await fetchViactRouteState(to);
+      if (result.type === "redirect") {
+        if (result.location) {
+          await navigate(result.location, opts);
           return;
         }
         window.location.href = to;
         return;
       }
 
-      const json = await response.json();
-      data = json.data;
+      data = result.data;
     } catch {
       // Network error — full page load as fallback
       window.location.href = to;
@@ -144,9 +133,30 @@ export async function initClientRouter(
 
   const initialMatch = matchAppRoute(app, options.initialState.url);
   if (initialMatch) {
-    const tree = await buildRouteTree(initialMatch, options.initialState.data);
+    let initialData = options.initialState.data;
+
+    if (initialMatch.route.render === "spa" && initialData == null) {
+      try {
+        const result = await fetchViactRouteState(options.initialState.url);
+        if (result.type === "redirect") {
+          window.location.href = result.location;
+          return;
+        }
+
+        initialData = result.data;
+      } catch {
+        window.location.href = options.initialState.url;
+        return;
+      }
+    }
+
+    const tree = await buildRouteTree(initialMatch, initialData);
     if (tree) {
-      hydrate(tree, root);
+      if (initialMatch.route.render === "spa") {
+        render(tree, root);
+      } else {
+        hydrate(tree, root);
+      }
     }
   }
 
@@ -198,5 +208,6 @@ export async function initClientRouter(
     });
   });
 
+  window.__VIACT_NAVIGATE__ = navigate;
   window.__VIACT_ROUTER_READY__ = true;
 }

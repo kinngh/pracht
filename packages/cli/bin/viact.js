@@ -2,11 +2,21 @@
 
 import { createServer as createHttpServer } from "node:http";
 import { resolve, join, dirname, extname } from "node:path";
-import { existsSync, statSync, mkdirSync, writeFileSync, createReadStream, readFileSync, rmSync, cpSync } from "node:fs";
+import {
+  existsSync,
+  statSync,
+  mkdirSync,
+  writeFileSync,
+  createReadStream,
+  readFileSync,
+  rmSync,
+  cpSync,
+} from "node:fs";
 import { createServer, build as viteBuild } from "vite";
 
 const DEFAULT_SECURITY_HEADERS = {
-  "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+  "permissions-policy":
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
   "referrer-policy": "strict-origin-when-cross-origin",
   "x-content-type-options": "nosniff",
   "x-frame-options": "SAMEORIGIN",
@@ -121,7 +131,9 @@ async function build() {
     if (Object.keys(isgManifest).length > 0) {
       const isgManifestPath = resolve(root, "dist/server/isg-manifest.json");
       writeFileSync(isgManifestPath, JSON.stringify(isgManifest, null, 2), "utf-8");
-      console.log(`\n  ISG manifest → dist/server/isg-manifest.json (${Object.keys(isgManifest).length} route(s))\n`);
+      console.log(
+        `\n  ISG manifest → dist/server/isg-manifest.json (${Object.keys(isgManifest).length} route(s))\n`,
+      );
     }
 
     if (serverMod.buildTarget === "cloudflare") {
@@ -138,9 +150,7 @@ async function build() {
         functionName: serverMod.vercelFunctionName,
         regions: serverMod.vercelRegions,
         root,
-        staticRoutes: pages
-          .map((page) => page.path)
-          .filter((path) => !(path in isgManifest)),
+        staticRoutes: pages.map((page) => page.path).filter((path) => !(path in isgManifest)),
         isgRoutes: Object.keys(isgManifest),
       });
 
@@ -157,9 +167,7 @@ async function preview() {
   const serverEntry = resolve(root, "dist/server/server.js");
 
   if (!existsSync(serverEntry)) {
-    console.error(
-      "Server build not found at dist/server/. Run `viact build` first.",
-    );
+    console.error("Server build not found at dist/server/. Run `viact build` first.");
     process.exit(1);
   }
 
@@ -205,16 +213,15 @@ async function preview() {
     // ISG stale-while-revalidate check
     if (req.method === "GET" && parsedUrl.pathname in isgManifest) {
       const entry = isgManifest[parsedUrl.pathname];
-      const htmlPath = parsedUrl.pathname === "/"
-        ? join(clientDir, "index.html")
-        : join(clientDir, parsedUrl.pathname, "index.html");
+      const htmlPath =
+        parsedUrl.pathname === "/"
+          ? join(clientDir, "index.html")
+          : join(clientDir, parsedUrl.pathname, "index.html");
 
       if (existsSync(htmlPath) && statSync(htmlPath).isFile()) {
         const stat = statSync(htmlPath);
         const ageMs = Date.now() - stat.mtimeMs;
-        const isStale =
-          entry.revalidate.kind === "time" &&
-          ageMs > entry.revalidate.seconds * 1000;
+        const isStale = entry.revalidate.kind === "time" && ageMs > entry.revalidate.seconds * 1000;
 
         setDefaultSecurityHeaders(res, {
           "content-type": "text/html; charset=utf-8",
@@ -224,25 +231,26 @@ async function preview() {
 
         if (isStale) {
           // Background regeneration
-          const regenRequest = new Request(
-            new URL(parsedUrl.pathname, "http://localhost"),
-            { method: "GET" },
-          );
+          const regenRequest = new Request(new URL(parsedUrl.pathname, "http://localhost"), {
+            method: "GET",
+          });
           handleViactRequest({
             app: serverMod.resolvedApp,
             registry: serverMod.registry,
             request: regenRequest,
             clientEntryUrl,
             cssUrls,
-          }).then(async (response) => {
-            if (response.status === 200) {
-              const { mkdirSync, writeFileSync } = await import("node:fs");
-              mkdirSync(dirname(htmlPath), { recursive: true });
-              writeFileSync(htmlPath, await response.text(), "utf-8");
-            }
-          }).catch((err) => {
-            console.error(`ISG regeneration failed for ${parsedUrl.pathname}:`, err);
-          });
+          })
+            .then(async (response) => {
+              if (response.status === 200) {
+                const { mkdirSync, writeFileSync } = await import("node:fs");
+                mkdirSync(dirname(htmlPath), { recursive: true });
+                writeFileSync(htmlPath, await response.text(), "utf-8");
+              }
+            })
+            .catch((err) => {
+              console.error(`ISG regeneration failed for ${parsedUrl.pathname}:`, err);
+            });
         }
         return;
       }
@@ -280,10 +288,10 @@ async function preview() {
 
       const protocol = req.headers["x-forwarded-proto"] || "http";
       const host = req.headers.host || "localhost";
-      const webRequest = new Request(
-        new URL(url, `${protocol}://${host}`),
-        { method: req.method, headers },
-      );
+      const webRequest = new Request(new URL(url, `${protocol}://${host}`), {
+        method: req.method,
+        headers,
+      });
 
       const response = await handleViactRequest({
         app: serverMod.resolvedApp,
@@ -314,9 +322,7 @@ async function preview() {
   });
 
   server.listen(port, () => {
-    console.log(
-      `\n  viact preview server running at http://localhost:${port}\n`,
-    );
+    console.log(`\n  viact preview server running at http://localhost:${port}\n`);
   });
 }
 
@@ -383,13 +389,7 @@ function setDefaultSecurityHeaders(res, headers = {}) {
   }
 }
 
-function writeVercelBuildOutput({
-  functionName,
-  regions,
-  root,
-  staticRoutes,
-  isgRoutes,
-}) {
+function writeVercelBuildOutput({ functionName, regions, root, staticRoutes, isgRoutes }) {
   const outputDir = join(root, ".vercel/output");
   const staticDir = join(outputDir, "static");
   const functionDir = join(outputDir, "functions", `${functionName || "render"}.func`);

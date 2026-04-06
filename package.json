@@ -19,7 +19,6 @@
     "build:example": "cd examples/cloudflare && node ../../packages/cli/bin/viact.js build",
     "preview:example": "cd examples/cloudflare && node ../../packages/cli/bin/viact.js preview"
   },
-  "packageManager": "pnpm@10.28.1",
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
@@ -34,5 +33,6 @@
     "typescript": "^5.8.3",
     "vite": "^8.0.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "packageManager": "pnpm@10.28.1"
 }

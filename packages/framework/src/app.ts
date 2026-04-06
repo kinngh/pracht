@@ -34,11 +34,7 @@ export function timeRevalidate(seconds: number): TimeRevalidatePolicy {
   };
 }
 
-export function route(
-  path: string,
-  file: string,
-  meta: RouteMeta = {},
-): RouteDefinition {
+export function route(path: string, file: string, meta: RouteMeta = {}): RouteDefinition {
   return {
     kind: "route",
     path: normalizeRoutePath(path),
@@ -47,10 +43,7 @@ export function route(
   };
 }
 
-export function group(
-  meta: GroupMeta,
-  routes: RouteTreeNode[],
-): GroupDefinition {
+export function group(meta: GroupMeta, routes: RouteTreeNode[]): GroupDefinition {
   return {
     kind: "group",
     meta,
@@ -62,6 +55,7 @@ export function defineApp(config: ViactAppConfig): ViactApp {
   return {
     shells: config.shells ?? {},
     middleware: config.middleware ?? {},
+    api: config.api ?? {},
     routes: config.routes,
   };
 }
@@ -80,6 +74,7 @@ export function resolveApp(app: ViactApp): ResolvedViactApp {
   return {
     shells: app.shells,
     middleware: app.middleware,
+    api: app.api,
     routes,
     apiRoutes: [],
   };
@@ -213,9 +208,7 @@ function parseRouteSegments(path: string): RouteSegment[] {
 }
 
 function splitPathSegments(path: string): string[] {
-  return normalizeRoutePath(path)
-    .split("/")
-    .filter(Boolean);
+  return normalizeRoutePath(path).split("/").filter(Boolean);
 }
 
 function mergeRoutePaths(prefix: string, path?: string): string {
@@ -245,9 +238,7 @@ function normalizeRoutePath(path: string): string {
   const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
   const collapsed = withLeadingSlash.replace(/\/{2,}/g, "/");
 
-  return collapsed.length > 1 && collapsed.endsWith("/")
-    ? collapsed.slice(0, -1)
-    : collapsed;
+  return collapsed.length > 1 && collapsed.endsWith("/") ? collapsed.slice(0, -1) : collapsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -261,10 +252,7 @@ function normalizeRoutePath(path: string): string {
  *          `"/src/api/users/[id].ts"` → path `/api/users/:id`
  *          `"/src/api/index.ts"` → path `/api`
  */
-export function resolveApiRoutes(
-  files: string[],
-  apiDir: string = "/src/api",
-): ResolvedApiRoute[] {
+export function resolveApiRoutes(files: string[], apiDir: string = "/src/api"): ResolvedApiRoute[] {
   const normalizedDir = apiDir.replace(/\/$/, "");
 
   return files.map((file) => {

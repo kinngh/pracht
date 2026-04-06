@@ -38,12 +38,12 @@ Viact is a full-stack Preact framework built on Vite. It draws routing and rende
 
 Per-route render mode via `{ render: "spa" | "ssr" | "ssg" | "isg" }`:
 
-| Mode | When HTML is generated | Use case |
-|------|----------------------|----------|
-| SPA  | Client only          | Dashboards, auth-gated UI |
-| SSR  | Every request        | Personalized / dynamic pages |
-| SSG  | Build time           | Marketing, docs, blog |
-| ISG  | Build + revalidation | Pricing, catalog, semi-static |
+| Mode | When HTML is generated | Use case                      |
+| ---- | ---------------------- | ----------------------------- |
+| SPA  | Client only            | Dashboards, auth-gated UI     |
+| SSR  | Every request          | Personalized / dynamic pages  |
+| SSG  | Build time             | Marketing, docs, blog         |
+| ISG  | Build + revalidation   | Pricing, catalog, semi-static |
 
 ISG supports time-based and webhook-based revalidation policies.
 
@@ -66,20 +66,22 @@ Standalone server endpoints independent of the page rendering pipeline:
 - Export named HTTP method handlers: `export function GET(args)`, `POST(args)`, etc.
 - Receive the same `LoaderArgs`-style context (request, params, context, signal).
 - Return `Response` objects directly — full control over status, headers, body.
-- API routes are independent of page-route middleware. Auth and policy checks live in the handler today.
+- API routes are independent of page-route middleware by default. Shared API
+  policy can be attached explicitly via `defineApp({ api: { middleware: [...] } })`.
 
 ### Deployment Adapters
 
 Platform adapters export a request handler shaped for their runtime:
 
-| Adapter | Runtime | Notes |
-|---------|---------|-------|
-| `adapter-node` | Node.js `http` | Static file serving, ISG mtime check |
-| `adapter-cloudflare` | Workers `fetch` | `env.ASSETS`, KV, execution context |
-| `adapter-vercel` | Serverless / Edge | Build Output API v3 + edge handler |
-| `adapter-deno` | Deno.serve | (planned) |
+| Adapter              | Runtime           | Notes                                |
+| -------------------- | ----------------- | ------------------------------------ |
+| `adapter-node`       | Node.js `http`    | Static file serving, ISG mtime check |
+| `adapter-cloudflare` | Workers `fetch`   | `env.ASSETS`, KV, execution context  |
+| `adapter-vercel`     | Serverless / Edge | Build Output API v3 + edge handler   |
+| `adapter-deno`       | Deno.serve        | (planned)                            |
 
 Each adapter:
+
 - Converts platform request → Web `Request`
 - Loads Vite manifests for asset injection
 - Implements ISG revalidation for its platform's storage

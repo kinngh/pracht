@@ -37,8 +37,8 @@ export async function run(argv = process.argv.slice(2)) {
   });
 
   try {
-    const dir = options.dir ?? await promptForDirectory(readline);
-    const adapterId = options.adapter ?? await promptForAdapter(readline);
+    const dir = options.dir ?? (await promptForDirectory(readline));
+    const adapterId = options.adapter ?? (await promptForAdapter(readline));
     const targetDir = resolve(process.cwd(), dir);
 
     await ensureTargetDirectory(targetDir);
@@ -128,9 +128,7 @@ export function parseArgs(argv) {
 
 async function promptForDirectory(readline) {
   while (true) {
-    const answer = await readline.question(
-      `Project directory (${DEFAULT_DIRECTORY}): `,
-    );
+    const answer = await readline.question(`Project directory (${DEFAULT_DIRECTORY}): `);
     const dir = answer.trim() || DEFAULT_DIRECTORY;
     const targetDir = resolve(process.cwd(), dir);
     const error = await validateTargetDirectory(targetDir);
@@ -235,6 +233,7 @@ function createPackageJson({ adapter, projectName }) {
 
   const devDependencies = {
     "@preact/preset-vite": "^2.9.4",
+    "@viact/cli": "latest",
     "@viact/vite-plugin": "latest",
     preact: "^10.26.9",
     "preact-render-to-string": "^6.5.13",
@@ -247,18 +246,22 @@ function createPackageJson({ adapter, projectName }) {
     devDependencies.wrangler = "^4.12.0";
   }
 
-  return `${JSON.stringify({
-    dependencies: {
-      [adapter.packageName]: "latest",
-      viact: "latest",
+  return `${JSON.stringify(
+    {
+      dependencies: {
+        [adapter.packageName]: "latest",
+        viact: "latest",
+      },
+      devDependencies,
+      name: projectName,
+      private: true,
+      scripts,
+      type: "module",
+      version: "0.0.0",
     },
-    devDependencies,
-    name: projectName,
-    private: true,
-    scripts,
-    type: "module",
-    version: "0.0.0",
-  }, null, 2)}\n`;
+    null,
+    2,
+  )}\n`;
 }
 
 function createViteConfig() {
@@ -301,7 +304,7 @@ function createShellFile(projectName) {
     `        <strong>${projectName}</strong>`,
     '        <p style={{ color: "#555", margin: "8px 0 0" }}>A new viact app.</p>',
     "      </header>",
-    '      <main>{children}</main>',
+    "      <main>{children}</main>",
     "    </div>",
     "  );",
     "}",
@@ -341,11 +344,11 @@ function createHomeRoute(adapter) {
     "      </p>",
     '      <ul style={{ lineHeight: 1.8, paddingLeft: "20px" }}>',
     "        {data.steps.map((step) => (",
-    '          <li key={step}>{step}</li>',
+    "          <li key={step}>{step}</li>",
     "        ))}",
     "      </ul>",
     '      <p style={{ marginTop: "24px" }}>',
-    '        Check <code>/api/health</code> for a simple API route.',
+    "        Check <code>/api/health</code> for a simple API route.",
     "      </p>",
     "    </section>",
     "  );",
@@ -357,9 +360,9 @@ function createHomeRoute(adapter) {
 function createHealthRoute(adapter) {
   return [
     "export function GET() {",
-    '  return Response.json({',
+    "  return Response.json({",
     `    adapter: ${JSON.stringify(adapter.short)},`,
-    '    ok: true,',
+    "    ok: true,",
     '    service: "viact",',
     "  });",
     "}",
@@ -374,8 +377,8 @@ function createCloudflareWorker() {
     'import { apiRoutes, registry, resolvedApp } from "../dist/server/server.js";',
     "",
     'const clientEntry = manifest["virtual:viact/client"];',
-    'const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;',
-    'const cssUrls = (clientEntry?.css ?? []).map((file) => `/${file}`);',
+    "const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;",
+    "const cssUrls = (clientEntry?.css ?? []).map((file) => `/${file}`);",
     "",
     "export default {",
     "  fetch: createCloudflareFetchHandler({",
@@ -426,18 +429,10 @@ function createWranglerConfig(projectName) {
 }
 
 function createReadme({ adapter, packageManager, projectName }) {
-  const installCommand = packageManager === "npm"
-    ? "npm install"
-    : `${packageManager} install`;
-  const devCommand = packageManager === "npm"
-    ? "npm run dev"
-    : `${packageManager} dev`;
-  const previewCommand = packageManager === "npm"
-    ? "npm run preview"
-    : `${packageManager} preview`;
-  const deployCommand = packageManager === "npm"
-    ? "npm run deploy"
-    : `${packageManager} deploy`;
+  const installCommand = packageManager === "npm" ? "npm install" : `${packageManager} install`;
+  const devCommand = packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
+  const previewCommand = packageManager === "npm" ? "npm run preview" : `${packageManager} preview`;
+  const deployCommand = packageManager === "npm" ? "npm run deploy" : `${packageManager} deploy`;
 
   const lines = [
     `# ${projectName}`,
@@ -454,7 +449,9 @@ function createReadme({ adapter, packageManager, projectName }) {
   if (adapter.id === "cloudflare") {
     lines.push(`- \`${deployCommand}\``);
     lines.push("");
-    lines.push("Cloudflare note: local development still uses `viact dev`. The worker bundle is produced when you run `build:worker` or `deploy`.");
+    lines.push(
+      "Cloudflare note: local development still uses `viact dev`. The worker bundle is produced when you run `build:worker` or `deploy`.",
+    );
   }
 
   lines.push("");
@@ -487,12 +484,8 @@ async function installDependencies(targetDir, packageManager) {
 }
 
 function printNextSteps({ adapter, dir, installSucceeded, packageManager, skipInstall }) {
-  const installCommand = packageManager === "npm"
-    ? "npm install"
-    : `${packageManager} install`;
-  const devCommand = packageManager === "npm"
-    ? "npm run dev"
-    : `${packageManager} dev`;
+  const installCommand = packageManager === "npm" ? "npm install" : `${packageManager} install`;
+  const devCommand = packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
 
   console.log("");
   console.log(`Created a viact app in ${dir}.`);

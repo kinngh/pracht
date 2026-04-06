@@ -5,14 +5,16 @@ described in `VISION_MVP.md`.
 
 ## Packages
 
-| Path | Package | Current role |
-|------|---------|--------------|
-| `packages/framework` | `viact` | Core manifest API, route resolution, API routes, SSR rendering, client runtime |
-| `packages/vite-plugin` | `@viact/vite-plugin` | Virtual modules, `import.meta.glob()` registries, API route auto-discovery, HMR, dev SSR middleware |
-| `packages/adapter-node` | `@viact/adapter-node` | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate |
-| `packages/adapter-cloudflare` | `@viact/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source |
-| `packages/cli` | `@viact/cli` | `viact dev`, `build` (with ISG manifest and Cloudflare output), and `preview` (with ISG revalidation) |
-| `examples/basic` | `@viact/example-basic` | Example app with SSG, ISG, SSR, SPA routes, auth middleware, API routes, and Cloudflare build output |
+| Path                          | Package                     | Current role                                                                                                |
+| ----------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages/framework`          | `viact`                     | Core manifest API, route resolution, API routes, SSR rendering, client runtime                              |
+| `packages/vite-plugin`        | `@viact/vite-plugin`        | Virtual modules, `import.meta.glob()` registries, API route auto-discovery, HMR, dev SSR middleware         |
+| `packages/adapter-node`       | `@viact/adapter-node`       | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate                                  |
+| `packages/adapter-cloudflare` | `@viact/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source                                          |
+| `packages/adapter-vercel`     | `@viact/adapter-vercel`     | Vercel Edge handler and Build Output API entry source                                                       |
+| `packages/cli`                | `@viact/cli`                | `viact dev`, `build` (with ISG manifest and adapter build output), and `preview` (with ISG revalidation)    |
+| `examples/cloudflare`         | `@viact/example-cloudflare` | Cloudflare-targeted example app with SSG, ISG, SSR, SPA routes, auth middleware, and API routes             |
+| `examples/docs`               | `@viact/example-docs`       | Documentation website built with viact + Cloudflare adapter; all routes SSG-prerendered; dark design system |
 
 ## What Exists Today
 
@@ -24,7 +26,8 @@ described in `VISION_MVP.md`.
   `/api/health`, `src/api/users/[id].ts` → `/api/users/:id`). Modules export
   named HTTP method handlers (`GET`, `POST`, etc.) that return `Response`
   objects directly. API routes are dispatched before page routes in
-  `handleViactRequest()`. Missing method handlers return 405.
+  `handleViactRequest()`. Missing method handlers return 405. Shared API policy
+  can be applied explicitly with `defineApp({ api: { middleware: [...] } })`.
 - **Server rendering** — `handleViactRequest()` executes the full request
   lifecycle: API route check → middleware chain → loader → Preact
   `renderToString` → HTML document assembly with hydration state
@@ -41,7 +44,8 @@ described in `VISION_MVP.md`.
 - **Middleware** — Named middleware from the manifest runs before loaders and can
   redirect, return a Response, or augment the context.
 - **Actions** — POST/PUT/PATCH/DELETE requests are routed to the route module's
-  `action` export and return JSON.
+  `action` export. Action envelopes support JSON results, redirects, custom
+  headers, and client-side revalidation of the current route.
 - **Vite plugin** — Generates `virtual:viact/client` (hydration entry) and
   `virtual:viact/server` (resolved app + module registry + API routes +
   adapter-targeted server entry) virtual modules. The `configureServer` hook
@@ -53,22 +57,28 @@ described in `VISION_MVP.md`.
   `hydrate()` from Preact.
 - **CLI** — `viact dev` starts a Vite dev server with SSR, `viact build` runs
   client + server builds (with Vite manifest generation, SSG/ISG prerendering,
-  ISG manifest output, and Cloudflare `wrangler.json` generation when the app
-  targets Cloudflare), and `viact preview` serves the production build with
-  static-file fallback and ISG revalidation.
+  ISG manifest output, Cloudflare `wrangler.json` generation, and Vercel
+  `.vercel/output/` generation when the app targets those adapters), and
+  `viact preview` serves the production build with static-file fallback and ISG
+  revalidation.
 - **Package builds** — `tsdown` compiles `viact`, `@viact/vite-plugin`,
-  `@viact/adapter-node`, and `@viact/adapter-cloudflare` from TypeScript to
-  ESM (`dist/index.mjs` + `.d.mts`). The CLI remains plain JS.
+  `@viact/adapter-node`, `@viact/adapter-cloudflare`, and
+  `@viact/adapter-vercel` from TypeScript to ESM (`dist/index.mjs` +
+  `.d.mts`). The CLI remains plain JS.
 - **Node adapter** — Translates Node requests to Web `Request` objects, calls
   `handleViactRequest()`, and implements ISG stale-while-revalidate with
   background regeneration.
 - **Cloudflare adapter** — Serves `env.ASSETS` when available, falls back to
   `handleViactRequest()`, and gives loaders/actions access to `env` and the
   `executionContext` through `args.context`.
+- **Vercel adapter** — Emits an Edge-compatible handler, copies the build into
+  `.vercel/output/static` and `.vercel/output/functions/render.func`, rewrites
+  clean SSG URLs to static HTML, and routes ISG plus dynamic requests to the
+  generated edge function.
 - **E2E tests** — Playwright tests cover SSR rendering, loader data, head
   metadata, middleware redirects, auth-gated routes, SPA mode, route-state JSON,
   404 handling, hydration, client-side navigation, API routes (GET, POST, 405,
-  404), and the Cloudflare build output.
+  404), and the Cloudflare/Vercel build outputs.
 - **Custom Vite plugins** — Users bring their own Vite plugins (MDX, Tailwind,
   image tools, PWA, etc.) alongside `viact()` in `vite.config.ts`. No special
   integration required — plugins participate in the full Vite pipeline for both
@@ -79,10 +89,9 @@ described in `VISION_MVP.md`.
     types and manifest wiring.
   - `/debug` — framework-aware debugging (route matching, loader errors,
     hydration mismatches, middleware, API routes, build issues).
-  - `/deploy` — guided adapter setup and deployment for Node.js and Cloudflare
-    Workers (build, configure, deploy checklist).
+  - `/deploy` — guided adapter setup and deployment for Node.js, Cloudflare,
+    and Vercel (build, configure, deploy checklist).
 
 ## Later (Phase 2 remaining)
 
-1. `adapter-vercel` — Serverless / Edge functions, Build Output API v3.
-2. ISG webhook revalidation — on-demand cache invalidation via POST endpoint.
+1. ISG webhook revalidation — on-demand cache invalidation via POST endpoint.

@@ -16,12 +16,8 @@
       "viact": ["./packages/framework/src/index.ts"],
       "@viact/vite-plugin": ["./packages/vite-plugin/src/index.ts"],
       "@viact/adapter-node": ["./packages/adapter-node/src/index.ts"],
-      "@viact/adapter-cloudflare": [
-        "./packages/adapter-cloudflare/src/index.ts"
-      ],
-      "@viact/adapter-vercel": [
-        "./packages/adapter-vercel/src/index.ts"
-      ]
+      "@viact/adapter-cloudflare": ["./packages/adapter-cloudflare/src/index.ts"],
+      "@viact/adapter-vercel": ["./packages/adapter-vercel/src/index.ts"]
     }
   },
   "include": [

@@ -25,9 +25,7 @@ function isClientModule(id: string): boolean {
 }
 
 function isServerModule(id: string): boolean {
-  return (
-    id === VIACT_SERVER_MODULE_ID || id.endsWith(VIACT_SERVER_MODULE_ID)
-  );
+  return id === VIACT_SERVER_MODULE_ID || id.endsWith(VIACT_SERVER_MODULE_ID);
 }
 
 export interface ViactPluginOptions {
@@ -114,7 +112,12 @@ export function viact(options: ViactPluginOptions = {}): Plugin {
 
       // Route/shell/middleware/API file changed — invalidate server module
       // so the registry re-evaluates on next request.
-      const dirs = [resolved.routesDir, resolved.shellsDir, resolved.middlewareDir, resolved.apiDir];
+      const dirs = [
+        resolved.routesDir,
+        resolved.shellsDir,
+        resolved.middlewareDir,
+        resolved.apiDir,
+      ];
       if (dirs.some((dir) => relative.startsWith(dir))) {
         const serverMod = server.moduleGraph.getModuleById(VIACT_SERVER_MODULE_ID);
         if (serverMod) server.moduleGraph.invalidateModule(serverMod);
@@ -128,9 +131,7 @@ export function viact(options: ViactPluginOptions = {}): Plugin {
 // Virtual module source generators
 // ---------------------------------------------------------------------------
 
-export function createViactClientModuleSource(
-  options: ViactPluginOptions = {},
-): string {
+export function createViactClientModuleSource(options: ViactPluginOptions = {}): string {
   const resolved = resolveOptions(options);
 
   return [
@@ -143,7 +144,7 @@ export function createViactClientModuleSource(
     "const resolvedApp = resolveApp(app);",
     "",
     "function findModuleKey(modules, file) {",
-    '  if (file in modules) return file;',
+    "  if (file in modules) return file;",
     '  const suffix = file.replace(/^\\.\\//,"");',
     "  for (const key of Object.keys(modules)) {",
     '    if (key.endsWith("/" + suffix) || key.endsWith(suffix)) return key;',
@@ -215,9 +216,7 @@ export function createViactServerModuleSource(
   return source.join("\n");
 }
 
-export function createViactRegistryModuleSource(
-  options: ViactPluginOptions = {},
-): string {
+export function createViactRegistryModuleSource(options: ViactPluginOptions = {}): string {
   const resolved = resolveOptions(options);
 
   return [
@@ -243,11 +242,7 @@ function createDevSSRMiddleware(
   server: ViteDevServer,
   _pluginOptions: ResolvedViactPluginOptions,
 ): Connect.NextHandleFunction {
-  return async (
-    req: IncomingMessage,
-    res: ServerResponse,
-    next: Connect.NextFunction,
-  ) => {
+  return async (req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
     const url = req.url ?? "/";
 
     // Let Vite handle assets (have file extensions) and node_modules.
@@ -336,9 +331,7 @@ async function nodeToWebRequest(req: IncomingMessage): Promise<Request> {
   return new Request(url, init);
 }
 
-function resolveOptions(
-  options: ViactPluginOptions,
-): ResolvedViactPluginOptions {
+function resolveOptions(options: ViactPluginOptions): ResolvedViactPluginOptions {
   return {
     ...DEFAULTS,
     ...options,

@@ -34,6 +34,7 @@ describe("create-viact", () => {
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const routes = await readFile(join(targetDir, "src/routes.ts"), "utf-8");
 
+    expect(packageJson).toContain('"@viact/cli": "latest"');
     expect(packageJson).toContain('"@viact/adapter-node": "latest"');
     expect(packageJson).not.toContain("wrangler");
     expect(routes).toContain('route("/", "./routes/home.tsx"');
@@ -59,6 +60,7 @@ describe("create-viact", () => {
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const worker = await readFile(join(targetDir, "src/worker.ts"), "utf-8");
 
+    expect(packageJson).toContain('"@viact/cli": "latest"');
     expect(packageJson).toContain('"@viact/adapter-cloudflare": "latest"');
     expect(packageJson).toContain('"build:worker"');
     expect(packageJson).toContain('"wrangler": "^4.12.0"');

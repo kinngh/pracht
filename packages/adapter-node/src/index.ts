@@ -28,9 +28,7 @@ export interface NodeAdapterOptions<TContext = unknown> {
   apiRoutes?: ResolvedApiRoute[];
   clientEntryUrl?: string;
   cssUrls?: string[];
-  createContext?: (
-    args: NodeAdapterContextArgs,
-  ) => TContext | Promise<TContext>;
+  createContext?: (args: NodeAdapterContextArgs) => TContext | Promise<TContext>;
 }
 
 export interface NodeServerEntryModuleOptions {
@@ -51,24 +49,25 @@ export function createNodeRequestHandler<TContext = unknown>(
     // --- ISG stale-while-revalidate for GET requests ---
     if (staticDir && request.method === "GET" && url.pathname in isgManifest) {
       const entry = isgManifest[url.pathname];
-      const htmlPath = url.pathname === "/"
-        ? join(staticDir, "index.html")
-        : join(staticDir, url.pathname, "index.html");
+      const htmlPath =
+        url.pathname === "/"
+          ? join(staticDir, "index.html")
+          : join(staticDir, url.pathname, "index.html");
 
       if (existsSync(htmlPath)) {
         const stat = statSync(htmlPath);
         const ageMs = Date.now() - stat.mtimeMs;
-        const isStale =
-          entry.revalidate.kind === "time" &&
-          ageMs > entry.revalidate.seconds * 1000;
+        const isStale = entry.revalidate.kind === "time" && ageMs > entry.revalidate.seconds * 1000;
 
         // Serve the cached file
         const html = await readFile(htmlPath, "utf-8");
         res.statusCode = 200;
-        const headers = applyDefaultSecurityHeaders(new Headers({
-          "content-type": "text/html; charset=utf-8",
-          "x-viact-isg": isStale ? "stale" : "fresh",
-        }));
+        const headers = applyDefaultSecurityHeaders(
+          new Headers({
+            "content-type": "text/html; charset=utf-8",
+            "x-viact-isg": isStale ? "stale" : "fresh",
+          }),
+        );
         headers.forEach((value, key) => {
           res.setHeader(key, value);
         });
@@ -107,9 +106,10 @@ export function createNodeRequestHandler<TContext = unknown>(
       response.status === 200
     ) {
       const html = await response.clone().text();
-      const htmlPath = url.pathname === "/"
-        ? join(staticDir, "index.html")
-        : join(staticDir, url.pathname, "index.html");
+      const htmlPath =
+        url.pathname === "/"
+          ? join(staticDir, "index.html")
+          : join(staticDir, url.pathname, "index.html");
       mkdirSync(dirname(htmlPath), { recursive: true });
       writeFileSync(htmlPath, html, "utf-8");
     }
@@ -141,9 +141,7 @@ async function regenerateISGPage<TContext>(
   }
 }
 
-export function createNodeServerEntryModule(
-  options: NodeServerEntryModuleOptions = {},
-): string {
+export function createNodeServerEntryModule(options: NodeServerEntryModuleOptions = {}): string {
   const appImportPath = options.appImportPath ?? "/src/routes.ts";
   const port = options.port ?? 3000;
 
@@ -219,10 +217,7 @@ async function readRequestBody(req: IncomingMessage): Promise<Uint8Array> {
   return Buffer.concat(chunks);
 }
 
-async function writeWebResponse(
-  res: ServerResponse,
-  response: Response,
-): Promise<void> {
+async function writeWebResponse(res: ServerResponse, response: Response): Promise<void> {
   res.statusCode = response.status;
   res.statusMessage = response.statusText;
 
@@ -239,9 +234,7 @@ async function writeWebResponse(
   res.end(body);
 }
 
-function getFirstHeaderValue(
-  value: string | string[] | undefined,
-): string | undefined {
+function getFirstHeaderValue(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) {
     return value[0];
   }

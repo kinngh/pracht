@@ -56,7 +56,10 @@ export const app = defineApp({
     group({ shell: "public" }, [
       route("/", "./routes/home.tsx", { render: "ssg" }),
       route("/about", "./routes/about.tsx", { render: "ssg" }),
-      route("/blog/:slug", "./routes/blog-post.tsx", { render: "isg", revalidate: timeRevalidate(3600) }),
+      route("/blog/:slug", "./routes/blog-post.tsx", {
+        render: "isg",
+        revalidate: timeRevalidate(3600),
+      }),
     ]),
     group({ shell: "app", middleware: ["auth"] }, [
       route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }),
@@ -73,7 +76,7 @@ structure. This forces awkward nesting for layout groups and makes middleware
 assignment implicit via `_middleware.ts` files. Viact's hybrid approach:
 
 - Route modules live in `src/routes/` (discoverable by convention)
-- Route *wiring* is explicit in `src/routes.ts` (auditable, type-checked)
+- Route _wiring_ is explicit in `src/routes.ts` (auditable, type-checked)
 - Shells and middleware are named references (reusable across groups)
 - URL structure is independent of file system layout
 
@@ -323,12 +326,7 @@ import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [
-    preact(),
-    viact(),
-    mdx(),
-    tailwindcss(),
-  ],
+  plugins: [preact(), viact(), mdx(), tailwindcss()],
 });
 ```
 
@@ -338,13 +336,13 @@ server middleware, build hooks — for both client and SSR builds.
 
 ### Common use cases
 
-| Plugin | Purpose |
-|--------|---------|
-| `@mdx-js/rollup` | MDX content in route modules |
-| `@tailwindcss/vite` | Tailwind CSS integration |
-| `vite-plugin-pwa` | Service worker / PWA support |
-| `vite-imagetools` | Image optimization and transforms |
-| Custom Rollup plugins | Any Rollup-compatible transform |
+| Plugin                | Purpose                           |
+| --------------------- | --------------------------------- |
+| `@mdx-js/rollup`      | MDX content in route modules      |
+| `@tailwindcss/vite`   | Tailwind CSS integration          |
+| `vite-plugin-pwa`     | Service worker / PWA support      |
+| `vite-imagetools`     | Image optimization and transforms |
+| Custom Rollup plugins | Any Rollup-compatible transform   |
 
 ### Plugin ordering
 
@@ -391,10 +389,13 @@ Server-rendered HTML includes a non-executable JSON script tag with serialized
 state:
 
 ```html
-<script id="viact-state" type="application/json">{"url":"/dashboard","routeId":"dashboard","data":{...}}</script>
+<script id="viact-state" type="application/json">
+  {"url":"/dashboard","routeId":"dashboard","data":{...}}
+</script>
 ```
 
 The client runtime reads this state to:
+
 1. Hydrate the Preact component tree (matching server output)
 2. Initialize the client router with current route data
 3. Skip the initial loader fetch (data already present)

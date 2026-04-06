@@ -28,23 +28,23 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 
 ### LoaderArgs
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `request` | `Request` | The incoming Web Request |
-| `params` | `RouteParams` | Dynamic URL params (e.g. `{ slug: "hello" }`) |
-| `context` | `TContext` | App-level context (from adapter's context factory) |
-| `signal` | `AbortSignal` | Cancellation signal for timeouts |
-| `url` | `URL` | Parsed URL |
-| `route` | `ResolvedRoute` | Matched route metadata |
+| Field     | Type            | Description                                        |
+| --------- | --------------- | -------------------------------------------------- |
+| `request` | `Request`       | The incoming Web Request                           |
+| `params`  | `RouteParams`   | Dynamic URL params (e.g. `{ slug: "hello" }`)      |
+| `context` | `TContext`      | App-level context (from adapter's context factory) |
+| `signal`  | `AbortSignal`   | Cancellation signal for timeouts                   |
+| `url`     | `URL`           | Parsed URL                                         |
+| `route`   | `ResolvedRoute` | Matched route metadata                             |
 
 ### When loaders run
 
-| Scenario | Loader runs on |
-|----------|---------------|
-| SSG build | Build machine, once per path |
-| SSR request | Server, every request |
-| ISG initial | Build machine, then server on revalidation |
-| SPA | Server, during client navigation fetch |
+| Scenario          | Loader runs on                                             |
+| ----------------- | ---------------------------------------------------------- |
+| SSG build         | Build machine, once per path                               |
+| SSR request       | Server, every request                                      |
+| ISG initial       | Build machine, then server on revalidation                 |
+| SPA               | Server, during client navigation fetch                     |
 | Client navigation | Server (fetched as JSON via `x-viact-route-state-request`) |
 
 Loaders **never** run in the browser. This keeps server secrets (DB connections,
@@ -94,12 +94,12 @@ Same as `LoaderArgs` — `request`, `params`, `context`, `signal`, `url`, `route
 
 Actions can return:
 
-| Return | Effect |
-|--------|--------|
-| Plain data | Serialized to client as JSON |
+| Return                     | Effect                                    |
+| -------------------------- | ----------------------------------------- |
+| Plain data                 | Serialized to client as JSON              |
 | `{ ok, data, revalidate }` | Structured result with revalidation hints |
-| `{ redirect: "/path" }` | Server-side redirect |
-| `{ data, headers }` | Custom response headers (cookies, cache) |
+| `{ redirect: "/path" }`    | Server-side redirect                      |
+| `{ data, headers }`        | Custom response headers (cookies, cache)  |
 
 ### Revalidation hints
 
@@ -108,7 +108,7 @@ After a mutation, tell viact which routes need fresh data:
 ```typescript
 return {
   ok: true,
-  revalidate: ["route:self"],         // Re-run this route's loader
+  revalidate: ["route:self"], // Re-run this route's loader
   // revalidate: ["route:dashboard"],  // Re-run a specific route by ID
 };
 ```
@@ -120,7 +120,8 @@ send an `Origin` or `Referer` header that matches the current route origin or
 they are rejected with `403`.
 
 API routes are separate endpoints. They do not inherit page-route middleware or
-page-action CSRF behavior automatically.
+page-action CSRF behavior automatically. If you want shared API policy, declare
+it explicitly with `defineApp({ api: { middleware: ["auth"] } })`.
 
 ---
 
@@ -136,9 +137,7 @@ export function head({ data }: HeadArgs<typeof loader>) {
       { name: "description", content: data.post.excerpt },
       { property: "og:title", content: data.post.title },
     ],
-    link: [
-      { rel: "canonical", href: `https://example.com/blog/${data.post.slug}` },
-    ],
+    link: [{ rel: "canonical", href: `https://example.com/blog/${data.post.slug}` }],
   };
 }
 ```
@@ -200,6 +199,7 @@ export function Component() {
 ```
 
 The `<Form>` component:
+
 - Intercepts submit and sends via fetch (no full page reload)
 - Automatically revalidates based on action response hints
 - Falls back to native form submission if JavaScript fails
@@ -232,9 +232,10 @@ export async function DELETE({ params, context }: ApiRouteArgs) {
 ```
 
 API routes:
+
 - Live in `src/api/` with file-based path mapping
 - Export named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
 - Return `Response` objects directly
 - Share the same request context shape as page routes
-- Do not inherit page-route middleware automatically
+- Can opt into app-level API middleware via `defineApp({ api: { middleware } })`
 - Are excluded from client bundles entirely

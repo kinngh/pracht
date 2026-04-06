@@ -27,9 +27,7 @@ export interface VercelAdapterOptions<
   apiRoutes?: ResolvedApiRoute[];
   clientEntryUrl?: string;
   cssUrls?: string[];
-  createContext?: (
-    args: VercelContextArgs<TVercelContext>,
-  ) => TContext | Promise<TContext>;
+  createContext?: (args: VercelContextArgs<TVercelContext>) => TContext | Promise<TContext>;
 }
 
 export interface VercelServerEntryModuleOptions {
@@ -41,10 +39,7 @@ export function createVercelEdgeHandler<
   TVercelContext extends VercelExecutionContext = VercelExecutionContext,
   TContext = TVercelContext,
 >(options: VercelAdapterOptions<TVercelContext, TContext>) {
-  return async (
-    request: Request,
-    context: TVercelContext,
-  ): Promise<Response> => {
+  return async (request: Request, context: TVercelContext): Promise<Response> => {
     const viactContext = options.createContext
       ? await options.createContext({ request, context })
       : (context as unknown as TContext);

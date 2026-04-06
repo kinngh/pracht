@@ -2,11 +2,7 @@ import type { LoaderArgs, RouteComponentProps } from "viact";
 
 export async function loader(_args: LoaderArgs) {
   return {
-    highlights: [
-      "Hybrid route manifest",
-      "Per-route rendering modes",
-      "Thin deployment adapters",
-    ],
+    highlights: ["Hybrid route manifest", "Per-route rendering modes", "Thin deployment adapters"],
   };
 }
 

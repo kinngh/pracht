@@ -40,30 +40,30 @@ export const app = defineApp({
 
 Top-level configuration:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `shells` | `Record<string, string>` | Named shell modules, keyed by name, value is file path |
-| `middleware` | `Record<string, string>` | Named middleware modules |
-| `routes` | `(RouteDefinition \| GroupDefinition)[]` | Route tree |
+| Field        | Type                                     | Description                                            |
+| ------------ | ---------------------------------------- | ------------------------------------------------------ |
+| `shells`     | `Record<string, string>`                 | Named shell modules, keyed by name, value is file path |
+| `middleware` | `Record<string, string>`                 | Named middleware modules                               |
+| `routes`     | `(RouteDefinition \| GroupDefinition)[]` | Route tree                                             |
 
 ### `route(path, file, meta?)`
 
 Defines a single route:
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `path` | `string` | URL pattern (e.g. `/blog/:slug`) |
-| `file` | `string` | Relative path to route module |
+| Param  | Type        | Description                                            |
+| ------ | ----------- | ------------------------------------------------------ |
+| `path` | `string`    | URL pattern (e.g. `/blog/:slug`)                       |
+| `file` | `string`    | Relative path to route module                          |
 | `meta` | `RouteMeta` | Optional: render mode, shell, middleware, revalidation |
 
 ### `group(meta, routes)`
 
 Groups routes with shared configuration:
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `meta` | `GroupMeta` | Shell, middleware, render mode, pathPrefix to inherit |
-| `routes` | `RouteDefinition[]` | Routes in this group |
+| Param    | Type                | Description                                           |
+| -------- | ------------------- | ----------------------------------------------------- |
+| `meta`   | `GroupMeta`         | Shell, middleware, render mode, pathPrefix to inherit |
+| `routes` | `RouteDefinition[]` | Routes in this group                                  |
 
 Group properties cascade to children. A route's own meta overrides the group's.
 
@@ -73,11 +73,11 @@ Group properties cascade to children. A route's own meta overrides the group's.
 
 ```typescript
 interface RouteMeta {
-  id?: string;                    // Explicit route ID (auto-generated if omitted)
-  shell?: string;                 // Named shell from defineApp.shells
+  id?: string; // Explicit route ID (auto-generated if omitted)
+  shell?: string; // Named shell from defineApp.shells
   render?: "spa" | "ssr" | "ssg" | "isg";
-  middleware?: string[];          // Named middleware from defineApp.middleware
-  revalidate?: RouteRevalidate;   // ISG revalidation policy
+  middleware?: string[]; // Named middleware from defineApp.middleware
+  revalidate?: RouteRevalidate; // ISG revalidation policy
 }
 ```
 
@@ -88,7 +88,7 @@ interface RouteMeta {
 ### Static paths
 
 ```typescript
-route("/about", "./routes/about.tsx")
+route("/about", "./routes/about.tsx");
 ```
 
 Matches `/about` exactly.
@@ -96,7 +96,7 @@ Matches `/about` exactly.
 ### Dynamic segments
 
 ```typescript
-route("/blog/:slug", "./routes/blog-post.tsx")
+route("/blog/:slug", "./routes/blog-post.tsx");
 ```
 
 Matches `/blog/hello-world` with `params.slug = "hello-world"`.
@@ -104,13 +104,13 @@ Matches `/blog/hello-world` with `params.slug = "hello-world"`.
 Multiple dynamic segments:
 
 ```typescript
-route("/users/:userId/posts/:postId", "./routes/user-post.tsx")
+route("/users/:userId/posts/:postId", "./routes/user-post.tsx");
 ```
 
 ### Catch-all segments
 
 ```typescript
-route("/docs/*", "./routes/docs.tsx")
+route("/docs/*", "./routes/docs.tsx");
 ```
 
 Matches `/docs/a/b/c` — the catch-all value is available in params.
@@ -191,9 +191,7 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 Apply middleware to routes or groups:
 
 ```typescript
-group({ middleware: ["auth"] }, [
-  route("/dashboard", "./routes/dashboard.tsx"),
-])
+group({ middleware: ["auth"] }, [route("/dashboard", "./routes/dashboard.tsx")]);
 ```
 
 Middleware from groups stacks — a route inside a group with `["auth"]` that also
@@ -207,9 +205,9 @@ Groups can add a URL prefix to all child routes:
 
 ```typescript
 group({ pathPrefix: "/admin", shell: "admin", middleware: ["auth"] }, [
-  route("/", "./routes/admin/index.tsx"),        // → /admin
-  route("/users", "./routes/admin/users.tsx"),    // → /admin/users
-])
+  route("/", "./routes/admin/index.tsx"), // → /admin
+  route("/users", "./routes/admin/users.tsx"), // → /admin/users
+]);
 ```
 
 This keeps route files flat while grouping URLs logically.
