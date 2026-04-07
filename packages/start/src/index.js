@@ -395,6 +395,7 @@ function createWranglerConfig(projectName) {
 
 function createCloudflareEnvDeclaration() {
   return [
+    'import "viact";',
     'declare module "viact" {',
     "  interface Register {",
     "    context: {",

@@ -124,7 +124,7 @@ const DEFAULTS: ResolvedViactPluginOptions = {
   pagesDefaultRender: "ssr",
 };
 
-export function viact(options: ViactPluginOptions = {}): Plugin[] {
+export async function viact(options: ViactPluginOptions = {}): Promise<Plugin[]> {
   const resolved = resolveOptions(options);
   const isPagesMode = !!resolved.pagesDir;
   let root = process.cwd();
@@ -236,23 +236,16 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
   const plugins: Plugin[] = [...preact(), viactPlugin];
 
   if (resolved.adapter.id === "cloudflare") {
-    // Inject @cloudflare/vite-plugin lazily via a plugin that loads it in
-    // the async config hook, avoiding a top-level import that would pull
-    // wrangler types into every project.
-    plugins.push({
-      name: "viact:cloudflare",
-      async config(_, env) {
-        const { cloudflare } = await import("@cloudflare/vite-plugin");
-        const cfPlugins = cloudflare({
-          config: {
-            main: "virtual:viact/server",
-          },
-        });
-        return {
-          plugins: cfPlugins,
-        };
-      },
-    });
+    const { cloudflare } = (await import("@cloudflare/vite-plugin")) as {
+      cloudflare: (opts?: { config?: { main?: string } }) => Plugin[];
+    };
+    plugins.push(
+      ...cloudflare({
+        config: {
+          main: "virtual:viact/server",
+        },
+      }),
+    );
   }
 
   return plugins;
@@ -345,7 +338,7 @@ export function createViactServerModuleSource(
     "export const resolvedApp = resolveApp(app);",
     `export const apiRoutes = resolveApiRoutes(Object.keys(apiModules), ${JSON.stringify(resolved.apiDir)});`,
     `export const buildTarget = ${JSON.stringify(adapter?.id ?? "node")};`,
-    `export const clientEntryUrl = ${JSON.stringify(clientBuild.clientEntryUrl)};`,
+    `export const clientEntryUrl = ${JSON.stringify(clientBuild.clientEntryUrl ?? CLIENT_BROWSER_PATH)};`,
     `export const cssManifest = ${JSON.stringify(clientBuild.cssManifest)};`,
     `export const jsManifest = ${JSON.stringify(clientBuild.jsManifest)};`,
     "",

@@ -8,7 +8,5 @@
     "directory": "dist/client",
     "run_worker_first": true
   },
-  // Example: add bindings here and they'll be available in dev via context.env
-  // "kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }],
-  // "d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "xyz" }]
+  "kv_namespaces": [{ "binding": "MY_KV", "id": "abc123" }]
 }

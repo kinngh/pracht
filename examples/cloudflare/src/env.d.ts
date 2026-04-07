@@ -1,3 +1,5 @@
+import 'viact';
+
 declare module "viact" {
   interface Register {
     context: {
