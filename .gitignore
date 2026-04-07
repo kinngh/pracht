@@ -5,3 +5,4 @@ dist
 !.claude/commands/
 test-results
 .tmp
+.wrangler

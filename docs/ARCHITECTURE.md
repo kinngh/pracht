@@ -62,8 +62,15 @@ export const app = defineApp({
       }),
     ]),
     group({ shell: "app", middleware: ["auth"] }, [
-      route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }),
+      // Inline style: loader/action exported from the route file
       route("/settings", "./routes/settings.tsx", { render: "spa" }),
+      // Separate files style: server code in dedicated files
+      route("/dashboard", {
+        component: "./routes/dashboard.tsx",
+        loader: "./server/dashboard-loader.ts",
+        action: "./server/dashboard-action.ts",
+        render: "ssr",
+      }),
     ]),
   ],
 });
@@ -82,7 +89,12 @@ assignment implicit via `_middleware.ts` files. Viact's hybrid approach:
 
 ### 2. Route Modules
 
-A route module is a file that exports some combination of:
+Viact supports two styles for wiring data loading to routes. Both can coexist
+in the same app.
+
+#### Style A: Inline (loader/action in the route file)
+
+A route module exports some combination of:
 
 ```typescript
 // src/routes/dashboard.tsx
@@ -120,6 +132,48 @@ export async function prerender(): Promise<string[]> {
   return ["/dashboard"];
 }
 ```
+
+#### Style B: Separate files (server code in dedicated files)
+
+Server-side data functions live in `src/server/` (or any directory configured
+via `serverDir`). Route files become pure components with no server code:
+
+```typescript
+// src/server/dashboard-loader.ts
+export async function loader({ request }: LoaderArgs) {
+  return { user: await getUser(request) };
+}
+```
+
+```typescript
+// src/server/dashboard-action.ts
+export async function action({ request }: ActionArgs) {
+  const form = await request.formData();
+  await createProject(form.get("name"));
+  return { ok: true, revalidate: ["route:self"] };
+}
+```
+
+```typescript
+// src/routes/dashboard.tsx — pure component, no server code
+export function Component({ data }: RouteComponentProps) {
+  return <main>{data.user.name}</main>;
+}
+```
+
+Wired in the manifest via the `RouteConfig` object form:
+
+```typescript
+route("/dashboard", {
+  component: "./routes/dashboard.tsx",
+  loader: "./server/dashboard-loader.ts",
+  action: "./server/dashboard-action.ts",
+  render: "ssr",
+})
+```
+
+When a separate file is specified, it takes precedence over inline exports in
+the route module.
 
 ### 3. Shell Modules
 

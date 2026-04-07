@@ -1,14 +1,29 @@
+---
+name: scaffold
+version: 1.0.0
+description: |
+  Viact code scaffolding. Generates routes, shells, middleware, and API route
+  modules with correct types, exports, and manifest wiring. Knows viact
+  conventions (Preact idioms, render modes, route manifest).
+  Use when asked to "scaffold", "generate a route", "create a new page",
+  "add middleware", "add an API route", or "create a shell".
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Grep
+  - Glob
+  - AskUserQuestion
+---
+
 # Viact Scaffold
 
 Generate viact framework modules with correct types, exports, and manifest wiring.
 
-## Instructions
-
-You are scaffolding code for the **viact** framework — a full-stack Preact framework built on Vite.
-
 The user will describe what they want to create. Parse their request and generate the appropriate module(s). Always ask if anything is ambiguous (e.g. render mode, shell assignment).
 
-### What you can scaffold
+## What You Can Scaffold
 
 | Kind | Directory | Key exports | Example |
 |------|-----------|-------------|---------|
@@ -17,7 +32,9 @@ The user will describe what they want to create. Parse their request and generat
 | Middleware | `src/middleware/` | `middleware` | `src/middleware/rate-limit.ts` |
 | API route | `src/api/` | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) | `src/api/users/[id].ts` |
 
-### Route module template
+## Templates
+
+### Route
 
 ```tsx
 import type { LoaderArgs, RouteComponentProps } from "viact";
@@ -41,7 +58,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 - Use `RouteComponentProps<typeof loader>` for typed `data` prop.
 - Import `Form` from `"viact"` when adding actions.
 
-### Shell module template
+### Shell
 
 ```tsx
 import type { ShellProps } from "viact";
@@ -60,7 +77,7 @@ export function head() {
 }
 ```
 
-### Middleware module template
+### Middleware
 
 ```ts
 import type { MiddlewareFn } from "viact";
@@ -71,7 +88,7 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 };
 ```
 
-### API route module template
+### API Route
 
 ```ts
 import type { BaseRouteArgs } from "viact";
@@ -86,7 +103,7 @@ export function GET({ params, url }: BaseRouteArgs) {
 - Always return `Response` objects (typically `Response.json()`).
 - Dynamic segments use bracket syntax in filenames: `[id].ts`, `[...slug].ts`.
 
-### Wiring into the manifest
+## Wiring Into the Manifest
 
 After creating module files, **always update `src/routes.ts`** to register the new module:
 
@@ -95,13 +112,13 @@ After creating module files, **always update `src/routes.ts`** to register the n
 - **Middleware**: Add to the `middleware` record: `mwName: "./middleware/filename.ts"`.
 - **API routes**: No manifest change needed — auto-discovered from `src/api/` by the Vite plugin.
 
-Available render modes: `"ssr"` (default for dynamic), `"ssg"` (static at build), `"isg"` (incremental static with `revalidate: timeRevalidate(seconds)`), `"spa"` (client-only).
+Available render modes: `"ssr"` (default), `"ssg"` (static at build), `"isg"` (incremental static with `revalidate: timeRevalidate(seconds)`), `"spa"` (client-only).
 
 Import `timeRevalidate` from `"viact"` when using ISG.
 
-### Rules
+## Rules
 
-1. Use the project's existing `src/routes.ts` to determine current shells, middleware, and route structure before adding.
+1. Read the project's existing `src/routes.ts` to determine current shells, middleware, and route structure before adding.
 2. Place files in the conventional directories (`src/routes/`, `src/shells/`, `src/middleware/`, `src/api/`).
 3. Keep generated code minimal — only include exports the user actually needs.
 4. Use Preact idioms: `class` not `className`, functional components, `import type` for type-only imports.
