@@ -1,5 +1,24 @@
 import type { ComponentChildren, FunctionComponent } from "preact";
 
+/**
+ * Augment this interface to register your app's context type globally.
+ * Once registered, all route args (`BaseRouteArgs`, `LoaderArgs`, etc.)
+ * will use your context type automatically — no per-file generics needed.
+ *
+ * ```ts
+ * // src/env.d.ts
+ * declare module "viact" {
+ *   interface Register {
+ *     context: { env: Env; executionContext: ExecutionContext };
+ *   }
+ * }
+ * ```
+ */
+// biome-ignore lint/suspicious/noEmptyInterface: augmented by users
+export interface Register {}
+
+type RegisteredContext = Register extends { context: infer T } ? T : unknown;
+
 export type RenderMode = "spa" | "ssr" | "ssg" | "isg";
 
 export type RouteParams = Record<string, string>;
@@ -13,11 +32,11 @@ export type RouteRevalidate = TimeRevalidatePolicy;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
-export type ApiRouteHandler<TContext = unknown> = (
+export type ApiRouteHandler<TContext = RegisteredContext> = (
   args: BaseRouteArgs<TContext>,
 ) => MaybePromise<Response>;
 
-export interface ApiRouteModule<TContext = unknown> {
+export interface ApiRouteModule<TContext = any> {
   GET?: ApiRouteHandler<TContext>;
   POST?: ApiRouteHandler<TContext>;
   PUT?: ApiRouteHandler<TContext>;
@@ -134,7 +153,7 @@ export interface RouteMatch {
   pathname: string;
 }
 
-export interface BaseRouteArgs<TContext = unknown> {
+export interface BaseRouteArgs<TContext = RegisteredContext> {
   request: Request;
   params: RouteParams;
   context: TContext;
@@ -143,10 +162,10 @@ export interface BaseRouteArgs<TContext = unknown> {
   route: ResolvedRoute;
 }
 
-export interface LoaderArgs<TContext = unknown> extends BaseRouteArgs<TContext> {}
+export interface LoaderArgs<TContext = RegisteredContext> extends BaseRouteArgs<TContext> {}
 
 
-export interface MiddlewareArgs<TContext = unknown> extends BaseRouteArgs<TContext> {}
+export interface MiddlewareArgs<TContext = RegisteredContext> extends BaseRouteArgs<TContext> {}
 
 export interface HeadMetadata {
   title?: string;
@@ -167,7 +186,7 @@ export type LoaderData<TLoader extends LoaderLike> = TLoader extends (
 
 export interface HeadArgs<
   TLoader extends LoaderLike = undefined,
-  TContext = unknown,
+  TContext = any,
 > extends BaseRouteArgs<TContext> {
   data: LoaderData<TLoader>;
 }
@@ -187,12 +206,12 @@ export interface ShellProps {
 
 
 
-export type LoaderFn<TContext = unknown, TData = unknown> = (
+export type LoaderFn<TContext = any, TData = unknown> = (
   args: LoaderArgs<TContext>,
 ) => MaybePromise<TData>;
 
 
-export interface RouteModule<TContext = unknown, TLoader extends LoaderLike = undefined> {
+export interface RouteModule<TContext = any, TLoader extends LoaderLike = undefined> {
   loader?: LoaderFn<TContext>;
   head?: (args: HeadArgs<TLoader, TContext>) => MaybePromise<HeadMetadata>;
   Component: FunctionComponent<RouteComponentProps<TLoader>>;
@@ -200,28 +219,28 @@ export interface RouteModule<TContext = unknown, TLoader extends LoaderLike = un
   getStaticPaths?: () => MaybePromise<RouteParams[]>;
 }
 
-export interface ShellModule<TContext = unknown> {
+export interface ShellModule<TContext = any> {
   Shell: FunctionComponent<ShellProps>;
   head?: (args: BaseRouteArgs<TContext>) => MaybePromise<HeadMetadata>;
 }
 
-export type MiddlewareResult<TContext = unknown> =
+export type MiddlewareResult<TContext = any> =
   | void
   | Response
   | { redirect: string }
   | { context: Partial<TContext> };
 
-export type MiddlewareFn<TContext = unknown> = (
+export type MiddlewareFn<TContext = any> = (
   args: MiddlewareArgs<TContext>,
 ) => MaybePromise<MiddlewareResult<TContext>>;
 
-export interface MiddlewareModule<TContext = unknown> {
+export interface MiddlewareModule<TContext = any> {
   middleware: MiddlewareFn<TContext>;
 }
 
 export type ModuleImporter<TModule = unknown> = () => Promise<TModule>;
 
-export interface DataModule<TContext = unknown> {
+export interface DataModule<TContext = any> {
   loader?: LoaderFn<TContext>;
 }
 

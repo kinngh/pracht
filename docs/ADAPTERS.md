@@ -132,6 +132,39 @@ executionContext }` to viact so loaders, actions, and middleware can access
   R2, cron, and any other Cloudflare bindings without losing them on rebuild.
 - **KV/D1/R2 support**: custom context factories and the default build entry both
   surface the Cloudflare `env` object.
+- **`@cloudflare/vite-plugin` integration**: the adapter automatically includes
+  `@cloudflare/vite-plugin`, running the dev server inside workerd so that API
+  routes and loaders have full access to Cloudflare bindings (KV, D1, R2,
+  Queues, etc.) during development.
+
+### Using Cloudflare bindings in dev
+
+The adapter handles everything — just declare bindings in `wrangler.jsonc`:
+
+```jsonc
+{
+  "main": "dist/server/server.js",
+  "kv_namespaces": [{ "binding": "MY_KV", "id": "..." }],
+  "d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "..." }]
+}
+```
+
+The `main` field stays pointed at `dist/server/server.js` for production
+deploys. During dev, the adapter automatically overrides the entry to
+viact's virtual server module via `@cloudflare/vite-plugin` — no extra
+files needed.
+
+Bindings are available via `context.env` in loaders, actions, and API routes:
+
+```typescript
+// src/api/items.ts
+import type { BaseRouteArgs } from "viact";
+
+export async function GET({ context }: BaseRouteArgs) {
+  const value = await context.env.MY_KV.get("key");
+  return Response.json({ value });
+}
+```
 
 ### Entry module
 

@@ -24,6 +24,7 @@
   "include": [
     "packages/**/*.ts",
     "packages/**/*.tsx",
+    "packages/vite-plugin/virtual.d.ts",
     "examples/**/*.ts",
     "examples/**/*.tsx",
     "e2e/**/*.ts"

@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "viact dev"
+  },
   "dependencies": {
     "@viact/adapter-cloudflare": "workspace:*",
     "viact": "workspace:*"
@@ -12,6 +15,7 @@
     "@viact/vite-plugin": "workspace:*",
     "preact": "^10.26.9",
     "preact-render-to-string": "^6.5.13",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "wrangler": "^4.81.0"
   }
 }

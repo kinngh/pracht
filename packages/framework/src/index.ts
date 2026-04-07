@@ -29,6 +29,7 @@ export { ViactHttpError } from "./types.ts";
 export type {
   ApiConfig,
   ApiRouteHandler,
+  Register,
   ApiRouteMatch,
   ApiRouteModule,
   BaseRouteArgs,

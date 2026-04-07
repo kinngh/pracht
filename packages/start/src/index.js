@@ -229,6 +229,7 @@ function buildProjectFiles({ adapter, packageManager, projectName }) {
 
   if (adapter.id === "cloudflare") {
     files["wrangler.jsonc"] = createWranglerConfig(projectName);
+    files["src/env.d.ts"] = createCloudflareEnvDeclaration();
   }
 
   return files;
@@ -251,7 +252,7 @@ function createPackageJson({ adapter, projectName }) {
 
   if (adapter.id === "cloudflare") {
     scripts.deploy = "viact build && wrangler deploy";
-    devDependencies.wrangler = "^4.12.0";
+    devDependencies.wrangler = "^4.81.0";
   }
 
   if (adapter.id === "vercel") {
@@ -404,6 +405,21 @@ function createWranglerConfig(projectName) {
     '    "binding": "ASSETS",',
     '    "directory": "dist/client",',
     '    "run_worker_first": true',
+    "  }",
+    "}",
+    "",
+  ].join("\n");
+}
+
+function createCloudflareEnvDeclaration() {
+  return [
+    'import "viact";',
+    'declare module "viact" {',
+    "  interface Register {",
+    "    context: {",
+    "      env: Env;",
+    "      executionContext: ExecutionContext;",
+    "    };",
     "  }",
     "}",
     "",
