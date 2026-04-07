@@ -54,7 +54,7 @@ Ask the user to confirm the migration scope if the project is large (>20 routes)
 | `app/not-found.tsx` | 404 route: `route("*", "./routes/not-found.tsx")` | Catch-all at end of routes array |
 | `middleware.ts` | `src/middleware/*.ts` + `middleware` in `defineApp` | Named, applied per route/group |
 | `app/api/*/route.ts` | `src/api/*.ts` with `GET`/`POST` exports | Auto-discovered, no manifest entry |
-| `generateStaticParams` | `prerender()` export | Returns `string[]` of paths |
+| `generateStaticParams` | `getStaticPaths()` export | Returns `RouteParams[]` of param objects |
 | `generateMetadata` | `head()` export | Returns `{ title, meta }` |
 | Server Components | `loader()` export | Data fetching moves to loader; component is always a Preact component |
 | `"use server"` actions | `action()` export | Returns data/redirect/revalidation hints |

@@ -28,13 +28,16 @@ route — it's served as a static file.
 
 ### Dynamic SSG paths
 
-For routes with dynamic segments, export a `prerender` function:
+For routes with dynamic segments, export a `getStaticPaths` function that
+returns the params for each page to generate:
 
 ```typescript
 // src/routes/blog-post.tsx
-export async function prerender(): Promise<string[]> {
-  const posts = await getAllPosts();
-  return posts.map((p) => `/blog/${p.slug}`);
+import type { LoaderArgs, RouteParams } from "viact";
+
+export function getStaticPaths(): RouteParams[] {
+  const posts = getAllPosts();
+  return posts.map((p) => ({ slug: p.slug }));
 }
 
 export async function loader({ params }: LoaderArgs) {
@@ -42,8 +45,9 @@ export async function loader({ params }: LoaderArgs) {
 }
 ```
 
-The build calls `prerender()` to enumerate all paths, then runs the loader
-and renderer for each. Output: `dist/client/blog/hello-world/index.html`, etc.
+The build calls `getStaticPaths()` to enumerate params, constructs full paths
+from the route pattern, then runs the loader and renderer for each.
+Output: `dist/client/blog/hello-world/index.html`, etc.
 
 Prerendering runs concurrently (default: 6 parallel renders).
 

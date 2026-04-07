@@ -27,7 +27,7 @@ The user will describe what they want to create. Parse their request and generat
 
 | Kind | Directory | Key exports | Example |
 |------|-----------|-------------|---------|
-| Route | `src/routes/` | `loader`, `action`, `head`, `Component`, `ErrorBoundary`, `prerender` | `src/routes/blog.tsx` |
+| Route | `src/routes/` | `loader`, `action`, `head`, `Component`, `ErrorBoundary`, `getStaticPaths` | `src/routes/blog.tsx` |
 | Shell | `src/shells/` | `Shell`, `head` | `src/shells/marketing.tsx` |
 | Middleware | `src/middleware/` | `middleware` | `src/middleware/rate-limit.ts` |
 | API route | `src/api/` | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) | `src/api/users/[id].ts` |
@@ -54,7 +54,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 
 - Include `action` only if the user asks for form handling or mutations.
 - Include `ErrorBoundary` only if requested.
-- Include `prerender` only for SSG/ISG routes with dynamic segments.
+- Include `getStaticPaths` only for SSG/ISG routes with dynamic segments.
 - Use `RouteComponentProps<typeof loader>` for typed `data` prop.
 - Import `Form` from `"viact"` when adding actions.
 

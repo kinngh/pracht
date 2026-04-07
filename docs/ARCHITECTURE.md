@@ -127,9 +127,9 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
   return <p>Something went wrong: {error.message}</p>;
 }
 
-// Build: enumerate paths for SSG/ISG prerendering (optional)
-export async function prerender(): Promise<string[]> {
-  return ["/dashboard"];
+// Build: enumerate params for SSG/ISG prerendering (optional)
+export function getStaticPaths(): RouteParams[] {
+  return [{ id: "1" }, { id: "2" }];
 }
 ```
 

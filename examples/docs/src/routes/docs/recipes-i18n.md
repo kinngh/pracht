@@ -224,11 +224,11 @@ export function LanguageSwitcher({ currentLocale }: { currentLocale: string }) {
 
 ## Tips
 
-- For **SSG** pages, use `prerender()` to generate a page per locale:
+- For **SSG** pages, use `getStaticPaths()` to generate a page per locale:
 
 ```ts
-export async function prerender() {
-  return ["/en/about", "/fr/about"];
+export function getStaticPaths(): RouteParams[] {
+  return [{ locale: "en" }, { locale: "fr" }];
 }
 ```
 

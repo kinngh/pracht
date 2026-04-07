@@ -11,6 +11,10 @@ export const app = defineApp({
   routes: [
     group({ shell: "public" }, [
       route("/", "./routes/home.tsx", { id: "home", render: "ssg" }),
+      route("/products/:productId", "./routes/product.tsx", {
+        id: "product",
+        render: "ssg",
+      }),
       route("/pricing", "./routes/pricing.tsx", {
         id: "pricing",
         render: "isg",
