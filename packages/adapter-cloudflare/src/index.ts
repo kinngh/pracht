@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import type { ViactAdapter } from "@viact/vite-plugin";
 import {
   handleViactRequest,
@@ -42,18 +42,6 @@ export interface CloudflareAdapterOptions<
 
 export interface CloudflareServerEntryModuleOptions {
   assetsBinding?: string;
-  /**
-   * Pass the `@cloudflare/vite-plugin` plugin instance (or an array of plugins)
-   * to enable Cloudflare bindings during development.  When provided, viact
-   * skips its own Node-based dev SSR middleware and lets the Cloudflare plugin
-   * handle requests via workerd.
-   *
-   * ```ts
-   * import { cloudflare } from "@cloudflare/vite-plugin";
-   * cloudflareAdapter({ vitePlugin: cloudflare() })
-   * ```
-   */
-  vitePlugin?: Plugin | Plugin[];
 }
 
 export function createCloudflareFetchHandler<
@@ -180,30 +168,18 @@ function isFetcher(value: unknown): value is CloudflareFetcher {
 /**
  * Create a viact adapter for Cloudflare Workers.
  *
+ * Automatically includes `@cloudflare/vite-plugin` so that Cloudflare
+ * bindings (KV, D1, R2, Queues, etc.) are available during development
+ * via workerd.
+ *
  * ```ts
  * import { cloudflareAdapter } from "@viact/adapter-cloudflare";
  * viact({ adapter: cloudflareAdapter() })
- * ```
- *
- * To enable Cloudflare bindings (KV, D1, R2, etc.) during development, pass
- * the `@cloudflare/vite-plugin` plugin via the `vitePlugin` option:
- *
- * ```ts
- * import { cloudflare } from "@cloudflare/vite-plugin";
- * import { cloudflareAdapter } from "@viact/adapter-cloudflare";
- *
- * viact({ adapter: cloudflareAdapter({ vitePlugin: cloudflare() }) })
  * ```
  */
 export function cloudflareAdapter(
   options: CloudflareServerEntryModuleOptions = {},
 ): ViactAdapter {
-  const cfPlugins = options.vitePlugin
-    ? Array.isArray(options.vitePlugin)
-      ? options.vitePlugin
-      : [options.vitePlugin]
-    : [];
-
   return {
     id: "cloudflare",
     serverImports:
@@ -211,7 +187,7 @@ export function cloudflareAdapter(
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },
-    plugins: cfPlugins,
-    handlesDev: cfPlugins.length > 0,
+    plugins: cloudflare(),
+    handlesDev: true,
   };
 }

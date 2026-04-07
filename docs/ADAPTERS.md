@@ -132,40 +132,14 @@ executionContext }` to viact so loaders, actions, and middleware can access
   R2, cron, and any other Cloudflare bindings without losing them on rebuild.
 - **KV/D1/R2 support**: custom context factories and the default build entry both
   surface the Cloudflare `env` object.
-- **`@cloudflare/vite-plugin` integration**: pass the Cloudflare Vite plugin via
-  `vitePlugin` to run the dev server inside workerd, giving API routes and
-  loaders full access to Cloudflare bindings (KV, D1, R2, Queues, etc.) during
-  development.
+- **`@cloudflare/vite-plugin` integration**: the adapter automatically includes
+  `@cloudflare/vite-plugin`, running the dev server inside workerd so that API
+  routes and loaders have full access to Cloudflare bindings (KV, D1, R2,
+  Queues, etc.) during development.
 
 ### Using Cloudflare bindings in dev
 
-Install `@cloudflare/vite-plugin` and pass it to the adapter:
-
-```typescript
-// vite.config.ts
-import { cloudflare } from "@cloudflare/vite-plugin";
-import { cloudflareAdapter } from "@viact/adapter-cloudflare";
-import { viact } from "@viact/vite-plugin";
-
-export default defineConfig({
-  plugins: [
-    viact({
-      adapter: cloudflareAdapter({
-        vitePlugin: cloudflare(),
-      }),
-    }),
-  ],
-});
-```
-
-Create a thin worker entry that re-exports the viact virtual module:
-
-```typescript
-// src/worker.ts
-export { default } from "virtual:viact/server";
-```
-
-Point `wrangler.jsonc` at this source entry and declare your bindings:
+The adapter handles everything — just declare bindings in `wrangler.jsonc`:
 
 ```jsonc
 {
@@ -173,6 +147,13 @@ Point `wrangler.jsonc` at this source entry and declare your bindings:
   "kv_namespaces": [{ "binding": "MY_KV", "id": "..." }],
   "d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "..." }]
 }
+```
+
+Create a thin worker entry that re-exports the viact virtual module:
+
+```typescript
+// src/worker.ts
+export { default } from "virtual:viact/server";
 ```
 
 Bindings are available via `context.env` in loaders, actions, and API routes:

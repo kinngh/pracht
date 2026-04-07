@@ -240,8 +240,7 @@ function createPackageJson({ adapter, projectName }) {
 
   if (adapter.id === "cloudflare") {
     scripts.deploy = "viact build && wrangler deploy";
-    devDependencies["@cloudflare/vite-plugin"] = "^1.0.0";
-    devDependencies.wrangler = "^4.12.0";
+    devDependencies.wrangler = "^4.81.0";
   }
 
   return `${JSON.stringify(
@@ -263,28 +262,9 @@ function createPackageJson({ adapter, projectName }) {
 }
 
 function createViteConfig(adapter) {
-  if (adapter.id === "cloudflare") {
-    return [
-      'import { defineConfig } from "vite";',
-      'import { cloudflare } from "@cloudflare/vite-plugin";',
-      'import { viact } from "@viact/vite-plugin";',
-      'import { cloudflareAdapter } from "@viact/adapter-cloudflare";',
-      "",
-      "export default defineConfig({",
-      "  plugins: [",
-      "    viact({",
-      "      adapter: cloudflareAdapter({",
-      "        vitePlugin: cloudflare(),",
-      "      }),",
-      "    }),",
-      "  ],",
-      "});",
-      "",
-    ].join("\n");
-  }
-
   const ADAPTER_IMPORTS = {
     node: { fn: "nodeAdapter", pkg: "@viact/adapter-node" },
+    cloudflare: { fn: "cloudflareAdapter", pkg: "@viact/adapter-cloudflare" },
   };
 
   const info = ADAPTER_IMPORTS[adapter.id] ?? ADAPTER_IMPORTS.node;

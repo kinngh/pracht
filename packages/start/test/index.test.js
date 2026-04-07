@@ -58,15 +58,12 @@ describe("create-viact", () => {
     });
 
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
-    const viteConfig = await readFile(join(targetDir, "vite.config.ts"), "utf-8");
     const wranglerConfig = await readFile(join(targetDir, "wrangler.jsonc"), "utf-8");
 
     expect(packageJson).toContain('"@viact/cli": "latest"');
     expect(packageJson).toContain('"@viact/adapter-cloudflare": "latest"');
-    expect(packageJson).toContain('"@cloudflare/vite-plugin"');
-    expect(packageJson).toContain('"wrangler": "^4.12.0"');
-    expect(viteConfig).toContain('@cloudflare/vite-plugin');
-    expect(viteConfig).toContain('vitePlugin: cloudflare()');
+    expect(packageJson).toContain('"wrangler": "^4.81.0"');
+    expect(packageJson).not.toContain('"@cloudflare/vite-plugin"');
     expect(wranglerConfig).toContain('"main": "src/worker.ts"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(true);
     expect(existsSync(join(targetDir, "src/worker.ts"))).toBe(true);
