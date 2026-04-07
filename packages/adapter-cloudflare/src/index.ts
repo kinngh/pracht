@@ -1,11 +1,11 @@
-import type { ViactAdapter } from "@viact/vite-plugin";
+import type { PrachtAdapter } from "@pracht/vite-plugin";
 import {
-  handleViactRequest,
-  type HandleViactRequestOptions,
+  handlePrachtRequest,
+  type HandlePrachtRequestOptions,
   type ModuleRegistry,
   type ResolvedApiRoute,
-  type ViactApp,
-} from "viact";
+  type PrachtApp,
+} from "pracht";
 
 export interface CloudflareFetcher {
   fetch(input: Request | URL | string): Promise<Response>;
@@ -29,7 +29,7 @@ export interface CloudflareAdapterOptions<
     executionContext: CloudflareExecutionContext;
   },
 > {
-  app: ViactApp;
+  app: PrachtApp;
   registry?: ModuleRegistry;
   apiRoutes?: ResolvedApiRoute[];
   clientEntryUrl?: string;
@@ -66,7 +66,7 @@ export function createCloudflareFetchHandler<
       ? await options.createContext({ request, env, executionContext })
       : ({ env, executionContext } as TContext);
 
-    return handleViactRequest({
+    return handlePrachtRequest({
       app: options.app,
       registry: options.registry,
       request,
@@ -75,7 +75,7 @@ export function createCloudflareFetchHandler<
       clientEntryUrl: options.clientEntryUrl,
       cssManifest: options.cssManifest,
       jsManifest: options.jsManifest,
-    } satisfies HandleViactRequestOptions<TContext>);
+    } satisfies HandlePrachtRequestOptions<TContext>);
   };
 }
 
@@ -87,13 +87,13 @@ export function createCloudflareServerEntryModule(
   return [
     `export const cloudflareAssetsBinding = ${JSON.stringify(assetsBinding)};`,
     "",
-    "async function maybeServeViactAsset(request, env) {",
+    "async function maybeServePrachtAsset(request, env) {",
     '  if (request.method !== "GET" && request.method !== "HEAD") {',
     "    return null;",
     "  }",
     "",
     "  // Route state requests must be handled by the framework (returns JSON), not static assets",
-    '  if (request.headers.get("x-viact-route-state-request") === "1") {',
+    '  if (request.headers.get("x-pracht-route-state-request") === "1") {',
     "    return null;",
     "  }",
     "",
@@ -106,17 +106,17 @@ export function createCloudflareServerEntryModule(
     "  if (response.status === 404) return null;",
     "  // Vary on the route-state header so the CDN caches HTML and JSON responses separately",
     "  const headers = new Headers(response.headers);",
-    "  headers.append('Vary', 'x-viact-route-state-request');",
+    "  headers.append('Vary', 'x-pracht-route-state-request');",
     "  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });",
     "}",
     "",
     "async function fetch(request, env, executionContext) {",
-    "  const assetResponse = await maybeServeViactAsset(request, env);",
+    "  const assetResponse = await maybeServePrachtAsset(request, env);",
     "  if (assetResponse) {",
     "    return assetResponse;",
     "  }",
     "",
-    "  return handleViactRequest({",
+    "  return handlePrachtRequest({",
     "    app: resolvedApp,",
     "    registry,",
     "    request,",
@@ -143,7 +143,7 @@ async function maybeServeAsset(
   }
 
   // Route state requests must be handled by the framework (returns JSON), not static assets
-  if (request.headers.get("x-viact-route-state-request") === "1") {
+  if (request.headers.get("x-pracht-route-state-request") === "1") {
     return null;
   }
 
@@ -156,7 +156,7 @@ async function maybeServeAsset(
   if (response.status === 404) return null;
   // Vary on the route-state header so the CDN caches HTML and JSON responses separately
   const headers = new Headers(response.headers);
-  headers.append("Vary", "x-viact-route-state-request");
+  headers.append("Vary", "x-pracht-route-state-request");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -169,17 +169,17 @@ function isFetcher(value: unknown): value is CloudflareFetcher {
 }
 
 /**
- * Create a viact adapter for Cloudflare Workers.
+ * Create a pracht adapter for Cloudflare Workers.
  *
  * ```ts
- * import { cloudflareAdapter } from "@viact/adapter-cloudflare";
- * viact({ adapter: cloudflareAdapter() })
+ * import { cloudflareAdapter } from "@pracht/adapter-cloudflare";
+ * pracht({ adapter: cloudflareAdapter() })
  * ```
  */
-export function cloudflareAdapter(options: CloudflareServerEntryModuleOptions = {}): ViactAdapter {
+export function cloudflareAdapter(options: CloudflareServerEntryModuleOptions = {}): PrachtAdapter {
   return {
     id: "cloudflare",
-    serverImports: 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";',
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },

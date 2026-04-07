@@ -1,11 +1,11 @@
 {
-  "name": "@viact/cli",
+  "name": "@pracht/cli",
   "version": "0.0.0",
   "bin": {
-    "viact": "./bin/viact.js"
+    "pracht": "./bin/pracht.js"
   },
   "type": "module",
   "dependencies": {
-    "viact": "workspace:*"
+    "pracht": "workspace:*"
   }
 }

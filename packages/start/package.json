@@ -1,8 +1,8 @@
 {
-  "name": "create-viact",
+  "name": "create-pracht",
   "version": "0.0.0",
   "bin": {
-    "create-viact": "./bin/create-viact.js"
+    "create-pracht": "./bin/create-pracht.js"
   },
   "files": [
     "bin",

@@ -1,18 +1,18 @@
 {
-  "name": "@viact/example-cloudflare",
+  "name": "@pracht/example-cloudflare",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "viact dev"
+    "dev": "pracht dev"
   },
   "dependencies": {
-    "@viact/adapter-cloudflare": "workspace:*",
-    "viact": "workspace:*"
+    "@pracht/adapter-cloudflare": "workspace:*",
+    "pracht": "workspace:*"
   },
   "devDependencies": {
-    "@viact/cli": "workspace:*",
-    "@viact/vite-plugin": "workspace:*",
+    "@pracht/cli": "workspace:*",
+    "@pracht/vite-plugin": "workspace:*",
     "preact": "^10.26.9",
     "preact-render-to-string": "^6.5.13",
     "vite": "^8.0.0",

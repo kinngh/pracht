@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
-import { viact } from "@viact/vite-plugin";
-import { cloudflareAdapter } from "@viact/adapter-cloudflare";
+import { pracht } from "@pracht/vite-plugin";
+import { cloudflareAdapter } from "@pracht/adapter-cloudflare";
 
 export default defineConfig({
-  plugins: [viact({ adapter: cloudflareAdapter() })],
+  plugins: [pracht({ adapter: cloudflareAdapter() })],
 });

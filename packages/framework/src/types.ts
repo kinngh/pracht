@@ -7,7 +7,7 @@ import type { ComponentChildren, FunctionComponent } from "preact";
  *
  * ```ts
  * // src/env.d.ts
- * declare module "viact" {
+ * declare module "pracht" {
  *   interface Register {
  *     context: { env: Env; executionContext: ExecutionContext };
  *   }
@@ -100,14 +100,14 @@ export interface GroupDefinition {
 
 export type RouteTreeNode = RouteDefinition | GroupDefinition;
 
-export interface ViactAppConfig {
+export interface PrachtAppConfig {
   shells?: Record<string, string>;
   middleware?: Record<string, string>;
   api?: ApiConfig;
   routes: RouteTreeNode[];
 }
 
-export interface ViactApp {
+export interface PrachtApp {
   shells: Record<string, string>;
   middleware: Record<string, string>;
   api: ApiConfig;
@@ -142,7 +142,7 @@ export interface ResolvedRoute extends Omit<RouteMeta, "middleware"> {
   segments: RouteSegment[];
 }
 
-export interface ResolvedViactApp extends Omit<ViactApp, "routes"> {
+export interface ResolvedPrachtApp extends Omit<PrachtApp, "routes"> {
   routes: ResolvedRoute[];
   apiRoutes: ResolvedApiRoute[];
 }
@@ -248,12 +248,12 @@ export interface ModuleRegistry {
   dataModules?: Record<string, ModuleImporter<DataModule>>;
 }
 
-export class ViactHttpError extends Error {
+export class PrachtHttpError extends Error {
   readonly status: number;
 
   constructor(status: number, message: string) {
     super(message);
-    this.name = "ViactHttpError";
+    this.name = "PrachtHttpError";
     this.status = status;
   }
 }

@@ -1,6 +1,6 @@
 ---
 title: Adapters
-lead: Adapters are thin layers that translate between a platform's native request handling and viact's Web Request/Response interface. viact ships adapters for Cloudflare Workers, Vercel Edge Functions, and Node.js.
+lead: Adapters are thin layers that translate between a platform's native request handling and pracht's Web Request/Response interface. pracht ships adapters for Cloudflare Workers, Vercel Edge Functions, and Node.js.
 breadcrumb: Adapters
 prev:
   href: /docs/deployment
@@ -19,7 +19,7 @@ Platform request (Node / CF / Vercel)
   → Convert to Web Request
   → Is this a static asset?  → Yes: serve from dist/client/
   → Is this a prerendered page?  → Yes: serve static HTML (check ISG staleness)
-  → Delegate to handleViactRequest()
+  → Delegate to handlePrachtRequest()
   → Convert Web Response back to platform response
 ```
 
@@ -33,26 +33,26 @@ Deploy to Cloudflare's global edge network. Static assets are served from the `A
 
 ```ts [vite.config.ts]
 import { defineConfig } from "vite";
-import { viact } from "@viact/vite-plugin";
-import { cloudflareAdapter } from "@viact/adapter-cloudflare";
+import { pracht } from "@pracht/vite-plugin";
+import { cloudflareAdapter } from "@pracht/adapter-cloudflare";
 
 export default defineConfig({
-  plugins: [viact({ adapter: cloudflareAdapter() })],
+  plugins: [pracht({ adapter: cloudflareAdapter() })],
 });
 ```
 
 ```json [package.json]
 {
   "dependencies": {
-    "viact": "*",
-    "@viact/adapter-cloudflare": "*"
+    "pracht": "*",
+    "@pracht/adapter-cloudflare": "*"
   }
 }
 ```
 
 ### Build output
 
-Running `viact build` with the Cloudflare adapter emits:
+Running `pracht build` with the Cloudflare adapter emits:
 
 ```
 dist/
@@ -83,7 +83,7 @@ export async function loader({ context }: LoaderArgs) {
 ### Deploy
 
 ```sh
-viact build
+pracht build
 npx wrangler deploy
 ```
 
@@ -97,11 +97,11 @@ Deploy using Vercel's Build Output API v3. SSG pages are served from the static 
 
 ```ts
 // vite.config.ts
-import { vercelAdapter } from "@viact/adapter-vercel";
-viact({ adapter: vercelAdapter() })
+import { vercelAdapter } from "@pracht/adapter-vercel";
+pracht({ adapter: vercelAdapter() })
 
 // package.json
-"@viact/adapter-vercel": "*"
+"@pracht/adapter-vercel": "*"
 ```
 
 ### Build output
@@ -118,7 +118,7 @@ viact({ adapter: vercelAdapter() })
 ### Deploy
 
 ```sh
-viact build
+pracht build
 npx vercel deploy --prebuilt
 ```
 
@@ -126,23 +126,23 @@ npx vercel deploy --prebuilt
 
 ## Node.js
 
-Run viact as a standard Node.js HTTP server. The adapter handles static file serving, ISG stale-while-revalidate, request translation, and the generated `dist/server/server.js` entry boots the production server directly.
+Run pracht as a standard Node.js HTTP server. The adapter handles static file serving, ISG stale-while-revalidate, request translation, and the generated `dist/server/server.js` entry boots the production server directly.
 
 ### Setup
 
 ```ts
 // vite.config.ts
-import { nodeAdapter } from "@viact/adapter-node";
-viact({ adapter: nodeAdapter() })
+import { nodeAdapter } from "@pracht/adapter-node";
+pracht({ adapter: nodeAdapter() })
 
 // package.json
-"@viact/adapter-node": "*"
+"@pracht/adapter-node": "*"
 ```
 
 ### Deploy
 
 ```sh
-viact build
+pracht build
 node dist/server/server.js
 // Server listening on http://localhost:3000
 ```
@@ -175,19 +175,19 @@ The context object is available as `args.context` in every loader, middleware, a
 
 ## Writing a Custom Adapter
 
-A custom adapter exports a factory function that returns a `ViactAdapter` object:
+A custom adapter exports a factory function that returns a `PrachtAdapter` object:
 
 ```ts
-import type { ViactAdapter } from "@viact/vite-plugin";
+import type { PrachtAdapter } from "@pracht/vite-plugin";
 
-export function myAdapter(): ViactAdapter {
+export function myAdapter(): PrachtAdapter {
   return {
     id: "my-platform",
-    serverImports: 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";',
     createServerEntryModule() {
       return `
 export default async function handle(request) {
-  return handleViactRequest({
+  return handlePrachtRequest({
     app: resolvedApp,
     registry,
     request,
@@ -208,10 +208,10 @@ At the runtime level, an adapter also typically needs to:
 1. Accept a platform request and convert it to a Web `Request`
 2. Check for static assets -- serve files from `dist/client/` with appropriate headers
 3. Check for prerendered pages -- serve SSG/ISG HTML (with staleness checking for ISG)
-4. Delegate dynamic requests to `handleViactRequest()` from `viact`
+4. Delegate dynamic requests to `handlePrachtRequest()` from `pracht`
 5. Convert the Web `Response` back to the platform's response format
 6. Provide a context factory for platform-specific values
 7. Export an entry module generator for the Vite plugin
 
 > [!INFO]
-> See the source of `@viact/adapter-cloudflare` or `@viact/adapter-node` in the monorepo for a concrete reference implementation.
+> See the source of `@pracht/adapter-cloudflare` or `@pracht/adapter-node` in the monorepo for a concrete reference implementation.

@@ -13,7 +13,7 @@ export { Suspense, lazy } from "preact-suspense";
 export {
   applyDefaultSecurityHeaders,
   Form,
-  handleViactRequest,
+  handlePrachtRequest,
   prerenderApp,
   readHydrationState,
   startApp,
@@ -22,10 +22,10 @@ export {
   useRevalidate,
   useRevalidateRoute,
   useRouteData,
-  ViactRuntimeProvider,
+  PrachtRuntimeProvider,
 } from "./runtime.ts";
 export { initClientRouter, useNavigate } from "./router.ts";
-export { ViactHttpError } from "./types.ts";
+export { PrachtHttpError } from "./types.ts";
 export type {
   ApiConfig,
   ApiRouteHandler,
@@ -53,7 +53,7 @@ export type {
   RenderMode,
   ResolvedApiRoute,
   ResolvedRoute,
-  ResolvedViactApp,
+  ResolvedPrachtApp,
   RouteComponentProps,
   RouteConfig,
   RouteDefinition,
@@ -66,18 +66,18 @@ export type {
   ShellModule,
   ShellProps,
   TimeRevalidatePolicy,
-  ViactApp,
-  ViactAppConfig,
+  PrachtApp,
+  PrachtAppConfig,
 } from "./types.ts";
 export type {
   FormProps,
-  HandleViactRequestOptions,
+  HandlePrachtRequestOptions,
   ISGManifestEntry,
   Location,
   PrerenderAppOptions,
   PrerenderAppResult,
   PrerenderResult,
   StartAppOptions,
-  ViactHydrationState,
+  PrachtHydrationState,
 } from "./runtime.ts";
 export type { InitClientRouterOptions, NavigateFn } from "./router.ts";

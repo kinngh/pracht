@@ -38,7 +38,7 @@ if (command === "--version" || command === "-v") {
 const handlers = { dev, build, preview };
 
 if (!(command in handlers)) {
-  console.error(`Unknown viact command: ${command}`);
+  console.error(`Unknown pracht command: ${command}`);
   printHelp();
   process.exit(1);
 }
@@ -73,7 +73,7 @@ async function build() {
       outDir: "dist/client",
       manifest: true,
       rollupOptions: {
-        input: "virtual:viact/client",
+        input: "virtual:pracht/client",
       },
     },
   });
@@ -83,7 +83,7 @@ async function build() {
   await viteBuild({
     root: process.cwd(),
     build: {
-      ssr: "virtual:viact/server",
+      ssr: "virtual:pracht/server",
       outDir: "dist/server",
     },
   });
@@ -95,7 +95,7 @@ async function build() {
 
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
-    const { prerenderApp } = await import("viact");
+    const { prerenderApp } = await import("pracht");
 
     // Read the Vite manifest for asset URLs
     const manifestPath = resolve(clientDir, ".vite/manifest.json");
@@ -103,7 +103,7 @@ async function build() {
       ? JSON.parse(readFileSync(manifestPath, "utf-8"))
       : {};
 
-    const clientEntry = viteManifest["virtual:viact/client"];
+    const clientEntry = viteManifest["virtual:pracht/client"];
     const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;
 
     // Build per-source-file CSS manifest by walking static imports transitively.
@@ -190,12 +190,12 @@ async function preview() {
   const serverEntry = resolve(root, "dist/server/server.js");
 
   if (!existsSync(serverEntry)) {
-    console.error("Server build not found at dist/server/. Run `viact build` first.");
+    console.error("Server build not found at dist/server/. Run `pracht build` first.");
     process.exit(1);
   }
 
   const serverMod = await import(serverEntry);
-  const { handleViactRequest } = await import("viact");
+  const { handlePrachtRequest } = await import("pracht");
 
   // Load ISG manifest if it exists
   const isgManifestPath = resolve(root, "dist/server/isg-manifest.json");
@@ -210,7 +210,7 @@ async function preview() {
     : {};
 
   // Find the client entry asset from the manifest
-  const clientEntry = viteManifest["virtual:viact/client"];
+  const clientEntry = viteManifest["virtual:pracht/client"];
   const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;
   const cssUrls = (clientEntry?.css ?? []).map((f) => `/${f}`);
 
@@ -248,7 +248,7 @@ async function preview() {
 
         setDefaultSecurityHeaders(res, {
           "content-type": "text/html; charset=utf-8",
-          "x-viact-isg": isStale ? "stale" : "fresh",
+          "x-pracht-isg": isStale ? "stale" : "fresh",
         });
         createReadStream(htmlPath).pipe(res);
 
@@ -257,7 +257,7 @@ async function preview() {
           const regenRequest = new Request(new URL(parsedUrl.pathname, "http://localhost"), {
             method: "GET",
           });
-          handleViactRequest({
+          handlePrachtRequest({
             app: serverMod.resolvedApp,
             registry: serverMod.registry,
             request: regenRequest,
@@ -321,7 +321,7 @@ async function preview() {
         headers,
       });
 
-      const response = await handleViactRequest({
+      const response = await handlePrachtRequest({
         app: serverMod.resolvedApp,
         registry: serverMod.registry,
         request: webRequest,
@@ -350,17 +350,17 @@ async function preview() {
   });
 
   server.listen(port, () => {
-    console.log(`\n  viact preview server running at http://localhost:${port}\n`);
+    console.log(`\n  pracht preview server running at http://localhost:${port}\n`);
   });
 }
 
 function printHelp() {
-  console.log(`viact ${VERSION}
+  console.log(`pracht ${VERSION}
 
 Usage:
-  viact dev       Start development server with HMR
-  viact build     Production build (client + server)
-  viact preview   Preview the production build
+  pracht dev       Start development server with HMR
+  pracht build     Production build (client + server)
+  pracht preview   Preview the production build
 `);
 }
 

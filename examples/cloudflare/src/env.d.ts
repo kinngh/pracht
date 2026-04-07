@@ -1,6 +1,6 @@
-import "viact";
+import "pracht";
 
-declare module "viact" {
+declare module "pracht" {
   interface Register {
     context: {
       env: Env;

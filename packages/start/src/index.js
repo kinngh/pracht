@@ -6,35 +6,35 @@ import { createInterface } from "node:readline/promises";
 
 const ADAPTERS = {
   node: {
-    description: "Node.js server with viact preview",
+    description: "Node.js server with pracht preview",
     id: "node",
     label: "Node.js",
-    packageName: "@viact/adapter-node",
+    packageName: "@pracht/adapter-node",
     short: "node",
   },
   cloudflare: {
     description: "Cloudflare Workers with wrangler deploy",
     id: "cloudflare",
     label: "Cloudflare Workers",
-    packageName: "@viact/adapter-cloudflare",
+    packageName: "@pracht/adapter-cloudflare",
     short: "cf",
   },
   vercel: {
     description: "Vercel Edge Functions with prebuilt deploy",
     id: "vercel",
     label: "Vercel",
-    packageName: "@viact/adapter-vercel",
+    packageName: "@pracht/adapter-vercel",
     short: "vercel",
   },
 };
 
-const DEFAULT_DIRECTORY = "viact-app";
+const DEFAULT_DIRECTORY = "pracht-app";
 
 export async function run(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   const packageManager = getPackageManager();
 
-  console.log("create-viact");
+  console.log("create-pracht");
   console.log(`Using ${packageManager} for this scaffold.`);
   console.log("");
 
@@ -237,26 +237,26 @@ function buildProjectFiles({ adapter, packageManager, projectName }) {
 
 function createPackageJson({ adapter, projectName }) {
   const scripts = {
-    build: "viact build",
-    dev: "viact dev",
-    preview: "viact preview",
+    build: "pracht build",
+    dev: "pracht dev",
+    preview: "pracht preview",
   };
 
   const devDependencies = {
-    "@viact/cli": "latest",
-    "@viact/vite-plugin": "latest",
+    "@pracht/cli": "latest",
+    "@pracht/vite-plugin": "latest",
     preact: "^10.26.9",
     "preact-render-to-string": "^6.5.13",
     vite: "^8.0.0",
   };
 
   if (adapter.id === "cloudflare") {
-    scripts.deploy = "viact build && wrangler deploy";
+    scripts.deploy = "pracht build && wrangler deploy";
     devDependencies.wrangler = "^4.81.0";
   }
 
   if (adapter.id === "vercel") {
-    scripts.deploy = "viact build && vercel deploy --prebuilt";
+    scripts.deploy = "pracht build && vercel deploy --prebuilt";
     devDependencies.vercel = "latest";
   }
 
@@ -264,7 +264,7 @@ function createPackageJson({ adapter, projectName }) {
     {
       dependencies: {
         [adapter.packageName]: "latest",
-        viact: "latest",
+        pracht: "latest",
       },
       devDependencies,
       name: projectName,
@@ -280,20 +280,20 @@ function createPackageJson({ adapter, projectName }) {
 
 function createViteConfig(adapter) {
   const ADAPTER_IMPORTS = {
-    node: { fn: "nodeAdapter", pkg: "@viact/adapter-node" },
-    cloudflare: { fn: "cloudflareAdapter", pkg: "@viact/adapter-cloudflare" },
-    vercel: { fn: "vercelAdapter", pkg: "@viact/adapter-vercel" },
+    node: { fn: "nodeAdapter", pkg: "@pracht/adapter-node" },
+    cloudflare: { fn: "cloudflareAdapter", pkg: "@pracht/adapter-cloudflare" },
+    vercel: { fn: "vercelAdapter", pkg: "@pracht/adapter-vercel" },
   };
 
   const info = ADAPTER_IMPORTS[adapter.id] ?? ADAPTER_IMPORTS.node;
 
   return [
     'import { defineConfig } from "vite";',
-    'import { viact } from "@viact/vite-plugin";',
+    'import { pracht } from "@pracht/vite-plugin";',
     `import { ${info.fn} } from "${info.pkg}";`,
     "",
     "export default defineConfig({",
-    `  plugins: [viact({ adapter: ${info.fn}() })],`,
+    `  plugins: [pracht({ adapter: ${info.fn}() })],`,
     "});",
     "",
   ].join("\n");
@@ -301,7 +301,7 @@ function createViteConfig(adapter) {
 
 function createRoutesFile() {
   return [
-    'import { defineApp, route } from "viact";',
+    'import { defineApp, route } from "pracht";',
     "",
     "export const app = defineApp({",
     "  shells: {",
@@ -317,14 +317,14 @@ function createRoutesFile() {
 
 function createShellFile(projectName) {
   return [
-    'import type { ShellProps } from "viact";',
+    'import type { ShellProps } from "pracht";',
     "",
     "export function Shell({ children }: ShellProps) {",
     "  return (",
     '    <div style={{ fontFamily: "Inter, system-ui, sans-serif", margin: "0 auto", maxWidth: "720px", padding: "48px 20px" }}>',
     '      <header style={{ marginBottom: "32px" }}>',
     `        <strong>${projectName}</strong>`,
-    '        <p style={{ color: "#555", margin: "8px 0 0" }}>A new viact app.</p>',
+    '        <p style={{ color: "#555", margin: "8px 0 0" }}>A new pracht app.</p>',
     "      </header>",
     "      <main>{children}</main>",
     "    </div>",
@@ -343,7 +343,7 @@ function createShellFile(projectName) {
 
 function createHomeRoute(adapter) {
   return [
-    'import type { LoaderArgs, RouteComponentProps } from "viact";',
+    'import type { LoaderArgs, RouteComponentProps } from "pracht";',
     "",
     "export async function loader(_args: LoaderArgs) {",
     "  return {",
@@ -360,7 +360,7 @@ function createHomeRoute(adapter) {
     "  return (",
     "    <section>",
     '      <p style={{ color: "#555", marginBottom: "8px" }}>Starter ready.</p>',
-    '      <h1 style={{ fontSize: "2.5rem", lineHeight: 1.1, margin: "0 0 16px" }}>Your viact app is up and running.</h1>',
+    '      <h1 style={{ fontSize: "2.5rem", lineHeight: 1.1, margin: "0 0 16px" }}>Your pracht app is up and running.</h1>',
     '      <p style={{ fontSize: "1.1rem", lineHeight: 1.6, marginBottom: "24px" }}>',
     "        This starter is configured for <strong>{data.adapter}</strong>.",
     "      </p>",
@@ -385,7 +385,7 @@ function createHealthRoute(adapter) {
     "  return Response.json({",
     `    adapter: ${JSON.stringify(adapter.short)},`,
     "    ok: true,",
-    '    service: "viact",',
+    '    service: "pracht",',
     "  });",
     "}",
     "",
@@ -413,8 +413,8 @@ function createWranglerConfig(projectName) {
 
 function createCloudflareEnvDeclaration() {
   return [
-    'import "viact";',
-    'declare module "viact" {',
+    'import "pracht";',
+    'declare module "pracht" {',
     "  interface Register {",
     "    context: {",
     "      env: Env;",
@@ -435,7 +435,7 @@ function createReadme({ adapter, packageManager, projectName }) {
   const lines = [
     `# ${projectName}`,
     "",
-    `This viact starter is configured for ${adapter.label}.`,
+    `This pracht starter is configured for ${adapter.label}.`,
     "",
     "## Commands",
     "",
@@ -492,7 +492,7 @@ function printNextSteps({ adapter, dir, installSucceeded, packageManager, skipIn
   const devCommand = packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
 
   console.log("");
-  console.log(`Created a viact app in ${dir}.`);
+  console.log(`Created a pracht app in ${dir}.`);
   console.log(`Adapter: ${adapter.label}`);
   console.log("");
   console.log("Next steps:");
@@ -511,10 +511,10 @@ function printNextSteps({ adapter, dir, installSucceeded, packageManager, skipIn
 }
 
 function printHelp() {
-  console.log(`create-viact
+  console.log(`create-pracht
 
 Usage:
-  create-viact [directory] [--adapter=node|cf|vercel] [--skip-install]
+  create-pracht [directory] [--adapter=node|cf|vercel] [--skip-install]
 `);
 }
 

@@ -1,4 +1,4 @@
-import type { LoaderArgs, RouteComponentProps, RouteParams } from "viact";
+import type { LoaderArgs, RouteComponentProps, RouteParams } from "pracht";
 
 export const RENDER_MODE = "ssg";
 

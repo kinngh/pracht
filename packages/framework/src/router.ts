@@ -5,14 +5,14 @@ import type { VNode } from "preact";
 
 import { matchAppRoute } from "./app.ts";
 import { getCachedRouteState, setupPrefetching } from "./prefetch.ts";
-import type { ResolvedViactApp, RouteMatch } from "./types.ts";
-import { fetchViactRouteState, ViactRuntimeProvider } from "./runtime.ts";
-import type { SerializedRouteError, ViactHydrationState } from "./runtime.ts";
+import type { ResolvedPrachtApp, RouteMatch } from "./types.ts";
+import { fetchPrachtRouteState, PrachtRuntimeProvider } from "./runtime.ts";
+import type { SerializedRouteError, PrachtHydrationState } from "./runtime.ts";
 
 declare global {
   interface Window {
-    __VIACT_NAVIGATE__?: NavigateFn;
-    __VIACT_ROUTER_READY__?: boolean;
+    __PRACHT_NAVIGATE__?: NavigateFn;
+    __PRACHT_ROUTER_READY__?: boolean;
   }
 }
 
@@ -27,10 +27,10 @@ export function useNavigate(): NavigateFn {
 }
 
 export interface InitClientRouterOptions {
-  app: ResolvedViactApp;
+  app: ResolvedPrachtApp;
   routeModules: ModuleMap;
   shellModules: ModuleMap;
-  initialState: ViactHydrationState;
+  initialState: PrachtHydrationState;
   root: HTMLElement;
   findModuleKey: (modules: ModuleMap, file: string) => string | null;
 }
@@ -71,7 +71,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       NavigateContext.Provider as any,
       { value: navigate },
       h(
-        ViactRuntimeProvider as any,
+        PrachtRuntimeProvider as any,
         {
           data: state.data,
           params: match.params,
@@ -104,7 +104,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       error: null,
     };
     try {
-      const result = await (getCachedRouteState(to) ?? fetchViactRouteState(to));
+      const result = await (getCachedRouteState(to) ?? fetchPrachtRouteState(to));
       if (result.type === "redirect") {
         if (result.location) {
           await navigate(result.location, opts);
@@ -160,7 +160,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       const component =
         typeof vnode.type === "function" ? vnode.type.displayName || vnode.type.name : vnode.type;
       const message = `Hydration mismatch in <${component || "Unknown"}>: ${s}`;
-      console.warn(`[viact] ${message}`);
+      console.warn(`[pracht] ${message}`);
       appendHydrationWarning(message);
       if (prev) prev(vnode, s);
     };
@@ -179,7 +179,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
 
     if (initialMatch.route.render === "spa" && state.data == null && !state.error) {
       try {
-        const result = await fetchViactRouteState(options.initialState.url);
+        const result = await fetchPrachtRouteState(options.initialState.url);
         if (result.type === "redirect") {
           window.location.href = result.location;
           return;
@@ -260,8 +260,8 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
     });
   });
 
-  window.__VIACT_NAVIGATE__ = navigate;
-  window.__VIACT_ROUTER_READY__ = true;
+  window.__PRACHT_NAVIGATE__ = navigate;
+  window.__PRACHT_ROUTER_READY__ = true;
 
   // Start prefetching after hydration is complete
   setupPrefetching(app);
@@ -271,7 +271,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
 // Dev-only: in-page hydration mismatch warning banner
 // ---------------------------------------------------------------------------
 
-const HYDRATION_BANNER_ID = "__viact_hydration_warnings__";
+const HYDRATION_BANNER_ID = "__pracht_hydration_warnings__";
 
 function appendHydrationWarning(message: string): void {
   let container = document.getElementById(HYDRATION_BANNER_ID);

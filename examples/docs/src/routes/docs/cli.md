@@ -1,6 +1,6 @@
 ---
 title: CLI
-lead: The <code>@viact/cli</code> package provides three commands for development, building, and previewing your app.
+lead: The <code>@pracht/cli</code> package provides three commands for development, building, and previewing your app.
 breadcrumb: CLI
 prev:
   href: /docs/shells
@@ -10,27 +10,27 @@ next:
   title: Deployment
 ---
 
-## viact dev
+## pracht dev
 
 Starts the Vite dev server with SSR middleware, HMR, and instant feedback.
 
 ```sh
-viact dev
+pracht dev
 
 # Custom port
-PORT=4000 viact dev
+PORT=4000 pracht dev
 ```
 
 Routes are rendered server-side on each request. Changes to routes, shells, loaders, and components are reflected immediately via HMR.
 
 ---
 
-## viact build
+## pracht build
 
 Runs a production build: client bundle, server bundle, and SSG/ISG prerendering.
 
 ```sh
-viact build
+pracht build
 ```
 
 Output:
@@ -41,15 +41,15 @@ Output:
 
 ---
 
-## viact preview
+## pracht preview
 
 Runs the production server entry locally. Useful for smoke-testing the build before deploying.
 
 ```sh
-viact preview
+pracht preview
 
 # Custom port
-PORT=4000 viact preview
+PORT=4000 pracht preview
 ```
 
 ---
@@ -59,7 +59,7 @@ PORT=4000 viact preview
 The CLI is included in scaffolded projects. For existing projects, add it as a dev dependency:
 
 ```sh
-pnpm add -D @viact/cli
+pnpm add -D @pracht/cli
 ```
 
 Then add scripts to your `package.json`:
@@ -67,9 +67,9 @@ Then add scripts to your `package.json`:
 ```json [package.json]
 {
   "scripts": {
-    "dev": "viact dev",
-    "build": "viact build",
-    "preview": "viact preview"
+    "dev": "pracht dev",
+    "build": "pracht build",
+    "preview": "pracht preview"
   }
 }
 ```
