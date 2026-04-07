@@ -4,14 +4,36 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: 0,
-  use: {
-    baseURL: "http://localhost:3100",
-  },
-  webServer: {
-    command:
-      "cd examples/cloudflare && PORT=3100 NODE_OPTIONS='--experimental-strip-types' node ../../packages/cli/bin/viact.js dev",
-    port: 3100,
-    reuseExistingServer: !process.env.CI,
-    timeout: 15_000,
-  },
+  projects: [
+    {
+      name: "basic",
+      testMatch: /basic\.test\.ts|node-build\.test\.ts|cloudflare-build\.test\.ts|vercel-build\.test\.ts/,
+      use: {
+        baseURL: "http://localhost:3100",
+      },
+    },
+    {
+      name: "pages-router",
+      testMatch: /pages-router\.test\.ts/,
+      use: {
+        baseURL: "http://localhost:3101",
+      },
+    },
+  ],
+  webServer: [
+    {
+      command:
+        "cd examples/cloudflare && PORT=3100 NODE_OPTIONS='--experimental-strip-types' node ../../packages/cli/bin/viact.js dev",
+      port: 3100,
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
+    {
+      command:
+        "cd examples/pages-router && PORT=3101 NODE_OPTIONS='--experimental-strip-types' node ../../packages/cli/bin/viact.js dev",
+      port: 3101,
+      reuseExistingServer: !process.env.CI,
+      timeout: 15_000,
+    },
+  ],
 });

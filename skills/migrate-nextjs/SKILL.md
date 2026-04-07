@@ -43,10 +43,25 @@ Before touching any code, understand what you're migrating:
 
 Ask the user to confirm the migration scope if the project is large (>20 routes).
 
+## Fast Path: Pages Router Projects
+
+If the source Next.js project uses the **pages router** (`pages/` directory), viact's `pagesDir` plugin option provides a near-drop-in migration:
+
+1. Set `viact({ pagesDir: "/src/pages" })` in `vite.config.ts`
+2. Copy `pages/` to `src/pages/`
+3. Convert `_app.tsx` to viact shell format (`Shell` export + `children` prop)
+4. Convert `getServerSideProps`/`getStaticProps` to `loader` exports
+5. Add `export const RENDER_MODE = "ssg"` to static pages, `"ssr"` for dynamic (default is `"ssr"`)
+6. Run dev server, iterate on errors
+7. Optionally run `generateRoutesFile` to eject to explicit manifest
+
+For pages router projects, you can **skip manual manifest wiring entirely** (Phase 7 below).
+
 ## Concept Mapping
 
 | Next.js | Viact | Notes |
 |---------|-------|-------|
+| `pages/` directory | `pagesDir` plugin option | Auto-discovers routes from file system |
 | `app/page.tsx` | `src/routes/*.tsx` + `route()` in manifest | File is a module; wiring is explicit |
 | `app/layout.tsx` | `src/shells/*.tsx` + `shells` in `defineApp` | Shells are named, not directory-nested |
 | `app/loading.tsx` | No direct equivalent | Use Suspense in component if needed |
@@ -278,6 +293,8 @@ Key transforms:
 - `NextResponse.next()` → `return` (void)
 
 ### Phase 7: Wire the route manifest
+
+**Note:** For pages router projects using `pagesDir`, this phase is automatic. Skip to Phase 8.
 
 Build `src/routes.ts` mapping every migrated page:
 

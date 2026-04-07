@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 import preact from "@preact/preset-vite";
 import type { Connect, Plugin, ViteDevServer } from "vite";
 
+import { generatePagesManifestSource, scanPagesDirectory } from "./pages-router.ts";
+
 export const VIACT_CLIENT_MODULE_ID = "virtual:viact/client";
 export const VIACT_SERVER_MODULE_ID = "virtual:viact/server";
 
@@ -92,6 +94,8 @@ function createDefaultNodeAdapter(): ViactAdapter {
   };
 }
 
+export type RenderMode = "spa" | "ssr" | "ssg" | "isg";
+
 export interface ViactPluginOptions {
   appFile?: string;
   routesDir?: string;
@@ -100,6 +104,10 @@ export interface ViactPluginOptions {
   apiDir?: string;
   serverDir?: string;
   adapter?: ViactAdapter;
+  /** Enable file-system pages routing by pointing to the pages directory (e.g. "/src/pages"). */
+  pagesDir?: string;
+  /** Default render mode for pages when RENDER_MODE is not exported. Defaults to "ssr". */
+  pagesDefaultRender?: RenderMode;
 }
 
 type ResolvedViactPluginOptions = Required<ViactPluginOptions>;
@@ -112,11 +120,20 @@ const DEFAULTS: ResolvedViactPluginOptions = {
   apiDir: "/src/api",
   serverDir: "/src/server",
   adapter: createDefaultNodeAdapter(),
+  pagesDir: "",
+  pagesDefaultRender: "ssr",
 };
 
 export function viact(options: ViactPluginOptions = {}): Plugin[] {
   const resolved = resolveOptions(options);
+  const isPagesMode = !!resolved.pagesDir;
   let root = process.cwd();
+
+  if (isPagesMode && options.appFile) {
+    console.warn(
+      "[viact] Both `pagesDir` and `appFile` are set. `pagesDir` takes precedence — `appFile` will be ignored.",
+    );
+  }
 
   const viactPlugin: Plugin = {
     name: "viact",
@@ -154,7 +171,7 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
 
     load(id) {
       if (isClientModule(id)) {
-        return createViactClientModuleSource(resolved);
+        return createViactClientModuleSource(resolved, { root });
       }
       if (isServerModule(id)) {
         return createViactServerModuleSource(resolved, { root });
@@ -163,6 +180,17 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
     },
 
     configureServer(server) {
+      // Watch pages directory for file add/unlink → restart (new routes need new globs)
+      if (isPagesMode) {
+        const abs = resolve(root, resolved.pagesDir.slice(1));
+        server.watcher.on("add", (f: string) => {
+          if (f.startsWith(abs)) server.restart();
+        });
+        server.watcher.on("unlink", (f: string) => {
+          if (f.startsWith(abs)) server.restart();
+        });
+      }
+
       return () => {
         server.middlewares.use(createDevSSRMiddleware(server, resolved));
       };
@@ -172,8 +200,17 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
       const root = server.config.root;
       const relative = file.startsWith(root) ? file.slice(root.length) : file;
 
+      // Pages mode: edits to page files invalidate virtual modules
+      if (isPagesMode && relative.startsWith(resolved.pagesDir)) {
+        const clientMod = server.moduleGraph.getModuleById(VIACT_CLIENT_MODULE_ID);
+        const serverMod = server.moduleGraph.getModuleById(VIACT_SERVER_MODULE_ID);
+        if (clientMod) server.moduleGraph.invalidateModule(clientMod);
+        if (serverMod) server.moduleGraph.invalidateModule(serverMod);
+        return;
+      }
+
       // App manifest changed — restart server (route definitions may have changed)
-      if (relative === resolved.appFile) {
+      if (!isPagesMode && relative === resolved.appFile) {
         server.restart();
         return [];
       }
@@ -202,15 +239,31 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
 // Virtual module source generators
 // ---------------------------------------------------------------------------
 
-export function createViactClientModuleSource(options: ViactPluginOptions = {}): string {
+export function createViactClientModuleSource(
+  options: ViactPluginOptions = {},
+  buildOptions: { root?: string } = {},
+): string {
   const resolved = resolveOptions(options);
+  const isPagesMode = !!resolved.pagesDir;
+
+  const appImport = isPagesMode
+    ? generatePagesAppInlineSource(resolved, buildOptions.root)
+    : `import { app } from ${JSON.stringify(resolved.appFile)};`;
+
+  const routeGlob = isPagesMode
+    ? `${resolved.pagesDir}/**/*.{ts,tsx,js,jsx,md,mdx}`
+    : `${resolved.routesDir}/**/*.{ts,tsx,js,jsx,md,mdx}`;
+
+  const shellGlob = isPagesMode
+    ? `${resolved.pagesDir}/**/_app.{ts,tsx,js,jsx}`
+    : `${resolved.shellsDir}/**/*.{ts,tsx,js,jsx,md,mdx}`;
 
   return [
     'import { resolveApp, initClientRouter, readHydrationState } from "viact";',
-    `import { app } from ${JSON.stringify(resolved.appFile)};`,
+    appImport,
     "",
-    `const routeModules = import.meta.glob(${JSON.stringify(`${resolved.routesDir}/**/*.{ts,tsx,js,jsx,md,mdx}`)});`,
-    `const shellModules = import.meta.glob(${JSON.stringify(`${resolved.shellsDir}/**/*.{ts,tsx,js,jsx,md,mdx}`)});`,
+    `const routeModules = import.meta.glob(${JSON.stringify(routeGlob)});`,
+    `const shellModules = import.meta.glob(${JSON.stringify(shellGlob)});`,
     "",
     "const resolvedApp = resolveApp(app);",
     "",
@@ -246,6 +299,7 @@ export function createViactServerModuleSource(
   } = {},
 ): string {
   const resolved = resolveOptions(options);
+  const isPagesMode = !!resolved.pagesDir;
   const registrySource = createViactRegistryModuleSource(resolved);
   const clientBuild = readClientBuildAssets(buildOptions.root);
   const adapter = resolved.adapter;
@@ -255,9 +309,13 @@ export function createViactServerModuleSource(
     ? adapter.serverImports
     : 'import { resolveApp, resolveApiRoutes } from "viact";';
 
+  const appImport = isPagesMode
+    ? generatePagesAppInlineSource(resolved, buildOptions.root)
+    : `import { app } from ${JSON.stringify(resolved.appFile)};`;
+
   const source = [
     viactImports,
-    `import { app } from ${JSON.stringify(resolved.appFile)};`,
+    appImport,
     "",
     registrySource,
     "",
@@ -279,10 +337,19 @@ export function createViactServerModuleSource(
 
 export function createViactRegistryModuleSource(options: ViactPluginOptions = {}): string {
   const resolved = resolveOptions(options);
+  const isPagesMode = !!resolved.pagesDir;
+
+  const routeGlob = isPagesMode
+    ? `${resolved.pagesDir}/**/*.{ts,tsx,js,jsx,md}`
+    : `${resolved.routesDir}/**/*.{ts,tsx,js,jsx,md}`;
+
+  const shellGlob = isPagesMode
+    ? `${resolved.pagesDir}/**/_app.{ts,tsx,js,jsx}`
+    : `${resolved.shellsDir}/**/*.{ts,tsx,js,jsx,md}`;
 
   return [
-    `export const routeModules = import.meta.glob(${JSON.stringify(`${resolved.routesDir}/**/*.{ts,tsx,js,jsx,md}`)});`,
-    `export const shellModules = import.meta.glob(${JSON.stringify(`${resolved.shellsDir}/**/*.{ts,tsx,js,jsx,md}`)});`,
+    `export const routeModules = import.meta.glob(${JSON.stringify(routeGlob)});`,
+    `export const shellModules = import.meta.glob(${JSON.stringify(shellGlob)});`,
     `export const middlewareModules = import.meta.glob(${JSON.stringify(`${resolved.middlewareDir}/**/*.{ts,tsx,js,jsx,md}`)});`,
     `export const apiModules = import.meta.glob(${JSON.stringify(`${resolved.apiDir}/**/*.{ts,js}`)});`,
     `export const dataModules = import.meta.glob(${JSON.stringify(`${resolved.serverDir}/**/*.{ts,js}`)});`,
@@ -295,6 +362,24 @@ export function createViactRegistryModuleSource(options: ViactPluginOptions = {}
     "  dataModules,",
     "};",
   ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Pages mode: inline app source generation
+// ---------------------------------------------------------------------------
+
+function generatePagesAppInlineSource(
+  options: ResolvedViactPluginOptions,
+  root = process.cwd(),
+): string {
+  const absPagesDir = resolve(root, options.pagesDir.slice(1));
+  const pages = scanPagesDirectory(absPagesDir);
+  const source = generatePagesManifestSource(pages, {
+    pagesDir: absPagesDir,
+    pagesDefaultRender: options.pagesDefaultRender,
+    pagesDirPrefix: options.pagesDir,
+  });
+  return source;
 }
 
 // ---------------------------------------------------------------------------

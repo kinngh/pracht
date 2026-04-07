@@ -1,0 +1,17 @@
+{
+  "name": "@viact/example-pages-router",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@viact/adapter-node": "workspace:*",
+    "viact": "workspace:*"
+  },
+  "devDependencies": {
+    "@viact/cli": "workspace:*",
+    "@viact/vite-plugin": "workspace:*",
+    "preact": "^10.26.9",
+    "preact-render-to-string": "^6.5.13",
+    "vite": "^8.0.0"
+  }
+}
