@@ -19,12 +19,19 @@
     "build": "tsdown"
   },
   "dependencies": {
+    "@cloudflare/vite-plugin": "^1.0.0",
     "@preact/preset-vite": "^2.10.5",
     "@viact/adapter-cloudflare": "workspace:*",
     "@viact/adapter-vercel": "workspace:*",
     "viact": "workspace:*"
   },
   "peerDependencies": {
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "wrangler": "^4.81.0"
+  },
+  "peerDependenciesMeta": {
+    "wrangler": {
+      "optional": true
+    }
   }
 }

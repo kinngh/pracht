@@ -1,4 +1,3 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import type { ViactAdapter } from "@viact/vite-plugin";
 import {
   handleViactRequest,
@@ -168,10 +167,6 @@ function isFetcher(value: unknown): value is CloudflareFetcher {
 /**
  * Create a viact adapter for Cloudflare Workers.
  *
- * Automatically includes `@cloudflare/vite-plugin` so that Cloudflare
- * bindings (KV, D1, R2, Queues, etc.) are available during development
- * via workerd.
- *
  * ```ts
  * import { cloudflareAdapter } from "@viact/adapter-cloudflare";
  * viact({ adapter: cloudflareAdapter() })
@@ -187,13 +182,5 @@ export function cloudflareAdapter(
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },
-    // During dev the CF vite plugin resolves the virtual module through Vite.
-    // The wrangler.jsonc `main` stays at `dist/server/server.js` for deploys.
-    plugins: cloudflare({
-      config: {
-        main: "virtual:viact/server",
-      },
-    }),
-    handlesDev: true,
   };
 }

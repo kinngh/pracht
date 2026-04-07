@@ -273,10 +273,6 @@ export default async function handle(request) {
 }
 `;
     },
-    // Optional: extra Vite plugins the adapter needs (e.g. runtime-specific dev tooling)
-    plugins: [],
-    // Optional: set true if the adapter handles dev SSR itself (e.g. via workerd)
-    handlesDev: false,
   };
 }
 ```

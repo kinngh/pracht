@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { resolve } from "node:path";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import preact from "@preact/preset-vite";
 import type { Connect, Plugin, ViteDevServer } from "vite";
 
@@ -48,17 +49,6 @@ export interface ViactAdapter {
    * request handler or default export.
    */
   createServerEntryModule(): string;
-  /**
-   * Additional Vite plugins provided by the adapter.  These are included in the
-   * array returned by `viact()`.  For example, the Cloudflare adapter can
-   * include `@cloudflare/vite-plugin` here so bindings are available in dev.
-   */
-  plugins?: Plugin[];
-  /**
-   * When `true`, the adapter handles dev SSR itself (e.g. via workerd) and
-   * viact will not install its own Node-based dev SSR middleware.
-   */
-  handlesDev?: boolean;
 }
 
 function createDefaultNodeAdapter(): ViactAdapter {
@@ -202,7 +192,7 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
         });
       }
 
-      if (resolved.adapter.handlesDev) return;
+      if (resolved.adapter.id === "cloudflare") return;
       return () => {
         server.middlewares.use(createDevSSRMiddleware(server, resolved));
       };
@@ -244,8 +234,19 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
     },
   };
 
-  const adapterPlugins = resolved.adapter.plugins ?? [];
-  return [...preact(), viactPlugin, ...adapterPlugins];
+  const plugins: Plugin[] = [...preact(), viactPlugin];
+
+  if (resolved.adapter.id === "cloudflare") {
+    plugins.push(
+      ...cloudflare({
+        config: {
+          main: "virtual:viact/server",
+        },
+      }),
+    );
+  }
+
+  return plugins;
 }
 
 // ---------------------------------------------------------------------------

@@ -15,11 +15,6 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "^1.0.0",
     "viact": "workspace:*"
-  },
-  "peerDependencies": {
-    "vite": "^8.0.0",
-    "wrangler": "^4.81.0"
   }
 }
