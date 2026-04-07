@@ -49,10 +49,30 @@ ISG supports time-based and webhook-based revalidation policies.
 
 ### Data Loading
 
+Two styles, both fully supported — pick whichever fits your mental model:
+
+**Inline (co-located in the route file):**
 - **Loaders**: `export function loader(args)` — runs at build (SSG), request (SSR),
   or client navigation time. Returns typed, serializable data.
 - **Actions**: `export function action(args)` — handles POST/PUT/PATCH/DELETE.
   Returns data, redirects, or revalidation hints.
+
+**Separate files (manifest-wired):**
+- Loader and action live in dedicated server files (e.g. `src/server/`).
+- Wired via the route config object in `routes.ts`:
+  ```typescript
+  route("/dashboard", {
+    component: "./routes/dashboard.tsx",
+    loader: "./server/dashboard-loader.ts",
+    action: "./server/dashboard-action.ts",
+    render: "ssr",
+  })
+  ```
+- Route files become pure components — no server code mixed in.
+
+Both styles can coexist in the same app. When a separate `loader`/`action` file
+is specified in the config, it takes precedence over inline exports.
+
 - **Head**: `export function head(args)` — per-route `<head>` metadata merged with
   shell-level head.
 - **Client hooks**: `useRouteData()`, `useRevalidateRoute()`, `useSubmitAction()`,

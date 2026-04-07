@@ -73,6 +73,99 @@ describe("handleViactRequest API middleware", () => {
   });
 });
 
+describe("handleViactRequest with separate data modules", () => {
+  it("resolves loader from a separate dataModule via loaderFile", async () => {
+    const app = defineApp({
+      routes: [
+        route("/dashboard", {
+          component: "./routes/dashboard.tsx",
+          loader: "./server/dashboard-loader.ts",
+          render: "ssr",
+        }),
+      ],
+    });
+
+    const response = await handleViactRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/dashboard.tsx": async () => ({
+            Component: ({ data }) => h("main", null, `Hello ${(data as any).user}`),
+          }),
+        },
+        dataModules: {
+          "./server/dashboard-loader.ts": async () => ({
+            loader: async () => ({ user: "Jovi" }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/dashboard"),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain("Hello Jovi");
+  });
+
+  it("resolves action from a separate dataModule via actionFile", async () => {
+    const app = defineApp({
+      routes: [
+        route("/dashboard", {
+          component: "./routes/dashboard.tsx",
+          action: "./server/dashboard-action.ts",
+        }),
+      ],
+    });
+
+    const response = await handleViactRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/dashboard.tsx": async () => ({
+            Component: () => h("main", null, "dashboard"),
+          }),
+        },
+        dataModules: {
+          "./server/dashboard-action.ts": async () => ({
+            action: async () => ({ ok: true, data: { created: true } }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/dashboard", {
+        method: "POST",
+        headers: { origin: "http://localhost" },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toEqual({ ok: true, data: { created: true } });
+  });
+
+  it("falls back to route module loader when no loaderFile is set", async () => {
+    const app = defineApp({
+      routes: [route("/home", "./routes/home.tsx", { render: "ssr" })],
+    });
+
+    const response = await handleViactRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/home.tsx": async () => ({
+            Component: ({ data }) => h("main", null, `Hello ${(data as any).name}`),
+            loader: async () => ({ name: "inline" }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/home"),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain("Hello inline");
+  });
+});
+
 describe("handleViactRequest ErrorBoundary", () => {
   it("renders the route error boundary for loader failures", async () => {
     const app = defineApp({

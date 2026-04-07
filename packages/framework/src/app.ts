@@ -5,6 +5,7 @@ import type {
   ResolvedApiRoute,
   ResolvedRoute,
   ResolvedViactApp,
+  RouteConfig,
   RouteDefinition,
   RouteMatch,
   RouteMeta,
@@ -34,12 +35,30 @@ export function timeRevalidate(seconds: number): TimeRevalidatePolicy {
   };
 }
 
-export function route(path: string, file: string, meta: RouteMeta = {}): RouteDefinition {
+export function route(path: string, file: string, meta?: RouteMeta): RouteDefinition;
+export function route(path: string, config: RouteConfig): RouteDefinition;
+export function route(
+  path: string,
+  fileOrConfig: string | RouteConfig,
+  meta: RouteMeta = {},
+): RouteDefinition {
+  if (typeof fileOrConfig === "string") {
+    return {
+      kind: "route",
+      path: normalizeRoutePath(path),
+      file: fileOrConfig,
+      ...meta,
+    };
+  }
+
+  const { component, loader, action, ...routeMeta } = fileOrConfig;
   return {
     kind: "route",
     path: normalizeRoutePath(path),
-    file,
-    ...meta,
+    file: component,
+    loaderFile: loader,
+    actionFile: action,
+    ...routeMeta,
   };
 }
 
@@ -131,6 +150,8 @@ function flattenRouteNode(
     id: node.id ?? createRouteId(fullPath),
     path: fullPath,
     file: node.file,
+    loaderFile: node.loaderFile,
+    actionFile: node.actionFile,
     shell,
     shellFile: shell ? app.shells[shell] : undefined,
     render: node.render ?? inherited.render,

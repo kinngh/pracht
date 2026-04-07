@@ -61,10 +61,18 @@ export interface ApiConfig {
   middleware?: string[];
 }
 
+export interface RouteConfig extends RouteMeta {
+  component: string;
+  loader?: string;
+  action?: string;
+}
+
 export interface RouteDefinition extends RouteMeta {
   kind: "route";
   path: string;
   file: string;
+  loaderFile?: string;
+  actionFile?: string;
 }
 
 export interface GroupDefinition {
@@ -109,6 +117,8 @@ export type RouteSegment = StaticRouteSegment | ParamRouteSegment | CatchAllRout
 export interface ResolvedRoute extends Omit<RouteMeta, "middleware"> {
   path: string;
   file: string;
+  loaderFile?: string;
+  actionFile?: string;
   shell?: string;
   shellFile?: string;
   middleware: string[];
@@ -144,6 +154,7 @@ export interface MiddlewareArgs<TContext = unknown> extends BaseRouteArgs<TConte
 
 export interface HeadMetadata {
   title?: string;
+  lang?: string;
   meta?: Array<Record<string, string>>;
   link?: Array<Record<string, string>>;
 }
@@ -226,11 +237,17 @@ export interface MiddlewareModule<TContext = unknown> {
 
 export type ModuleImporter<TModule = unknown> = () => Promise<TModule>;
 
+export interface DataModule<TContext = unknown> {
+  loader?: LoaderFn<TContext>;
+  action?: ActionFn<TContext>;
+}
+
 export interface ModuleRegistry {
   routeModules?: Record<string, ModuleImporter<RouteModule>>;
   shellModules?: Record<string, ModuleImporter<ShellModule>>;
   middlewareModules?: Record<string, ModuleImporter<MiddlewareModule>>;
   apiModules?: Record<string, ModuleImporter<ApiRouteModule>>;
+  dataModules?: Record<string, ModuleImporter<DataModule>>;
 }
 
 export class ViactHttpError extends Error {

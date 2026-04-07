@@ -7,12 +7,14 @@ import type {
   ApiRouteModule,
   ActionEnvelope,
   BaseRouteArgs,
+  DataModule,
   HeadMetadata,
   HttpMethod,
   MiddlewareModule,
   ModuleImporter,
   ModuleRegistry,
   ResolvedApiRoute,
+  ResolvedRoute,
   RouteModule,
   ShellModule,
   ViactHttpError,
@@ -419,9 +421,16 @@ export async function handleViactRequest<TContext>(
     route: match.route,
   };
 
+  // --- Resolve loader/action from separate data modules or route module ---
+  const { loader, action } = await resolveDataFunctions(
+    match.route,
+    routeModule,
+    registry,
+  );
+
   // --- Handle actions (POST/PUT/PATCH/DELETE) ---
   if (isAction) {
-    if (!routeModule?.action) {
+    if (!action) {
       return withDefaultSecurityHeaders(
         new Response("Method not allowed", {
           status: 405,
@@ -429,7 +438,7 @@ export async function handleViactRequest<TContext>(
         }),
       );
     }
-    const actionResult = await routeModule.action(routeArgs);
+    const actionResult = await action(routeArgs);
     return actionResultToResponse(actionResult);
   }
 
@@ -437,7 +446,7 @@ export async function handleViactRequest<TContext>(
 
   try {
     // --- Execute loader ---
-    const loaderResult = routeModule?.loader ? await routeModule.loader(routeArgs) : undefined;
+    const loaderResult = loader ? await loader(routeArgs) : undefined;
 
     // Allow loaders to return a Response directly (e.g. for redirects)
     if (loaderResult instanceof Response) {
@@ -862,6 +871,33 @@ async function runMiddlewareChain<TContext>(options: {
   return { context };
 }
 
+async function resolveDataFunctions(
+  route: ResolvedRoute,
+  routeModule: RouteModule | undefined,
+  registry: ModuleRegistry,
+): Promise<{ loader: RouteModule["loader"]; action: RouteModule["action"] }> {
+  let loader = routeModule?.loader;
+  let action = routeModule?.action;
+
+  if (route.loaderFile) {
+    const dataModule = await resolveRegistryModule<DataModule>(
+      registry.dataModules,
+      route.loaderFile,
+    );
+    if (dataModule?.loader) loader = dataModule.loader;
+  }
+
+  if (route.actionFile) {
+    const dataModule = await resolveRegistryModule<DataModule>(
+      registry.dataModules,
+      route.actionFile,
+    );
+    if (dataModule?.action) action = dataModule.action;
+  }
+
+  return { loader, action };
+}
+
 async function resolveRegistryModule<T>(
   modules: Record<string, ModuleImporter> | undefined,
   file: string,
@@ -895,6 +931,7 @@ async function mergeHeadMetadata(
 
   return {
     title: routeHead.title ?? shellHead.title,
+    lang: routeHead.lang ?? shellHead.lang,
     meta: [...(shellHead.meta ?? []), ...(routeHead.meta ?? [])],
     link: [...(shellHead.link ?? []), ...(routeHead.link ?? [])],
   };
@@ -944,7 +981,7 @@ function buildHtmlDocument(options: {
     : "";
 
   return `<!DOCTYPE html>
-<html>
+<html${head.lang ? ` lang="${escapeHtml(head.lang)}"` : ""}>
   <head>
     <meta charset="utf-8">
     ${titleTag}

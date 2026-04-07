@@ -36,6 +36,7 @@ export interface ViactPluginOptions {
   shellsDir?: string;
   middlewareDir?: string;
   apiDir?: string;
+  serverDir?: string;
   adapter?: ViactAdapter;
   cloudflareAssetsBinding?: string;
   vercelFunctionName?: string;
@@ -54,6 +55,7 @@ const DEFAULTS: ResolvedViactPluginOptions = {
   routesDir: "/src/routes",
   shellsDir: "/src/shells",
   apiDir: "/src/api",
+  serverDir: "/src/server",
   adapter: "node",
   cloudflareAssetsBinding: "ASSETS",
   vercelFunctionName: "render",
@@ -131,6 +133,7 @@ export function viact(options: ViactPluginOptions = {}): Plugin[] {
         resolved.shellsDir,
         resolved.middlewareDir,
         resolved.apiDir,
+        resolved.serverDir,
       ];
       if (dirs.some((dir) => relative.startsWith(dir))) {
         const serverMod = server.moduleGraph.getModuleById(VIACT_SERVER_MODULE_ID);
@@ -245,12 +248,14 @@ export function createViactRegistryModuleSource(options: ViactPluginOptions = {}
     `export const shellModules = import.meta.glob(${JSON.stringify(`${resolved.shellsDir}/**/*.{ts,tsx,js,jsx}`)});`,
     `export const middlewareModules = import.meta.glob(${JSON.stringify(`${resolved.middlewareDir}/**/*.{ts,tsx,js,jsx}`)});`,
     `export const apiModules = import.meta.glob(${JSON.stringify(`${resolved.apiDir}/**/*.{ts,js}`)});`,
+    `export const dataModules = import.meta.glob(${JSON.stringify(`${resolved.serverDir}/**/*.{ts,js}`)});`,
     "",
     "export const registry = {",
     "  routeModules,",
     "  shellModules,",
     "  middlewareModules,",
     "  apiModules,",
+    "  dataModules,",
     "};",
   ].join("\n");
 }

@@ -1,4 +1,4 @@
-import { createContext, h } from "preact";
+import { createContext, h, options } from "preact";
 import { hydrate, render } from "preact";
 import { useContext } from "preact/hooks";
 import type { VNode } from "preact";
@@ -150,6 +150,22 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
   }
 
   // ------------------------------------------------------------------
+  // Dev-mode hydration mismatch monitor (Preact options.__m hook)
+  // ------------------------------------------------------------------
+
+  if ((import.meta as any).env?.DEV) {
+    const prev = (options as any).__m;
+    (options as any).__m = (vnode: VNode, s: string) => {
+      const component =
+        typeof vnode.type === "function" ? vnode.type.displayName || vnode.type.name : vnode.type;
+      const message = `Hydration mismatch in <${component || "Unknown"}>: ${s}`;
+      console.warn(`[viact] ${message}`);
+      appendHydrationWarning(message);
+      if (prev) prev(vnode, s);
+    };
+  }
+
+  // ------------------------------------------------------------------
   // Initial hydration — includes NavigateContext so useNavigate works
   // ------------------------------------------------------------------
 
@@ -248,6 +264,65 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
 
   // Start prefetching after hydration is complete
   setupPrefetching(app);
+}
+
+// ---------------------------------------------------------------------------
+// Dev-only: in-page hydration mismatch warning banner
+// ---------------------------------------------------------------------------
+
+const HYDRATION_BANNER_ID = "__viact_hydration_warnings__";
+
+function appendHydrationWarning(message: string): void {
+  let container = document.getElementById(HYDRATION_BANNER_ID);
+  if (!container) {
+    container = document.createElement("div");
+    container.id = HYDRATION_BANNER_ID;
+    Object.assign(container.style, {
+      position: "fixed",
+      bottom: "0",
+      left: "0",
+      right: "0",
+      maxHeight: "30vh",
+      overflow: "auto",
+      background: "#2d1b00",
+      borderTop: "2px solid #f0ad4e",
+      color: "#ffc107",
+      fontFamily: "ui-monospace, Consolas, monospace",
+      fontSize: "13px",
+      padding: "12px 16px",
+      zIndex: "2147483647",
+    });
+
+    const header = document.createElement("div");
+    Object.assign(header.style, {
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "8px",
+    });
+    header.innerHTML =
+      '<strong style="color:#f0ad4e">⚠ Hydration Mismatches</strong>';
+
+    const close = document.createElement("button");
+    close.textContent = "×";
+    Object.assign(close.style, {
+      background: "none",
+      border: "none",
+      color: "#f0ad4e",
+      fontSize: "18px",
+      cursor: "pointer",
+    });
+    close.onclick = () => container!.remove();
+    header.appendChild(close);
+
+    container.appendChild(header);
+    document.body.appendChild(container);
+  }
+
+  const entry = document.createElement("div");
+  entry.textContent = message;
+  Object.assign(entry.style, { padding: "2px 0" });
+  container.appendChild(entry);
 }
 
 function deserializeRouteError(error: SerializedRouteError): Error {
