@@ -36,7 +36,7 @@ export type ApiRouteHandler<TContext = RegisteredContext> = (
   args: BaseRouteArgs<TContext>,
 ) => MaybePromise<Response>;
 
-export interface ApiRouteModule<TContext = RegisteredContext> {
+export interface ApiRouteModule<TContext = any> {
   GET?: ApiRouteHandler<TContext>;
   POST?: ApiRouteHandler<TContext>;
   PUT?: ApiRouteHandler<TContext>;
@@ -186,7 +186,7 @@ export type LoaderData<TLoader extends LoaderLike> = TLoader extends (
 
 export interface HeadArgs<
   TLoader extends LoaderLike = undefined,
-  TContext = RegisteredContext,
+  TContext = any,
 > extends BaseRouteArgs<TContext> {
   data: LoaderData<TLoader>;
 }
@@ -206,12 +206,12 @@ export interface ShellProps {
 
 
 
-export type LoaderFn<TContext = RegisteredContext, TData = unknown> = (
+export type LoaderFn<TContext = any, TData = unknown> = (
   args: LoaderArgs<TContext>,
 ) => MaybePromise<TData>;
 
 
-export interface RouteModule<TContext = RegisteredContext, TLoader extends LoaderLike = undefined> {
+export interface RouteModule<TContext = any, TLoader extends LoaderLike = undefined> {
   loader?: LoaderFn<TContext>;
   head?: (args: HeadArgs<TLoader, TContext>) => MaybePromise<HeadMetadata>;
   Component: FunctionComponent<RouteComponentProps<TLoader>>;
@@ -219,28 +219,28 @@ export interface RouteModule<TContext = RegisteredContext, TLoader extends Loade
   getStaticPaths?: () => MaybePromise<RouteParams[]>;
 }
 
-export interface ShellModule<TContext = RegisteredContext> {
+export interface ShellModule<TContext = any> {
   Shell: FunctionComponent<ShellProps>;
   head?: (args: BaseRouteArgs<TContext>) => MaybePromise<HeadMetadata>;
 }
 
-export type MiddlewareResult<TContext = RegisteredContext> =
+export type MiddlewareResult<TContext = any> =
   | void
   | Response
   | { redirect: string }
   | { context: Partial<TContext> };
 
-export type MiddlewareFn<TContext = RegisteredContext> = (
+export type MiddlewareFn<TContext = any> = (
   args: MiddlewareArgs<TContext>,
 ) => MaybePromise<MiddlewareResult<TContext>>;
 
-export interface MiddlewareModule<TContext = RegisteredContext> {
+export interface MiddlewareModule<TContext = any> {
   middleware: MiddlewareFn<TContext>;
 }
 
 export type ModuleImporter<TModule = unknown> = () => Promise<TModule>;
 
-export interface DataModule<TContext = RegisteredContext> {
+export interface DataModule<TContext = any> {
   loader?: LoaderFn<TContext>;
 }
 

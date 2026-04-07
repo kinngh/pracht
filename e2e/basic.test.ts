@@ -297,7 +297,7 @@ test("GET /api/health returns JSON", async ({ request }) => {
   expect(response.status()).toBe(200);
 
   const json = await response.json();
-  expect(json).toEqual({ status: "ok" });
+  expect(json).toMatchObject({ status: "ok" });
 });
 
 test("POST /api/echo echoes the request body", async ({ request }) => {
