@@ -149,17 +149,10 @@ The adapter handles everything — just declare bindings in `wrangler.jsonc`:
 }
 ```
 
-Create a thin worker entry that the adapter uses during dev (resolved through
-Vite so the virtual module import works):
-
-```typescript
-// src/worker.ts
-export { default } from "virtual:viact/server";
-```
-
-The `main` field in `wrangler.jsonc` stays pointed at `dist/server/server.js`
-for production deploys — the adapter automatically overrides the entry to
-`src/worker.ts` during dev via `@cloudflare/vite-plugin`.
+The `main` field stays pointed at `dist/server/server.js` for production
+deploys. During dev, the adapter automatically overrides the entry to
+viact's virtual server module via `@cloudflare/vite-plugin` — no extra
+files needed.
 
 Bindings are available via `context.env` in loaders, actions, and API routes:
 

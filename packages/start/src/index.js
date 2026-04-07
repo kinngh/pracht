@@ -216,7 +216,6 @@ function buildProjectFiles({ adapter, packageManager, projectName }) {
   };
 
   if (adapter.id === "cloudflare") {
-    files["src/worker.ts"] = 'export { default } from "virtual:viact/server";\n';
     files["wrangler.jsonc"] = createWranglerConfig(projectName);
   }
 

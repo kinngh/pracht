@@ -187,12 +187,11 @@ export function cloudflareAdapter(
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },
-    // During dev the CF vite plugin resolves `src/worker.ts` through Vite so
-    // the `virtual:viact/server` import works.  The wrangler.jsonc `main`
-    // field stays pointed at `dist/server/server.js` for production deploys.
+    // During dev the CF vite plugin resolves the virtual module through Vite.
+    // The wrangler.jsonc `main` stays at `dist/server/server.js` for deploys.
     plugins: cloudflare({
       config: {
-        main: "src/worker.ts",
+        main: "virtual:viact/server",
       },
     }),
     handlesDev: true,

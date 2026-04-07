@@ -66,6 +66,5 @@ describe("create-viact", () => {
     expect(packageJson).not.toContain('"@cloudflare/vite-plugin"');
     expect(wranglerConfig).toContain('"main": "dist/server/server.js"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(true);
-    expect(existsSync(join(targetDir, "src/worker.ts"))).toBe(true);
   });
 });
