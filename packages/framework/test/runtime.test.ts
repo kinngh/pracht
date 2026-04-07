@@ -1,5 +1,4 @@
 import { h } from "preact";
-import { useContext } from "preact/hooks";
 import { describe, expect, it } from "vitest";
 
 import { ViactHttpError, defineApp, handleViactRequest, resolveApiRoutes, route, useParams } from "../src/index.ts";
