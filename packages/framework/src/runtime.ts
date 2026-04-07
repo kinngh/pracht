@@ -1183,17 +1183,19 @@ async function collectSSGPaths(
     return [route.path];
   }
 
-  // Dynamic route — must export prerender() to enumerate paths
+  // Dynamic route — must export getStaticPaths() to enumerate params
   const routeModule = await resolveRegistryModule<RouteModule>(registry?.routeModules, route.file);
 
-  if (!routeModule?.prerender) {
+  if (!routeModule?.getStaticPaths) {
     console.warn(
-      `  Warning: SSG route "${route.path}" has dynamic segments but no prerender() export, skipping.`,
+      `  Warning: SSG route "${route.path}" has dynamic segments but no getStaticPaths() export, skipping.`,
     );
     return [];
   }
 
-  return routeModule.prerender();
+  const { buildPathFromSegments } = await import("./app.ts");
+  const paramSets = await routeModule.getStaticPaths();
+  return paramSets.map((params) => buildPathFromSegments(route.segments, params));
 }
 
 async function readResponseBody(response: Response): Promise<unknown> {

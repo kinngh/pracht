@@ -31,12 +31,12 @@ HTML is generated at build time. The loader runs once during the build, and the 
 
 ### Dynamic SSG paths
 
-For routes with dynamic segments, export a `prerender` function to enumerate all paths:
+For routes with dynamic segments, export a `getStaticPaths` function that returns the params for each page:
 
 ```ts [src/routes/blog-post.tsx]
-export async function prerender(): Promise<string[]> {
-  const posts = await getAllPosts();
-  return posts.map(p => `/blog/${p.slug}`);
+export function getStaticPaths(): RouteParams[] {
+  const posts = getAllPosts();
+  return posts.map(p => ({ slug: p.slug }));
 }
 
 export async function loader({ params }: LoaderArgs) {
@@ -48,7 +48,7 @@ export function Component({ data }) {
 }
 ```
 
-The build calls `prerender()` to enumerate all paths, then runs the loader and renderer for each. Prerendering runs concurrently (default: 6 parallel renders).
+The build calls `getStaticPaths()` to enumerate params, constructs full paths from the route pattern, then runs the loader and renderer for each. Prerendering runs concurrently (default: 6 parallel renders).
 
 ---
 

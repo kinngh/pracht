@@ -262,6 +262,17 @@ function normalizeRoutePath(path: string): string {
   return collapsed.length > 1 && collapsed.endsWith("/") ? collapsed.slice(0, -1) : collapsed;
 }
 
+export function buildPathFromSegments(segments: RouteSegment[], params: RouteParams): string {
+  const parts = segments.map((segment) => {
+    if (segment.type === "static") return segment.value;
+    if (segment.type === "param") return encodeURIComponent(params[segment.name] ?? "");
+    // catchall
+    return params["*"] ?? "";
+  });
+
+  return normalizeRoutePath("/" + parts.join("/"));
+}
+
 // ---------------------------------------------------------------------------
 // API Routes — file-based auto-discovery
 // ---------------------------------------------------------------------------

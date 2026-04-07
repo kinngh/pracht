@@ -63,6 +63,17 @@ test("viact build emits a deployable Node server entry", async () => {
       "Viact starts with an explicit app manifest.",
     );
 
+    // Dynamic SSG routes should be prerendered as static HTML files
+    for (const id of ["1", "2", "3"]) {
+      const htmlPath = resolve(exampleDir, `dist/client/products/${id}/index.html`);
+      expect(existsSync(htmlPath)).toBe(true);
+
+      const productResponse = await fetch(`http://127.0.0.1:${port}/products/${id}`);
+      expect(productResponse.status).toBe(200);
+      const productHtml = await productResponse.text();
+      expect(productHtml).toContain("Price:");
+    }
+
     const apiResponse = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(apiResponse.status).toBe(200);
     await expect(apiResponse.json()).resolves.toEqual({ status: "ok" });

@@ -213,7 +213,7 @@ export interface RouteModule<TContext = unknown, TLoader extends LoaderLike = un
   head?: (args: HeadArgs<TLoader, TContext>) => MaybePromise<HeadMetadata>;
   Component: FunctionComponent<RouteComponentProps<TLoader>>;
   ErrorBoundary?: FunctionComponent<ErrorBoundaryProps>;
-  prerender?: () => MaybePromise<string[]>;
+  getStaticPaths?: () => MaybePromise<RouteParams[]>;
 }
 
 export interface ShellModule<TContext = unknown> {
