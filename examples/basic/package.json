@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@viact/adapter-node": "workspace:*",
+    "@viact/adapter-vercel": "workspace:*",
     "viact": "workspace:*"
   },
   "devDependencies": {

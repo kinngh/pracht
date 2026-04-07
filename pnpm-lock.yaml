@@ -50,6 +50,9 @@ importers:
       '@viact/adapter-node':
         specifier: workspace:*
         version: link:../../packages/adapter-node
+      '@viact/adapter-vercel':
+        specifier: workspace:*
+        version: link:../../packages/adapter-vercel
       viact:
         specifier: workspace:*
         version: link:../../packages/framework
