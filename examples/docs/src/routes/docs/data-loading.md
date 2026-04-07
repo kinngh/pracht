@@ -1,6 +1,6 @@
 ---
 title: Data Loading
-lead: viact provides a unified data model that works across all rendering modes. Loaders fetch data on the server, actions handle mutations, and client hooks give reactive access to route data — all with full TypeScript inference.
+lead: viact provides a unified data model that works across all rendering modes. Loaders fetch data on the server, API routes handle mutations, and client hooks give reactive access to route data — all with full TypeScript inference.
 breadcrumb: Data Loading
 prev:
   href: /docs/rendering
@@ -79,43 +79,6 @@ export function ErrorBoundary({ error }: ErrorBoundaryProps) {
 
 ---
 
-## Actions
-
-Actions handle form submissions and mutations. They receive POST, PUT, PATCH, or DELETE requests to the current route's URL.
-
-```ts
-export async function action({ request, context }: ActionArgs) {
-  const form = await request.formData();
-  const name = String(form.get("name") || "").trim();
-
-  if (!name) return { ok: false, data: { error: "Name is required" } };
-
-  await context.db.projects.create({ name });
-  return { ok: true, revalidate: ["route:self"] };
-}
-```
-
-### Return values
-
-| Return | Effect |
-|--------|--------|
-| Plain data | Serialized to the client as JSON |
-| `{ ok, data, revalidate }` | Structured result with revalidation hints |
-| `{ redirect: "/path" }` | Server-side redirect after the action |
-| `{ data, headers }` | Custom response headers (cookies, cache-control) |
-
-### Revalidation hints
-
-```ts
-return {
-  ok: true,
-  revalidate: ["route:self"],          // Re-run this route's loader
-  // revalidate: ["route:dashboard"],  // Re-run a specific route by ID
-};
-```
-
----
-
 ## Head Metadata
 
 The `head` export controls `<head>` content for the route. It receives the loader data as its argument:
@@ -151,36 +114,27 @@ export function Component() {
 }
 ```
 
-### useRevalidateRoute()
+### useRevalidate()
 
 Imperatively re-run the current route's loader:
 
 ```ts
 export function Component() {
-  const revalidate = useRevalidateRoute();
+  const revalidate = useRevalidate();
   return <button onClick={() => revalidate()}>Refresh</button>;
 }
 ```
 
-### useSubmitAction()
-
-Submit an action programmatically (without a form element):
-
-```ts
-const submit = useSubmitAction();
-await submit({ method: "POST", body: formData });
-```
-
 ### \<Form\> Component
 
-Declarative form submission that calls the route's action with progressive enhancement:
+Declarative form submission with progressive enhancement. Use the `action` prop to target an API route:
 
 ```ts
 import { Form } from "viact";
 
 export function Component() {
   return (
-    <Form method="post">
+    <Form method="post" action="/api/projects">
       <input name="title" placeholder="Project name" />
       <button type="submit">Create</button>
     </Form>
@@ -188,7 +142,7 @@ export function Component() {
 }
 ```
 
-The `<Form>` component intercepts submit and sends via `fetch` (no full page reload), automatically revalidates based on action response hints, and falls back to native submission if JavaScript fails.
+The `<Form>` component intercepts submit and sends via `fetch` (no full page reload), and falls back to native submission if JavaScript fails.
 
 ---
 

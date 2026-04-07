@@ -1,7 +1,7 @@
 # Data Loading
 
 Viact provides a unified data loading model that works across all rendering modes.
-Loaders fetch data, actions handle mutations, and client hooks provide reactive access.
+Loaders fetch data and client hooks provide reactive access.
 
 ---
 
@@ -67,64 +67,6 @@ the fallback UI. Otherwise, the error bubbles to the shell or global handler.
 
 ---
 
-## Actions
-
-Actions handle form submissions and mutations. They receive POST, PUT, PATCH,
-or DELETE requests.
-
-```typescript
-export async function action({ request, params, context }: ActionArgs) {
-  const form = await request.formData();
-  const name = String(form.get("name") || "").trim();
-
-  if (!name) {
-    return { ok: false, data: { error: "Name is required" } };
-  }
-
-  await db.projects.create({ name });
-  return { ok: true, revalidate: ["route:self"] };
-}
-```
-
-### ActionArgs
-
-Same as `LoaderArgs` — `request`, `params`, `context`, `signal`, `url`, `route`.
-
-### Return values
-
-Actions can return:
-
-| Return                     | Effect                                    |
-| -------------------------- | ----------------------------------------- |
-| Plain data                 | Serialized to client as JSON              |
-| `{ ok, data, revalidate }` | Structured result with revalidation hints |
-| `{ redirect: "/path" }`    | Server-side redirect                      |
-| `{ data, headers }`        | Custom response headers (cookies, cache)  |
-
-### Revalidation hints
-
-After a mutation, tell viact which routes need fresh data:
-
-```typescript
-return {
-  ok: true,
-  revalidate: ["route:self"], // Re-run this route's loader
-  // revalidate: ["route:dashboard"],  // Re-run a specific route by ID
-};
-```
-
-### CSRF protection
-
-Page actions validate same-origin requests automatically. Unsafe requests must
-send an `Origin` or `Referer` header that matches the current route origin or
-they are rejected with `403`.
-
-API routes are separate endpoints. They do not inherit page-route middleware or
-page-action CSRF behavior automatically. If you want shared API policy, declare
-it explicitly with `defineApp({ api: { middleware: ["auth"] } })`.
-
----
-
 ## Head Metadata
 
 The `head` export controls `<head>` content per route:
@@ -161,36 +103,27 @@ export function Component() {
 }
 ```
 
-### `useRevalidateRoute()`
+### `useRevalidate()`
 
 Imperatively re-run the current route's loader:
 
 ```typescript
 export function Component() {
-  const revalidate = useRevalidateRoute();
+  const revalidate = useRevalidate();
   return <button onClick={() => revalidate()}>Refresh</button>;
 }
 ```
 
-### `useSubmitAction()`
-
-Submit an action programmatically:
-
-```typescript
-const submit = useSubmitAction();
-await submit({ method: "POST", body: formData });
-```
-
 ### `<Form>` Component
 
-Declarative form submission that calls the route's action:
+Declarative form submission:
 
 ```typescript
 import { Form } from "viact";
 
 export function Component() {
   return (
-    <Form method="post">
+    <Form method="post" action="/api/projects">
       <input name="title" />
       <button type="submit">Create</button>
     </Form>
@@ -200,8 +133,8 @@ export function Component() {
 
 The `<Form>` component:
 
-- Intercepts submit and sends via fetch (no full page reload)
-- Automatically revalidates based on action response hints
+- Intercepts submit and sends via fetch to the specified action URL (no full page reload)
+- Handles redirects automatically
 - Falls back to native form submission if JavaScript fails
 
 ---

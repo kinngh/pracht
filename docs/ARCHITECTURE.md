@@ -62,13 +62,12 @@ export const app = defineApp({
       }),
     ]),
     group({ shell: "app", middleware: ["auth"] }, [
-      // Inline style: loader/action exported from the route file
+      // Inline style: loader exported from the route file
       route("/settings", "./routes/settings.tsx", { render: "spa" }),
       // Separate files style: server code in dedicated files
       route("/dashboard", {
         component: "./routes/dashboard.tsx",
         loader: "./server/dashboard-loader.ts",
-        action: "./server/dashboard-action.ts",
         render: "ssr",
       }),
     ]),
@@ -92,7 +91,7 @@ assignment implicit via `_middleware.ts` files. Viact's hybrid approach:
 Viact supports two styles for wiring data loading to routes. Both can coexist
 in the same app.
 
-#### Style A: Inline (loader/action in the route file)
+#### Style A: Inline (loader in the route file)
 
 A route module exports some combination of:
 
@@ -102,13 +101,6 @@ A route module exports some combination of:
 // Server: runs on request (SSR) or build (SSG)
 export async function loader({ request, params, context, signal }: LoaderArgs) {
   return { user: await getUser(request) };
-}
-
-// Server: handles POST/PUT/PATCH/DELETE
-export async function action({ request, params, context }: ActionArgs) {
-  const form = await request.formData();
-  await createProject(form.get("name"));
-  return { ok: true, revalidate: ["route:self"] };
 }
 
 // Shared: <head> metadata
@@ -146,15 +138,6 @@ export async function loader({ request }: LoaderArgs) {
 ```
 
 ```typescript
-// src/server/dashboard-action.ts
-export async function action({ request }: ActionArgs) {
-  const form = await request.formData();
-  await createProject(form.get("name"));
-  return { ok: true, revalidate: ["route:self"] };
-}
-```
-
-```typescript
 // src/routes/dashboard.tsx — pure component, no server code
 export function Component({ data }: RouteComponentProps) {
   return <main>{data.user.name}</main>;
@@ -167,7 +150,6 @@ Wired in the manifest via the `RouteConfig` object form:
 route("/dashboard", {
   component: "./routes/dashboard.tsx",
   loader: "./server/dashboard-loader.ts",
-  action: "./server/dashboard-action.ts",
   render: "ssr",
 })
 ```
@@ -295,19 +277,6 @@ User clicks <a> or calls navigate()
 This "server-owned navigation" pattern means loaders never run in the browser.
 Secrets in loader code stay server-side. The client only receives serialized data.
 
-### Action Submission
-
-```
-User submits <Form> or calls submitAction()
-  → POST to current route URL
-  → Server validates same-origin (CSRF)
-  → Run middleware
-  → Execute action function
-  → If revalidate hints: re-run affected loaders
-  → Return JSON response
-  → Client updates data and re-renders
-```
-
 ---
 
 ## Build Pipeline
@@ -325,7 +294,7 @@ Viact uses Vite's multi-environment build:
    - Entry: `virtual:viact/server`
    - Output: `dist/ssr/` or `dist/server/`
    - Produces: route manifest JSON, ISG manifest JSON
-   - Contains: loader/action/shell/middleware code
+   - Contains: loader/shell/middleware code
 
 3. **platform** (adapter-specific) — entry module
    - Entry: `virtual:viact/node-server` or `virtual:viact/cloudflare-worker`

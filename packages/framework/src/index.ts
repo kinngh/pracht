@@ -19,18 +19,14 @@ export {
   startApp,
   useLocation,
   useParams,
+  useRevalidate,
   useRevalidateRoute,
   useRouteData,
-  useSubmitAction,
   ViactRuntimeProvider,
 } from "./runtime.ts";
 export { initClientRouter, useNavigate } from "./router.ts";
 export { ViactHttpError } from "./types.ts";
 export type {
-  ActionArgs,
-  ActionEnvelope,
-  ActionFn,
-  ActionResult,
   ApiConfig,
   ApiRouteHandler,
   ApiRouteMatch,
@@ -81,7 +77,6 @@ export type {
   PrerenderAppResult,
   PrerenderResult,
   StartAppOptions,
-  SubmitActionOptions,
   ViactHydrationState,
 } from "./runtime.ts";
 export type { InitClientRouterOptions, NavigateFn } from "./router.ts";

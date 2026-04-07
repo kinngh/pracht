@@ -41,13 +41,12 @@ describe("resolveApp", () => {
 });
 
 describe("route() with RouteConfig object", () => {
-  it("accepts an object config with component, loader, and action", () => {
+  it("accepts an object config with component and loader", () => {
     const app = defineApp({
       routes: [
         route("/dashboard", {
           component: "./routes/dashboard.tsx",
           loader: "./server/dashboard-loader.ts",
-          action: "./server/dashboard-action.ts",
           render: "ssr",
         }),
       ],
@@ -59,12 +58,11 @@ describe("route() with RouteConfig object", () => {
     expect(resolved.routes[0]).toMatchObject({
       file: "./routes/dashboard.tsx",
       loaderFile: "./server/dashboard-loader.ts",
-      actionFile: "./server/dashboard-action.ts",
       render: "ssr",
     });
   });
 
-  it("works without loader and action", () => {
+  it("works without loader", () => {
     const app = defineApp({
       routes: [
         route("/about", {
@@ -81,7 +79,6 @@ describe("route() with RouteConfig object", () => {
       render: "ssg",
     });
     expect(resolved.routes[0].loaderFile).toBeUndefined();
-    expect(resolved.routes[0].actionFile).toBeUndefined();
   });
 });
 

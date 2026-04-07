@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { ViactHttpError, defineApp, handleViactRequest, resolveApiRoutes, route, useParams } from "../src/index.ts";
 
-describe("handleViactRequest actions", () => {
-  it("translates redirect envelopes into HTTP redirects with headers", async () => {
+describe("handleViactRequest rejects non-GET on page routes", () => {
+  it("returns 405 for POST to a page route", async () => {
     const app = defineApp({
       routes: [route("/", "./routes/home.tsx")],
     });
@@ -15,24 +15,15 @@ describe("handleViactRequest actions", () => {
         routeModules: {
           "./routes/home.tsx": async () => ({
             Component: () => null,
-            action: async () => ({
-              headers: { "set-cookie": "viact=1" },
-              redirect: "/done",
-            }),
           }),
         },
       },
       request: new Request("http://localhost/", {
-        headers: {
-          origin: "http://localhost",
-        },
         method: "POST",
       }),
     });
 
-    expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe("/done");
-    expect(response.headers.get("set-cookie")).toBe("viact=1");
+    expect(response.status).toBe(405);
   });
 });
 
@@ -107,12 +98,13 @@ describe("handleViactRequest with separate data modules", () => {
     expect(html).toContain("Hello Jovi");
   });
 
-  it("resolves action from a separate dataModule via actionFile", async () => {
+  it("returns 405 for POST to a page route with separate loader", async () => {
     const app = defineApp({
       routes: [
         route("/dashboard", {
           component: "./routes/dashboard.tsx",
-          action: "./server/dashboard-action.ts",
+          loader: "./server/dashboard-loader.ts",
+          render: "ssr",
         }),
       ],
     });
@@ -126,8 +118,8 @@ describe("handleViactRequest with separate data modules", () => {
           }),
         },
         dataModules: {
-          "./server/dashboard-action.ts": async () => ({
-            action: async () => ({ ok: true, data: { created: true } }),
+          "./server/dashboard-loader.ts": async () => ({
+            loader: async () => ({ user: "Jovi" }),
           }),
         },
       },
@@ -137,9 +129,7 @@ describe("handleViactRequest with separate data modules", () => {
       }),
     });
 
-    expect(response.status).toBe(200);
-    const json = await response.json();
-    expect(json).toEqual({ ok: true, data: { created: true } });
+    expect(response.status).toBe(405);
   });
 
   it("falls back to route module loader when no loaderFile is set", async () => {

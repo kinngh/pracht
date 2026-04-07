@@ -77,7 +77,7 @@ test("dashboard renders with session cookie", async ({ page, context }) => {
   await expect(page.locator("p")).toContainText("Projects: 3");
 });
 
-test("dashboard form submits in-app and keeps the current route hydrated", async ({
+test("dashboard form posts to API route and keeps the current route hydrated", async ({
   page,
   context,
 }) => {
