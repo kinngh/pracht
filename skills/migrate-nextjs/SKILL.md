@@ -67,7 +67,7 @@ Ask the user to confirm the migration scope if the project is large (>20 routes)
 | `className` | `class` | Preact uses `class` attribute |
 | `React.useState` etc. | `import { useState } from "preact/hooks"` | Preact hooks API is compatible |
 | `React.useEffect` | `import { useEffect } from "preact/hooks"` | Same API |
-| `import React from "react"` | Remove — no import needed | Preact with `@preact/preset-vite` handles JSX |
+| `import React from "react"` | Remove — no import needed | Viact's Vite plugin handles JSX automatically |
 
 ## Migration Procedure
 
@@ -85,17 +85,15 @@ Ask the user to confirm the migration scope if the project is large (>20 routes)
 2. Create `vite.config.ts`:
    ```ts
    import { defineConfig } from "vite";
-   import preact from "@preact/preset-vite";
    import { viact } from "@viact/vite-plugin";
 
    export default defineConfig({
-     plugins: [preact(), viact()],
+     plugins: [viact()],
    });
    ```
 3. Update `package.json`:
    - Replace `react`, `react-dom` → `preact`
    - Replace `next` → `viact`, `@viact/vite-plugin`, `@viact/adapter-node` (or target adapter)
-   - Add `@preact/preset-vite`
    - Update scripts: `dev` → `viact dev`, `build` → `viact build`, `start` → `viact preview` or `node dist/server/server.js`
 4. Remove Next.js config files: `next.config.*`, `next-env.d.ts`, `.next/`
 5. If `tsconfig.json` has `"jsx": "preserve"`, change to `"jsx": "react-jsx"` and add `"jsxImportSource": "preact"`.
@@ -416,7 +414,7 @@ resolve: {
 }
 ```
 
-Note: `@preact/preset-vite` sets these aliases automatically. Only add manual aliases if a dependency doesn't resolve correctly.
+Note: The viact Vite plugin sets these aliases automatically. Only add manual aliases if a dependency doesn't resolve correctly.
 
 ## Rules
 

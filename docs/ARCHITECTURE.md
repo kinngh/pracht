@@ -374,13 +374,12 @@ viact plugin. Add them in `vite.config.ts`:
 
 ```typescript
 import { defineConfig } from "vite";
-import preact from "@preact/preset-vite";
 import { viact } from "@viact/vite-plugin";
 import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [preact(), viact(), mdx(), tailwindcss()],
+  plugins: [viact(), mdx(), tailwindcss()],
 });
 ```
 
