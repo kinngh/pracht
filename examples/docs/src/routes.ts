@@ -73,6 +73,10 @@ export const app = defineApp({
         id: "recipes-testing",
         render: "ssg",
       }),
+      route("/docs/migrate/nextjs", "./routes/docs/migrate-nextjs.md", {
+        id: "migrate-nextjs",
+        render: "ssg",
+      }),
     ]),
   ],
 });

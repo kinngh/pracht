@@ -164,3 +164,88 @@ group({ pathPrefix: "/admin", shell: "admin", middleware: ["auth"] }, [
   route("/settings", "./routes/admin/settings.tsx"), // → /admin/settings
 ])
 ```
+
+---
+
+## Pages Router (Auto-Discovery)
+
+For projects that prefer file-system routing — especially when migrating from Next.js — viact offers an optional pages-based routing mode. Instead of writing a route manifest, set `pagesDir` and viact auto-discovers routes from the file system.
+
+### Setup
+
+```ts [vite.config.ts]
+import { defineConfig } from "vite";
+import { viact } from "@viact/vite-plugin";
+
+export default defineConfig({
+  plugins: [viact({ pagesDir: "/src/pages" })],
+});
+```
+
+When `pagesDir` is set, the `appFile` option is ignored. The plugin scans the pages directory and generates the route manifest automatically.
+
+### File Conventions
+
+| File | Route |
+|------|-------|
+| `pages/index.tsx` | `/` |
+| `pages/about.tsx` | `/about` |
+| `pages/blog/index.tsx` | `/blog` |
+| `pages/blog/[slug].tsx` | `/blog/:slug` |
+| `pages/[...path].tsx` | `/*` |
+| `pages/_app.tsx` | *(shell, not a route)* |
+| `pages/_anything.tsx` | *(ignored — underscore prefix is reserved)* |
+
+### Shell via `_app.tsx`
+
+If `pages/_app.tsx` exists, it is registered as a shell named `"pages"` and all discovered routes are automatically wrapped in it:
+
+```tsx [src/pages/_app.tsx]
+import type { ShellProps } from "viact";
+
+export function Shell({ children }: ShellProps) {
+  return (
+    <div class="app-layout">
+      <nav>...</nav>
+      <main>{children}</main>
+    </div>
+  );
+}
+```
+
+### Per-Route Render Mode
+
+Page files can export a `RENDER_MODE` constant to override the rendering strategy:
+
+```tsx [src/pages/about.tsx]
+export const RENDER_MODE = "ssg";
+
+export default function About() {
+  return <div>About us</div>;
+}
+```
+
+Valid values: `"ssr"` | `"ssg"` | `"isg"` | `"spa"`. The default is `"ssr"`, overridable globally via `pagesDefaultRender`:
+
+```ts [vite.config.ts]
+viact({ pagesDir: "/src/pages", pagesDefaultRender: "ssg" })
+```
+
+### Route Priority
+
+Routes are sorted: static routes first, then dynamic (`:param`), then catch-all (`*`). This matches Next.js resolution order.
+
+### Ejecting to Explicit Manifest
+
+When you outgrow auto-discovery and want full manifest control, eject with a one-time codegen:
+
+```ts
+import { generateRoutesFile } from "@viact/vite-plugin/pages-router";
+
+generateRoutesFile("src/pages", "src/routes.ts", {
+  pagesDir: "src/pages",
+  pagesDefaultRender: "ssr",
+});
+```
+
+Then remove `pagesDir` from your viact config. The generated `src/routes.ts` is a standard manifest you can customize freely.

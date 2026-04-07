@@ -5,6 +5,9 @@ breadcrumb: Testing
 prev:
   href: /docs/recipes/forms
   title: Forms
+next:
+  href: /docs/migrate/nextjs
+  title: Migrate from Next.js
 ---
 
 ## Recommended Setup

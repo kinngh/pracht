@@ -1,0 +1,347 @@
+---
+title: Migrating from Next.js
+lead: A practical guide to moving your Next.js App Router project to viact. Covers routing, data loading, rendering modes, middleware, layouts, and API routes — with side-by-side code examples.
+breadcrumb: Migrate from Next.js
+prev:
+  href: /docs/recipes/testing
+  title: Testing
+---
+
+## Overview
+
+Next.js and viact share many of the same concepts — server rendering, file-based conventions, loaders, middleware — but viact takes a more explicit approach. This guide walks through the key differences so you can migrate incrementally.
+
+| Concept | Next.js (App Router) | viact |
+|---------|---------------------|-------|
+| UI library | React | Preact |
+| Bundler | Turbopack / Webpack | Vite |
+| Routing | File-system conventions | Explicit manifest (`src/routes.ts`) |
+| Layouts | `layout.tsx` nesting | Named shells |
+| Data fetching | `async` Server Components, `fetch` | `loader` / `action` exports |
+| Rendering modes | Per-segment (`dynamic`, `revalidate`) | Per-route (`ssg`, `ssr`, `isg`, `spa`) |
+| Middleware | Single `middleware.ts` at root | Named middleware, per-route or per-group |
+| API routes | `app/api/**/route.ts` | `src/api/**/*.ts` |
+| Deployment | Vercel-first | Adapter-based (Node, Cloudflare, Vercel) |
+
+---
+
+## React → Preact
+
+Preact is API-compatible with React for the vast majority of components. The main changes:
+
+1. **Replace imports** — `react` → `preact` and `react-dom` → `preact/compat`
+2. **`className` → `class`** — Preact supports both, but `class` is idiomatic
+3. **No Server Components** — viact uses loaders for server-side data, not `async` components
+4. **Hooks** — Import from `preact/hooks` instead of `react`
+
+```tsx
+// Next.js
+import { useState } from "react";
+
+// viact
+import { useState } from "preact/hooks";
+```
+
+> [!NOTE]
+> If you have a large component library built for React, you can use `preact/compat` as a drop-in alias during migration. Configure it in your `vite.config.ts` with `resolve.alias`.
+
+---
+
+## Routing
+
+### File-system → Manifest
+
+Next.js derives routes from the file system. viact uses an explicit `src/routes.ts` manifest:
+
+```
+# Next.js file structure
+app/
+  page.tsx              → /
+  about/page.tsx        → /about
+  blog/[slug]/page.tsx  → /blog/:slug
+  (auth)/login/page.tsx → /login (route group)
+```
+
+```ts [src/routes.ts]
+// viact equivalent
+import { defineApp, group, route } from "viact";
+
+export const app = defineApp({
+  shells: {
+    public: "./shells/public.tsx",
+    auth:   "./shells/auth.tsx",
+  },
+  routes: [
+    group({ shell: "public" }, [
+      route("/",           "./routes/home.tsx",      { render: "ssg" }),
+      route("/about",      "./routes/about.tsx",     { render: "ssg" }),
+      route("/blog/:slug", "./routes/blog-post.tsx", { render: "ssr" }),
+    ]),
+    group({ shell: "auth" }, [
+      route("/login", "./routes/login.tsx", { render: "spa" }),
+    ]),
+  ],
+});
+```
+
+**Why?** The manifest gives you full control: URL structure is independent of file layout, shell and middleware assignment is explicit, and render modes are visible at a glance.
+
+### Dynamic Routes
+
+| Next.js | viact |
+|---------|-------|
+| `[slug]` folder | `:slug` in path |
+| `[...slug]` folder | `*` catch-all |
+| `(group)` folder | `group()` call |
+
+---
+
+## Layouts → Shells
+
+Next.js uses `layout.tsx` files that nest based on folder structure. viact uses **named shells** that are explicitly assigned to routes or groups.
+
+```tsx
+// Next.js — app/layout.tsx
+export default function RootLayout({ children }) {
+  return (
+    <html><body>{children}</body></html>
+  );
+}
+```
+
+```tsx [src/shells/public.tsx]
+// viact — named shell
+import type { ShellProps } from "viact";
+
+export function Shell({ children }: ShellProps) {
+  return (
+    <html><body>{children}</body></html>
+  );
+}
+
+export function head() {
+  return { title: "My App" };
+}
+```
+
+**Key difference:** Shells are decoupled from URL structure. A flat route like `/settings` can use the `app` shell without being nested under `/app/settings` in the file system.
+
+---
+
+## Data Fetching → Loaders & Actions
+
+### Server Components → Loaders
+
+Next.js uses async Server Components that `fetch` data inline. viact separates data fetching into `loader` functions:
+
+```tsx
+// Next.js — app/blog/[slug]/page.tsx
+export default async function BlogPost({ params }) {
+  const post = await db.posts.find(params.slug);
+  return <article><h1>{post.title}</h1></article>;
+}
+```
+
+```tsx [src/routes/blog-post.tsx]
+// viact
+import type { LoaderArgs, RouteComponentProps } from "viact";
+import { useRouteData } from "viact/client";
+
+export async function loader({ params }: LoaderArgs) {
+  const post = await db.posts.find(params.slug);
+  return { post };
+}
+
+export default function BlogPost() {
+  const { post } = useRouteData<typeof loader>();
+  return <article><h1>{post.title}</h1></article>;
+}
+```
+
+### Server Actions → Actions
+
+Next.js Server Actions become viact `action` exports:
+
+```tsx
+// Next.js
+"use server";
+async function createPost(formData: FormData) {
+  await db.posts.create({ title: formData.get("title") });
+  redirect("/blog");
+}
+```
+
+```tsx [src/routes/new-post.tsx]
+// viact
+import type { ActionArgs } from "viact";
+import { Form } from "viact/client";
+
+export async function action({ request }: ActionArgs) {
+  const form = await request.formData();
+  await db.posts.create({ title: form.get("title") });
+  return { redirect: "/blog" };
+}
+
+export default function NewPost() {
+  return (
+    <Form method="post">
+      <input name="title" />
+      <button type="submit">Create</button>
+    </Form>
+  );
+}
+```
+
+---
+
+## Head Metadata
+
+Next.js uses a `metadata` export or `generateMetadata` function. viact uses a `head` export:
+
+```tsx
+// Next.js
+export const metadata = { title: "About Us" };
+// or
+export async function generateMetadata({ params }) {
+  return { title: `Post: ${params.slug}` };
+}
+```
+
+```tsx [src/routes/about.tsx]
+// viact
+import type { HeadArgs } from "viact";
+
+export function head({ data }: HeadArgs) {
+  return {
+    title: "About Us",
+    meta: [{ name: "description", content: "Learn about us" }],
+  };
+}
+```
+
+---
+
+## Rendering Modes
+
+Next.js controls caching with `export const dynamic` and `revalidate`. viact sets rendering mode per-route in the manifest:
+
+| Next.js | viact | When to use |
+|---------|-------|-------------|
+| `dynamic = "force-static"` | `render: "ssg"` | Content known at build time |
+| `dynamic = "force-dynamic"` | `render: "ssr"` | Personalized or real-time data |
+| `revalidate = 3600` | `render: "isg"` + `timeRevalidate(3600)` | Mostly static, periodic updates |
+| Client component with `"use client"` | `render: "spa"` | Client-only UI (dashboards) |
+
+```ts [src/routes.ts]
+import { route, timeRevalidate } from "viact";
+
+route("/pricing", "./routes/pricing.tsx", {
+  render: "isg",
+  revalidate: timeRevalidate(3600),
+})
+```
+
+---
+
+## Middleware
+
+Next.js uses a single `middleware.ts` file at the project root with path matching. viact uses **named middleware** assigned per-route or per-group:
+
+```ts
+// Next.js — middleware.ts
+import { NextResponse } from "next/server";
+
+export function middleware(request) {
+  const session = getSession(request);
+  if (!session) return NextResponse.redirect(new URL("/login", request.url));
+}
+
+export const config = { matcher: ["/dashboard/:path*", "/settings/:path*"] };
+```
+
+```ts [src/middleware/auth.ts]
+// viact — named middleware
+import type { MiddlewareFn } from "viact";
+
+export const middleware: MiddlewareFn = async ({ request }) => {
+  const session = await getSession(request);
+  if (!session) return { redirect: "/login" };
+};
+```
+
+```ts [src/routes.ts]
+// Applied to specific routes via the manifest
+group({ middleware: ["auth"], shell: "app" }, [
+  route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }),
+  route("/settings",  "./routes/settings.tsx",  { render: "spa" }),
+])
+```
+
+**Advantage:** Multiple named middleware can be composed per-group. No regex matchers — assignment is explicit.
+
+---
+
+## API Routes
+
+Both frameworks use file-based API routes with named HTTP method exports:
+
+```ts
+// Next.js — app/api/posts/route.ts
+import { NextResponse } from "next/server";
+
+export async function GET() {
+  const posts = await db.posts.list();
+  return NextResponse.json(posts);
+}
+```
+
+```ts [src/api/posts.ts]
+// viact — src/api/posts.ts
+export async function GET() {
+  const posts = await db.posts.list();
+  return Response.json(posts);
+}
+```
+
+The main differences:
+- viact uses standard `Response` instead of `NextResponse`
+- Files live in `src/api/` instead of `app/api/`
+- No need for route segment config — middleware is applied via `defineApp({ api: { middleware } })`
+
+---
+
+## Deployment
+
+Next.js is optimized for Vercel. viact uses **adapters** to deploy anywhere:
+
+```ts [vite.config.ts]
+import { viact } from "@viact/vite-plugin";
+import { node } from "@viact/adapter-node";
+// or: import { cloudflare } from "@viact/adapter-cloudflare";
+// or: import { vercel } from "@viact/adapter-vercel";
+
+export default {
+  plugins: [viact({ adapter: node() })],
+};
+```
+
+| Target | Adapter | Notes |
+|--------|---------|-------|
+| Node.js | `@viact/adapter-node` | Express-compatible, ISG revalidation |
+| Cloudflare Workers | `@viact/adapter-cloudflare` | KV, D1, R2 bindings via context |
+| Vercel | `@viact/adapter-vercel` | Edge Functions, Build Output API v3 |
+
+---
+
+## Migration Checklist
+
+1. **Scaffold a viact project** — `npm create viact@latest`
+2. **Move components** — Update imports from `react` to `preact/hooks`, `class` instead of `className`
+3. **Create the route manifest** — Map your `app/` folder structure to `src/routes.ts`
+4. **Convert layouts to shells** — Extract `layout.tsx` files into named shell components
+5. **Extract data fetching into loaders** — Move `async` component logic into `loader` exports
+6. **Convert Server Actions to actions** — Replace `"use server"` functions with `action` exports
+7. **Move middleware** — Split your single `middleware.ts` into named middleware files
+8. **Move API routes** — Copy `app/api/` handlers to `src/api/`, replace `NextResponse` with `Response`
+9. **Choose an adapter** — Pick your deployment target in `vite.config.ts`
+10. **Test** — Run `viact dev` and verify each route renders correctly
