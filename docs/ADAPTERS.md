@@ -66,7 +66,7 @@ The adapter factory calls the entry module generator internally to create a virt
 
 | Option          | Type                 | Description                         |
 | --------------- | -------------------- | ----------------------------------- |
-| `app`           | `PlyonApp`           | The resolved app from `defineApp()` |
+| `app`           | `ViactApp`           | The resolved app from `defineApp()` |
 | `registry`      | `ModuleRegistry`     | Lazy module importers               |
 | `staticDir`     | `string`             | Path to `dist/client/`              |
 | `viteManifest`  | `ViteManifest`       | Client asset manifest for injection |

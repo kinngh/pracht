@@ -25,7 +25,7 @@ yarn create viact my-app
 bunx create-viact my-app
 ```
 
-The CLI will ask you to choose an adapter (Node.js or Cloudflare Workers). You can change this later in your `vite.config.ts`.
+The CLI will ask you to choose an adapter (Node.js, Cloudflare Workers, or Vercel). You can change this later in your `vite.config.ts`.
 
 ---
 

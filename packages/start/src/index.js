@@ -19,6 +19,13 @@ const ADAPTERS = {
     packageName: "@viact/adapter-cloudflare",
     short: "cf",
   },
+  vercel: {
+    description: "Vercel Edge Functions with prebuilt deploy",
+    id: "vercel",
+    label: "Vercel",
+    packageName: "@viact/adapter-vercel",
+    short: "vercel",
+  },
 };
 
 const DEFAULT_DIRECTORY = "viact-app";
@@ -145,6 +152,7 @@ async function promptForAdapter(readline) {
   console.log("Adapters:");
   console.log("  1. Node.js");
   console.log("  2. Cloudflare Workers");
+  console.log("  3. Vercel");
 
   while (true) {
     const answer = await readline.question("Adapter (1): ");
@@ -154,7 +162,7 @@ async function promptForAdapter(readline) {
       return normalized;
     }
 
-    console.log("Choose 1/2 or node/cf.");
+    console.log("Choose 1/2/3 or node/cf/vercel.");
   }
 }
 
@@ -200,12 +208,16 @@ function normalizeAdapter(value) {
     return "cloudflare";
   }
 
+  if (normalized === "3" || normalized === "vc" || normalized === "vercel") {
+    return "vercel";
+  }
+
   return null;
 }
 
 function buildProjectFiles({ adapter, packageManager, projectName }) {
   const files = {
-    ".gitignore": "dist\nnode_modules\n.wrangler\n",
+    ".gitignore": "dist\nnode_modules\n.wrangler\n.vercel\n",
     "README.md": createReadme({ adapter, packageManager, projectName }),
     "package.json": createPackageJson({ adapter, projectName }),
     "src/api/health.ts": createHealthRoute(adapter),
@@ -242,6 +254,11 @@ function createPackageJson({ adapter, projectName }) {
     devDependencies.wrangler = "^4.12.0";
   }
 
+  if (adapter.id === "vercel") {
+    scripts.deploy = "viact build && vercel deploy --prebuilt";
+    devDependencies.vercel = "latest";
+  }
+
   return `${JSON.stringify(
     {
       dependencies: {
@@ -264,6 +281,7 @@ function createViteConfig(adapter) {
   const ADAPTER_IMPORTS = {
     node: { fn: "nodeAdapter", pkg: "@viact/adapter-node" },
     cloudflare: { fn: "cloudflareAdapter", pkg: "@viact/adapter-cloudflare" },
+    vercel: { fn: "vercelAdapter", pkg: "@viact/adapter-vercel" },
   };
 
   const info = ADAPTER_IMPORTS[adapter.id] ?? ADAPTER_IMPORTS.node;
@@ -418,6 +436,12 @@ function createReadme({ adapter, packageManager, projectName }) {
     );
   }
 
+  if (adapter.id === "vercel") {
+    lines.push(`- \`${deployCommand}\``);
+    lines.push("");
+    lines.push("Run the deploy command after linking or logging into your Vercel account.");
+  }
+
   lines.push("");
   lines.push("## Files");
   lines.push("");
@@ -474,7 +498,7 @@ function printHelp() {
   console.log(`create-viact
 
 Usage:
-  create-viact [directory] [--adapter=node|cf] [--skip-install]
+  create-viact [directory] [--adapter=node|cf|vercel] [--skip-install]
 `);
 }
 

@@ -64,4 +64,31 @@ describe("create-viact", () => {
     expect(packageJson).toContain('"wrangler": "^4.12.0"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(true);
   });
+
+  it("scaffolds a vercel starter", async () => {
+    const root = await mkdtemp(join(tmpdir(), "viact-start-vercel-"));
+    const targetDir = join(root, "my-vercel-app");
+
+    await scaffoldProject({
+      adapter: {
+        description: "Vercel Edge Functions with prebuilt deploy",
+        id: "vercel",
+        label: "Vercel",
+        packageName: "@viact/adapter-vercel",
+        short: "vercel",
+      },
+      packageManager: "pnpm",
+      targetDir,
+    });
+
+    const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
+    const readme = await readFile(join(targetDir, "README.md"), "utf-8");
+
+    expect(packageJson).toContain('"@viact/adapter-vercel": "latest"');
+    expect(packageJson).toContain('"vercel": "latest"');
+    expect(packageJson).toContain('"deploy": "viact build && vercel deploy --prebuilt"');
+    expect(readme).toContain("configured for Vercel");
+    expect(readme).toContain("pnpm deploy");
+    expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
+  });
 });

@@ -15,7 +15,7 @@ npm run dev
 
 - Prompts for the target folder.
 - Detects the active package manager from the current environment.
-- Lets the user choose between the Node.js and Cloudflare adapters.
+- Lets the user choose between the Node.js, Cloudflare, and Vercel adapters.
 - Scaffolds a minimal app with a route manifest, shell, home route, sample API route, and runnable project README.
 
 ## Usage
@@ -23,6 +23,7 @@ npm run dev
 ```bash
 node ./packages/start/bin/create-viact.js
 node ./packages/start/bin/create-viact.js my-app --adapter=node --skip-install
+node ./packages/start/bin/create-viact.js my-app --adapter=vercel --skip-install
 ```
 
 ## Generated Files
@@ -47,6 +48,10 @@ Cloudflare scaffolds also include:
 Cloudflare starters also include:
 
 - `deploy` -> `viact build && wrangler deploy`
+
+Vercel starters also include:
+
+- `deploy` -> `viact build && vercel deploy --prebuilt`
 
 Node starters can be run in production with:
 
