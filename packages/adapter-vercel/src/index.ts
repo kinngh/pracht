@@ -1,3 +1,4 @@
+import type { ViactAdapter } from "@viact/vite-plugin";
 import {
   handleViactRequest,
   type HandleViactRequestOptions,
@@ -82,4 +83,25 @@ export function createVercelServerEntryModule(
     "}",
     "",
   ].join("\n");
+}
+
+/**
+ * Create a viact adapter for Vercel Edge Functions.
+ *
+ * ```ts
+ * import { vercelAdapter } from "@viact/adapter-vercel";
+ * viact({ adapter: vercelAdapter() })
+ * ```
+ */
+export function vercelAdapter(
+  options: VercelServerEntryModuleOptions = {},
+): ViactAdapter {
+  return {
+    id: "vercel",
+    serverImports:
+      'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      return createVercelServerEntryModule(options);
+    },
+  };
 }

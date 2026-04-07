@@ -36,8 +36,10 @@ node dist/server/server.js
 Deploys as a Cloudflare Worker with static assets served via the `ASSETS` binding.
 
 ```ts [vite.config.ts]
+import { cloudflareAdapter } from "@viact/adapter-cloudflare";
+
 export default defineConfig({
-  plugins: [preact(), viact({ adapter: "cloudflare" })],
+  plugins: [preact(), viact({ adapter: cloudflareAdapter() })],
 });
 ```
 
@@ -56,8 +58,10 @@ Configure bindings (KV, D1, R2) in `wrangler.jsonc`. They are available via `con
 Deploys as a Vercel Edge Function with static assets served from the CDN.
 
 ```ts [vite.config.ts]
+import { vercelAdapter } from "@viact/adapter-vercel";
+
 export default defineConfig({
-  plugins: [preact(), viact({ adapter: "vercel" })],
+  plugins: [preact(), viact({ adapter: vercelAdapter() })],
 });
 ```
 

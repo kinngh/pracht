@@ -261,17 +261,20 @@ function createPackageJson({ adapter, projectName }) {
 }
 
 function createViteConfig(adapter) {
-  const viactCall =
-    adapter.id === "cloudflare"
-      ? 'viact({ adapter: "cloudflare" })'
-      : "viact()";
+  const ADAPTER_IMPORTS = {
+    node: { fn: "nodeAdapter", pkg: "@viact/adapter-node" },
+    cloudflare: { fn: "cloudflareAdapter", pkg: "@viact/adapter-cloudflare" },
+  };
+
+  const info = ADAPTER_IMPORTS[adapter.id] ?? ADAPTER_IMPORTS.node;
 
   return [
     'import { defineConfig } from "vite";',
     'import { viact } from "@viact/vite-plugin";',
+    `import { ${info.fn} } from "${info.pkg}";`,
     "",
     "export default defineConfig({",
-    `  plugins: [${viactCall}],`,
+    `  plugins: [viact({ adapter: ${info.fn}() })],`,
     "});",
     "",
   ].join("\n");

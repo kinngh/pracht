@@ -1,3 +1,4 @@
+import type { ViactAdapter } from "@viact/vite-plugin";
 import {
   handleViactRequest,
   type HandleViactRequestOptions,
@@ -161,4 +162,25 @@ async function maybeServeAsset(
 
 function isFetcher(value: unknown): value is CloudflareFetcher {
   return typeof value === "object" && value !== null && "fetch" in value;
+}
+
+/**
+ * Create a viact adapter for Cloudflare Workers.
+ *
+ * ```ts
+ * import { cloudflareAdapter } from "@viact/adapter-cloudflare";
+ * viact({ adapter: cloudflareAdapter() })
+ * ```
+ */
+export function cloudflareAdapter(
+  options: CloudflareServerEntryModuleOptions = {},
+): ViactAdapter {
+  return {
+    id: "cloudflare",
+    serverImports:
+      'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      return createCloudflareServerEntryModule(options);
+    },
+  };
 }

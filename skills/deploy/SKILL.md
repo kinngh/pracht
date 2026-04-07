@@ -44,9 +44,9 @@ Ask the user where they want to deploy if not already clear from their message.
 2. In `vite.config.ts`:
    ```ts
    import { viact } from "@viact/vite-plugin";
-   export default { plugins: [viact({ adapter: "node" })] };
+   import { nodeAdapter } from "@viact/adapter-node";
+   export default { plugins: [viact({ adapter: nodeAdapter() })] };
    ```
-3. The default adapter is `"node"`, so this may already be configured.
 
 ### Build
 
@@ -95,7 +95,8 @@ CMD ["node", "dist/server/server.js"]
 2. In `vite.config.ts`:
    ```ts
    import { viact } from "@viact/vite-plugin";
-   export default { plugins: [viact({ adapter: "cloudflare" })] };
+   import { cloudflareAdapter } from "@viact/adapter-cloudflare";
+   export default { plugins: [viact({ adapter: cloudflareAdapter() })] };
    ```
 
 ### Build & Deploy
@@ -128,7 +129,7 @@ export async function loader({ context }: LoaderArgs) {
 ### Custom Assets Binding
 
 ```ts
-viact({ adapter: "cloudflare", cloudflareAssetsBinding: "STATIC" })
+viact({ adapter: cloudflareAdapter({ assetsBinding: "STATIC" }) })
 ```
 
 ---
@@ -141,7 +142,8 @@ viact({ adapter: "cloudflare", cloudflareAssetsBinding: "STATIC" })
 2. In `vite.config.ts`:
    ```ts
    import { viact } from "@viact/vite-plugin";
-   export default { plugins: [viact({ adapter: "vercel" })] };
+   import { vercelAdapter } from "@viact/adapter-vercel";
+   export default { plugins: [viact({ adapter: vercelAdapter() })] };
    ```
 
 ### Build & Deploy

@@ -82,7 +82,7 @@ Work through these in order, stopping when you find the root cause:
 - `viact build` runs client + server builds, then prerenders SSG/ISG routes.
 - Check `dist/client/` for client assets and `dist/server/` for server bundle.
 - ISG manifest: `dist/client/viact-isg-manifest.json`.
-- Adapter mismatch: ensure `viact({ adapter: "node" })` or `"cloudflare"` matches deployment target.
+- Adapter mismatch: ensure `viact({ adapter: nodeAdapter() })` or `cloudflareAdapter()` matches deployment target.
 
 ## Key Files
 

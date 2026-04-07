@@ -26,9 +26,21 @@ are served and how ISG revalidation state is tracked.
 
 ## Adapter Interface
 
-Each adapter exports two things:
+Each adapter exports three things:
 
-### 1. Request handler factory
+### 1. Adapter factory (for the Vite plugin)
+
+```typescript
+// Example: Node adapter
+import { nodeAdapter } from "@viact/adapter-node";
+
+viact({ adapter: nodeAdapter() });
+```
+
+The factory returns a `ViactAdapter` object that the Vite plugin uses to
+generate the server entry module.
+
+### 2. Request handler factory
 
 ```typescript
 // Example: Node adapter
@@ -37,14 +49,14 @@ export function createNodeRequestHandler<TContext>(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 ```
 
-### 2. Entry module generator (for the Vite plugin)
+### 3. Entry module generator (for custom adapters)
 
 ```typescript
 export function createNodeServerEntryModule(options?: NodeServerEntryModuleOptions): string;
 ```
 
-The Vite plugin calls the entry module generator to create a virtual module
-(`virtual:viact/node-server`) that bootstraps the server.
+The adapter factory calls the entry module generator internally to create a virtual module
+(`virtual:viact/server`) that bootstraps the server.
 
 ---
 
@@ -114,7 +126,7 @@ the executable production server entry.
 - **Default request context**: generated worker entries pass `{ env,
 executionContext }` to viact so loaders, actions, and middleware can access
   bindings without extra wiring.
-- **Build output**: `viact({ adapter: "cloudflare" })` makes `viact build`
+- **Build output**: `viact({ adapter: cloudflareAdapter() })` makes `viact build`
   emit a Worker bundle in `dist/server/server.js`. You own a `wrangler.jsonc`
   in your project root that points at the output — this lets you add KV, D1,
   R2, cron, and any other Cloudflare bindings without losing them on rebuild.
@@ -163,7 +175,7 @@ export default {
 
 - **Edge runtime handler**: generated server entries export a default `fetch`-style
   handler that Vercel bundles as an Edge Function.
-- **Build Output API v3**: `viact({ adapter: "vercel" })` makes `viact build`
+- **Build Output API v3**: `viact({ adapter: vercelAdapter() })` makes `viact build`
   emit `.vercel/output/config.json`, `.vercel/output/static/`, and
   `.vercel/output/functions/render.func/`.
 - **Clean URL routing**: prerendered SSG pages are copied into
@@ -202,19 +214,51 @@ export default async function handle(request, context) {
 
 ## Writing a Custom Adapter
 
-An adapter needs to:
+A custom adapter exports a factory function that returns a `ViactAdapter` object:
+
+```typescript
+import type { ViactAdapter } from "@viact/vite-plugin";
+
+export function myAdapter(options?: MyOptions): ViactAdapter {
+  return {
+    id: "my-platform",
+    serverImports: 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      // Return JavaScript source code that will be appended to the
+      // generated virtual:viact/server module.
+      return `
+export default async function handle(request) {
+  return handleViactRequest({
+    app: resolvedApp,
+    registry,
+    request,
+    apiRoutes,
+    clientEntryUrl: clientEntryUrl ?? undefined,
+    cssManifest,
+    jsManifest,
+  });
+}
+`;
+    },
+  };
+}
+```
+
+The generated server entry module has access to `resolvedApp`, `registry`,
+`apiRoutes`, `clientEntryUrl`, `cssManifest`, and `jsManifest` -- your
+`createServerEntryModule()` code can reference these directly.
+
+At the runtime level, an adapter also typically needs to:
 
 1. **Accept a platform request** and convert it to a Web `Request` object
-2. **Check for static assets** — serve files from `dist/client/` with appropriate
+2. **Check for static assets** -- serve files from `dist/client/` with appropriate
    headers (content-type, cache-control with immutable for hashed assets)
-3. **Check for prerendered pages** — SSG and ISG routes have HTML files on disk.
+3. **Check for prerendered pages** -- SSG and ISG routes have HTML files on disk.
    For ISG, implement staleness checking.
-4. **Delegate dynamic requests** to `handleViactRequest()` from `@viact/framework`
+4. **Delegate dynamic requests** to `handleViactRequest()` from `viact`
 5. **Convert the Web `Response`** back to the platform's response format
-6. **Provide a context factory** — create app-level context from platform-specific
+6. **Provide a context factory** -- create app-level context from platform-specific
    inputs (env bindings, headers, etc.)
-7. **Export an entry module generator** — a function that returns JavaScript source
-   code for the Vite plugin to use as a virtual module
 
 ### Context factory pattern
 

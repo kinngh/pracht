@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
 
+import type { ViactAdapter } from "@viact/vite-plugin";
 import {
   applyDefaultSecurityHeaders,
   handleViactRequest,
@@ -284,3 +285,21 @@ function getFirstHeaderValue(value: string | string[] | undefined): string | und
 }
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
+
+/**
+ * Create a viact adapter for Node.js.
+ *
+ * ```ts
+ * import { nodeAdapter } from "@viact/adapter-node";
+ * viact({ adapter: nodeAdapter() })
+ * ```
+ */
+export function nodeAdapter(options: NodeServerEntryModuleOptions = {}): ViactAdapter {
+  return {
+    id: "node",
+    serverImports: 'import { resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      return createNodeServerEntryModule(options);
+    },
+  };
+}

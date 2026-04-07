@@ -34,9 +34,10 @@ Deploy to Cloudflare's global edge network. Static assets are served from the `A
 ```ts [vite.config.ts]
 import { defineConfig } from "vite";
 import { viact } from "@viact/vite-plugin";
+import { cloudflareAdapter } from "@viact/adapter-cloudflare";
 
 export default defineConfig({
-  plugins: [viact({ adapter: "cloudflare" })],
+  plugins: [viact({ adapter: cloudflareAdapter() })],
 });
 ```
 
@@ -96,7 +97,8 @@ Deploy using Vercel's Build Output API v3. SSG pages are served from the static 
 
 ```ts
 // vite.config.ts
-viact({ adapter: "vercel" })
+import { vercelAdapter } from "@viact/adapter-vercel";
+viact({ adapter: vercelAdapter() })
 
 // package.json
 "@viact/adapter-vercel": "*"
@@ -130,7 +132,8 @@ Run viact as a standard Node.js HTTP server. The adapter handles static file ser
 
 ```ts
 // vite.config.ts
-viact({ adapter: "node" })
+import { nodeAdapter } from "@viact/adapter-node";
+viact({ adapter: nodeAdapter() })
 
 // package.json
 "@viact/adapter-node": "*"
@@ -172,11 +175,39 @@ The context object is available as `args.context` in every loader, action, middl
 
 ## Writing a Custom Adapter
 
-A custom adapter needs to:
+A custom adapter exports a factory function that returns a `ViactAdapter` object:
+
+```ts
+import type { ViactAdapter } from "@viact/vite-plugin";
+
+export function myAdapter(): ViactAdapter {
+  return {
+    id: "my-platform",
+    serverImports: 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      return `
+export default async function handle(request) {
+  return handleViactRequest({
+    app: resolvedApp,
+    registry,
+    request,
+    apiRoutes,
+    clientEntryUrl: clientEntryUrl ?? undefined,
+    cssManifest,
+    jsManifest,
+  });
+}
+`;
+    },
+  };
+}
+```
+
+At the runtime level, an adapter also typically needs to:
 
 1. Accept a platform request and convert it to a Web `Request`
-2. Check for static assets — serve files from `dist/client/` with appropriate headers
-3. Check for prerendered pages — serve SSG/ISG HTML (with staleness checking for ISG)
+2. Check for static assets -- serve files from `dist/client/` with appropriate headers
+3. Check for prerendered pages -- serve SSG/ISG HTML (with staleness checking for ISG)
 4. Delegate dynamic requests to `handleViactRequest()` from `viact`
 5. Convert the Web `Response` back to the platform's response format
 6. Provide a context factory for platform-specific values

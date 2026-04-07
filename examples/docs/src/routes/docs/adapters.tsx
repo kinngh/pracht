@@ -45,9 +45,10 @@ export function Component() {
         filename="vite.config.ts"
         code={`import { defineConfig } from "vite";
 import { viact } from "@viact/vite-plugin";
+import { cloudflareAdapter } from "@viact/adapter-cloudflare";
 
 export default defineConfig({
-  plugins: [viact({ adapter: "cloudflare" })],
+  plugins: [viact({ adapter: cloudflareAdapter() })],
 });`}
       />
       <CodeBlock
@@ -101,7 +102,8 @@ npx wrangler deploy`} />
 
       <h3>Setup</h3>
       <CodeBlock code={`// vite.config.ts
-viact({ adapter: "vercel" })
+import { vercelAdapter } from "@viact/adapter-vercel";
+viact({ adapter: vercelAdapter() })
 
 // package.json
 "@viact/adapter-vercel": "*"`} />
@@ -130,7 +132,8 @@ npx vercel deploy --prebuilt`} />
 
       <h3>Setup</h3>
       <CodeBlock code={`// vite.config.ts
-viact({ adapter: "node" })
+import { nodeAdapter } from "@viact/adapter-node";
+viact({ adapter: nodeAdapter() })
 
 // package.json
 "@viact/adapter-node": "*"`} />
@@ -169,11 +172,32 @@ createContext: ({ request, env, executionContext }) => ({
       <div class="doc-sep" />
 
       <h2>Writing a Custom Adapter</h2>
-      <p>A custom adapter needs to:</p>
+      <p>
+        A custom adapter exports a factory function that returns a{" "}
+        <code>ViactAdapter</code> object:
+      </p>
+      <CodeBlock code={`import type { ViactAdapter } from "@viact/vite-plugin";
+
+export function myAdapter(): ViactAdapter {
+  return {
+    id: "my-platform",
+    serverImports: 'import { handleViactRequest, resolveApp, resolveApiRoutes } from "viact";',
+    createServerEntryModule() {
+      return \`
+export default async function handle(request) {
+  return handleViactRequest({
+    app: resolvedApp, registry, request, apiRoutes,
+    clientEntryUrl: clientEntryUrl ?? undefined, cssManifest, jsManifest,
+  });
+}\`;
+    },
+  };
+}`} />
+      <p>At the runtime level, an adapter also typically needs to:</p>
       <ol style="padding-left:20px;color:var(--text-2);line-height:1.85;">
         <li>Accept a platform request and convert it to a Web <code>Request</code></li>
-        <li>Check for static assets — serve files from <code>dist/client/</code> with appropriate headers</li>
-        <li>Check for prerendered pages — serve SSG/ISG HTML (with staleness checking for ISG)</li>
+        <li>Check for static assets -- serve files from <code>dist/client/</code> with appropriate headers</li>
+        <li>Check for prerendered pages -- serve SSG/ISG HTML (with staleness checking for ISG)</li>
         <li>Delegate dynamic requests to <code>handleViactRequest()</code> from <code>viact</code></li>
         <li>Convert the Web <code>Response</code> back to the platform's response format</li>
         <li>Provide a context factory for platform-specific values</li>
