@@ -35,6 +35,15 @@ const NAV = [
     ],
   },
   {
+    label: "Recipes",
+    links: [
+      { href: "/docs/recipes/i18n", icon: "🌍", title: "i18n" },
+      { href: "/docs/recipes/auth", icon: "🔒", title: "Authentication" },
+      { href: "/docs/recipes/forms", icon: "📝", title: "Forms" },
+      { href: "/docs/recipes/testing", icon: "🧪", title: "Testing" },
+    ],
+  },
+  {
     label: "Reference",
     links: [
       { href: "/docs/adapters", icon: "🌐", title: "Adapters" },

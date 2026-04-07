@@ -57,6 +57,22 @@ export const app = defineApp({
         id: "performance",
         render: "ssg",
       }),
+      route("/docs/recipes/i18n", "./routes/docs/recipes-i18n.tsx", {
+        id: "recipes-i18n",
+        render: "ssg",
+      }),
+      route("/docs/recipes/auth", "./routes/docs/recipes-auth.tsx", {
+        id: "recipes-auth",
+        render: "ssg",
+      }),
+      route("/docs/recipes/forms", "./routes/docs/recipes-forms.tsx", {
+        id: "recipes-forms",
+        render: "ssg",
+      }),
+      route("/docs/recipes/testing", "./routes/docs/recipes-testing.tsx", {
+        id: "recipes-testing",
+        render: "ssg",
+      }),
     ]),
   ],
 });
