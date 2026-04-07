@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
 import { expect, test } from "@playwright/test";
+import { parse as parseJsonc } from "jsonc-parser";
 
 test("viact build emits a deployable Cloudflare Worker setup", async () => {
   test.setTimeout(120_000);
@@ -29,7 +30,7 @@ test("viact build emits a deployable Cloudflare Worker setup", async () => {
   expect(existsSync(wranglerPath)).toBe(true);
   expect(existsSync(serverEntryPath)).toBe(true);
 
-  const wranglerConfig = JSON.parse(readFileSync(wranglerPath, "utf-8"));
+  const wranglerConfig = parseJsonc(readFileSync(wranglerPath, "utf-8"));
   expect(wranglerConfig).toMatchObject({
     main: "dist/server/server.js",
     assets: {
