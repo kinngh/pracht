@@ -230,7 +230,6 @@ function createPackageJson({ adapter, projectName }) {
   };
 
   const devDependencies = {
-    "@preact/preset-vite": "^2.9.4",
     "@viact/cli": "latest",
     "@viact/vite-plugin": "latest",
     preact: "^10.26.9",
@@ -269,11 +268,10 @@ function createViteConfig(adapter) {
 
   return [
     'import { defineConfig } from "vite";',
-    'import preact from "@preact/preset-vite";',
     'import { viact } from "@viact/vite-plugin";',
     "",
     "export default defineConfig({",
-    `  plugins: [preact(), ${viactCall}],`,
+    `  plugins: [${viactCall}],`,
     "});",
     "",
   ].join("\n");

@@ -8,7 +8,6 @@
     "viact": "workspace:*"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.9.4",
     "@viact/cli": "workspace:*",
     "@viact/vite-plugin": "workspace:*",
     "preact": "^10.26.9",
