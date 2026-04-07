@@ -2,74 +2,74 @@ import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
-    home: "./shells/home.tsx",
-    docs: "./shells/docs.tsx",
+    home: () => import("./shells/home.tsx"),
+    docs: () => import("./shells/docs.tsx"),
   },
   routes: [
-    group({ shell: "home" }, [route("/", "./routes/home.tsx", { id: "home", render: "ssg" })]),
+    group({ shell: "home" }, [route("/", () => import("./routes/home.tsx"), { id: "home", render: "ssg" })]),
     group({ shell: "docs" }, [
-      route("/docs", "./routes/docs/index.tsx", { id: "docs-index", render: "ssr" }),
-      route("/docs/getting-started", "./routes/docs/getting-started.md", {
+      route("/docs", () => import("./routes/docs/index.tsx"), { id: "docs-index", render: "ssr" }),
+      route("/docs/getting-started", () => import("./routes/docs/getting-started.md"), {
         id: "getting-started",
         render: "ssg",
       }),
-      route("/docs/routing", "./routes/docs/routing.md", {
+      route("/docs/routing", () => import("./routes/docs/routing.md"), {
         id: "routing",
         render: "ssg",
       }),
-      route("/docs/rendering", "./routes/docs/rendering.md", {
+      route("/docs/rendering", () => import("./routes/docs/rendering.md"), {
         id: "rendering",
         render: "ssg",
       }),
-      route("/docs/data-loading", "./routes/docs/data-loading.md", {
+      route("/docs/data-loading", () => import("./routes/docs/data-loading.md"), {
         id: "data-loading",
         render: "ssg",
       }),
-      route("/docs/api-routes", "./routes/docs/api-routes.md", {
+      route("/docs/api-routes", () => import("./routes/docs/api-routes.md"), {
         id: "api-routes",
         render: "ssg",
       }),
-      route("/docs/middleware", "./routes/docs/middleware.md", {
+      route("/docs/middleware", () => import("./routes/docs/middleware.md"), {
         id: "middleware",
         render: "ssg",
       }),
-      route("/docs/shells", "./routes/docs/shells.md", {
+      route("/docs/shells", () => import("./routes/docs/shells.md"), {
         id: "shells",
         render: "ssg",
       }),
-      route("/docs/cli", "./routes/docs/cli.md", {
+      route("/docs/cli", () => import("./routes/docs/cli.md"), {
         id: "cli",
         render: "ssg",
       }),
-      route("/docs/deployment", "./routes/docs/deployment.md", {
+      route("/docs/deployment", () => import("./routes/docs/deployment.md"), {
         id: "deployment",
         render: "ssg",
       }),
-      route("/docs/adapters", "./routes/docs/adapters.md", {
+      route("/docs/adapters", () => import("./routes/docs/adapters.md"), {
         id: "adapters",
         render: "ssg",
       }),
-      route("/docs/prefetching", "./routes/docs/prefetching.md", {
+      route("/docs/prefetching", () => import("./routes/docs/prefetching.md"), {
         id: "prefetching",
         render: "ssg",
       }),
-      route("/docs/performance", "./routes/docs/performance.md", {
+      route("/docs/performance", () => import("./routes/docs/performance.md"), {
         id: "performance",
         render: "ssg",
       }),
-      route("/docs/recipes/i18n", "./routes/docs/recipes-i18n.md", {
+      route("/docs/recipes/i18n", () => import("./routes/docs/recipes-i18n.md"), {
         id: "recipes-i18n",
         render: "ssg",
       }),
-      route("/docs/recipes/auth", "./routes/docs/recipes-auth.md", {
+      route("/docs/recipes/auth", () => import("./routes/docs/recipes-auth.md"), {
         id: "recipes-auth",
         render: "ssg",
       }),
-      route("/docs/recipes/forms", "./routes/docs/recipes-forms.md", {
+      route("/docs/recipes/forms", () => import("./routes/docs/recipes-forms.md"), {
         id: "recipes-forms",
         render: "ssg",
       }),
-      route("/docs/recipes/testing", "./routes/docs/recipes-testing.md", {
+      route("/docs/recipes/testing", () => import("./routes/docs/recipes-testing.md"), {
         id: "recipes-testing",
         render: "ssg",
       }),
