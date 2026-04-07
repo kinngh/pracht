@@ -16,6 +16,7 @@ import type {
   ResolvedApiRoute,
   ResolvedRoute,
   RouteModule,
+  RouteParams,
   ShellModule,
   ViactHttpError,
   ViactApp,
@@ -77,6 +78,7 @@ const HYDRATION_STATE_ELEMENT_ID = "viact-state";
 
 interface ViactRuntimeValue {
   data: unknown;
+  params: RouteParams;
   routeId: string;
   url: string;
   setData: (data: unknown) => void;
@@ -87,11 +89,13 @@ const RouteDataContext = createContext<ViactRuntimeValue | undefined>(undefined)
 export function ViactRuntimeProvider<TData>({
   children,
   data,
+  params = {} as RouteParams,
   routeId,
   url,
 }: {
   children: ComponentChildren;
   data: TData;
+  params?: RouteParams;
   routeId: string;
   url: string;
 }) {
@@ -105,10 +109,11 @@ export function ViactRuntimeProvider<TData>({
 
   const context = useMemo(() => ({
     data: routeData,
+    params,
     routeId,
     setData: setRouteData as (data: unknown) => void,
     url,
-  }), [routeData, routeId, url]);
+  }), [routeData, params, routeId, url]);
 
   return h(RouteDataContext.Provider, {
     value: context,
@@ -167,6 +172,10 @@ export interface Location {
 export function useLocation(): Location {
   const url = useContext(RouteDataContext)?.url ?? (typeof window !== "undefined" ? window.location.pathname : "/");
   return { pathname: url };
+}
+
+export function useParams(): RouteParams {
+  return useContext(RouteDataContext)?.params ?? {};
 }
 
 export function useRevalidateRoute() {
@@ -518,6 +527,7 @@ export async function handleViactRequest<TContext>(
       ViactRuntimeProvider as any,
       {
         data,
+        params: match.params,
         routeId: match.route.id ?? "",
         url: url.pathname,
       },

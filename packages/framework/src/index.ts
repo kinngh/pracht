@@ -17,6 +17,7 @@ export {
   readHydrationState,
   startApp,
   useLocation,
+  useParams,
   useRevalidateRoute,
   useRouteData,
   useSubmitAction,

@@ -74,6 +74,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
         ViactRuntimeProvider as any,
         {
           data: state.data,
+          params: match.params,
           routeId: match.route.id ?? "",
           url: match.pathname,
         },
