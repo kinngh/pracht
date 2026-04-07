@@ -381,7 +381,7 @@ function createWranglerConfig(projectName) {
     "{",
     '  "$schema": "node_modules/wrangler/config-schema.json",',
     `  "name": ${JSON.stringify(projectName)},`,
-    '  "main": "src/worker.ts",',
+    '  "main": "dist/server/server.js",',
     `  "compatibility_date": ${JSON.stringify(compatibilityDate)},`,
     '  "assets": {',
     '    "binding": "ASSETS",',

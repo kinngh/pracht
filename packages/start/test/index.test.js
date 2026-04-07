@@ -64,7 +64,7 @@ describe("create-viact", () => {
     expect(packageJson).toContain('"@viact/adapter-cloudflare": "latest"');
     expect(packageJson).toContain('"wrangler": "^4.81.0"');
     expect(packageJson).not.toContain('"@cloudflare/vite-plugin"');
-    expect(wranglerConfig).toContain('"main": "src/worker.ts"');
+    expect(wranglerConfig).toContain('"main": "dist/server/server.js"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(true);
     expect(existsSync(join(targetDir, "src/worker.ts"))).toBe(true);
   });

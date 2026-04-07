@@ -143,18 +143,23 @@ The adapter handles everything — just declare bindings in `wrangler.jsonc`:
 
 ```jsonc
 {
-  "main": "src/worker.ts",
+  "main": "dist/server/server.js",
   "kv_namespaces": [{ "binding": "MY_KV", "id": "..." }],
   "d1_databases": [{ "binding": "DB", "database_name": "my-db", "database_id": "..." }]
 }
 ```
 
-Create a thin worker entry that re-exports the viact virtual module:
+Create a thin worker entry that the adapter uses during dev (resolved through
+Vite so the virtual module import works):
 
 ```typescript
 // src/worker.ts
 export { default } from "virtual:viact/server";
 ```
+
+The `main` field in `wrangler.jsonc` stays pointed at `dist/server/server.js`
+for production deploys — the adapter automatically overrides the entry to
+`src/worker.ts` during dev via `@cloudflare/vite-plugin`.
 
 Bindings are available via `context.env` in loaders, actions, and API routes:
 
