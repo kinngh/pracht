@@ -135,6 +135,8 @@ export async function pracht(options: PrachtPluginOptions = {}): Promise<Plugin[
     );
   }
 
+  let isBuild = false;
+
   const prachtPlugin: Plugin = {
     name: "pracht",
     enforce: "pre",
@@ -161,6 +163,7 @@ export async function pracht(options: PrachtPluginOptions = {}): Promise<Plugin[
 
     configResolved(config) {
       root = config.root;
+      isBuild = config.command === "build";
     },
 
     resolveId(id) {
@@ -174,7 +177,7 @@ export async function pracht(options: PrachtPluginOptions = {}): Promise<Plugin[
         return createPrachtClientModuleSource(resolved, { root });
       }
       if (isServerModule(id)) {
-        return createPrachtServerModuleSource(resolved, { root });
+        return createPrachtServerModuleSource(resolved, { root, isBuild });
       }
       return null;
     },
@@ -312,12 +315,15 @@ export function createPrachtServerModuleSource(
   options: PrachtPluginOptions = {},
   buildOptions: {
     root?: string;
+    isBuild?: boolean;
   } = {},
 ): string {
   const resolved = resolveOptions(options);
   const isPagesMode = !!resolved.pagesDir;
   const registrySource = createPrachtRegistryModuleSource(resolved);
-  const clientBuild = readClientBuildAssets(buildOptions.root);
+  const clientBuild = buildOptions.isBuild
+    ? readClientBuildAssets(buildOptions.root)
+    : { clientEntryUrl: null, cssManifest: {}, jsManifest: {} };
   const adapter = resolved.adapter;
 
   // The adapter tells us what extra imports it needs (e.g. handlePrachtRequest).
