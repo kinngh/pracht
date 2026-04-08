@@ -33,18 +33,22 @@ describe("create-pracht", () => {
 
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const routes = await readFile(join(targetDir, "src/routes.ts"), "utf-8");
-    const tsconfig = await readFile(join(targetDir, "tsconfig.json"), "utf-8");
 
     expect(packageJson).toMatch(/"@pracht\/cli": "\^\d+\.\d+\.\d+"/);
     expect(packageJson).toMatch(/"@pracht\/adapter-node": "\^\d+\.\d+\.\d+"/);
     expect(packageJson).not.toContain("wrangler");
     expect(routes).toContain('route("/", "./routes/home.tsx"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
+
+    const tsconfig = await readFile(join(targetDir, "tsconfig.json"), "utf-8");
     expect(tsconfig).toMatchInlineSnapshot(`
       "{
           "compilerOptions": {
               "jsx": "react-jsx",
-              "jsxImportSource":"preact"
+              "jsxImportSource": "preact",
+              "lib": [
+                  "ES2022"
+              ]
           }
       }"
     `);
@@ -77,6 +81,22 @@ describe("create-pracht", () => {
     expect(wranglerConfig).toContain('"main": "dist/server/server.js"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(true);
 
+    const tsconfig = await readFile(join(targetDir, "tsconfig.json"), "utf-8");
+    expect(tsconfig).toMatchInlineSnapshot(`
+      "{
+          "compilerOptions": {
+              "jsx": "react-jsx",
+              "jsxImportSource": "preact",
+              "lib": [
+                  "ES2022"
+              ],
+              "types": [
+                  "./worker-configuration.d.ts"
+              ]
+          }
+      }"
+    `);
+
     const envDts = await readFile(join(targetDir, "src/env.d.ts"), "utf-8");
     expect(envDts).toContain("interface Register");
     expect(envDts).toContain("env: Env");
@@ -108,6 +128,19 @@ describe("create-pracht", () => {
     expect(readme).toContain("configured for Vercel");
     expect(readme).toContain("pnpm deploy");
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
+
+    const tsconfig = await readFile(join(targetDir, "tsconfig.json"), "utf-8");
+    expect(tsconfig).toMatchInlineSnapshot(`
+      "{
+          "compilerOptions": {
+              "jsx": "react-jsx",
+              "jsxImportSource": "preact",
+              "lib": [
+                  "ES2022"
+              ]
+          }
+      }"
+    `);
   });
 
   it("scaffolds a pages-router starter", async () => {

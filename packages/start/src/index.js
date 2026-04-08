@@ -297,11 +297,8 @@ async function buildProjectFiles({ adapter, packageManager, projectName, router 
     "package.json": createPackageJson({ adapter, projectName, versions }),
     "src/api/health.ts": createHealthRoute(adapter),
     "vite.config.ts": createViteConfig(adapter, router),
+    "tsconfig.json": createBaseTSConfig(adapter),
   };
-
-  if(adapter.id === "node"){
-    files["tsconfig.json"] = createBaseTSConfig(adapter)
-  }
 
   if (router === "pages") {
     files["src/pages/_app.tsx"] = createShellFile(projectName);
@@ -509,15 +506,19 @@ function createPagesHomeRoute(adapter) {
   ].join("\n");
 }
 
-function createBaseTSConfig(_adapter) {
-  return [
-    "{",
-    "    \"compilerOptions\": {",
-    "        \"jsx\": \"react-jsx\",",
-    "        \"jsxImportSource\":\"preact\"",
-    "    }",
-    "}",
-  ].join("\n");
+function createBaseTSConfig(adapter) {
+  const config = {
+    compilerOptions: {
+      jsx: "react-jsx",
+      jsxImportSource: "preact",
+      lib: ["ES2022"],
+    },
+  };
+  if (adapter.id === "cloudflare") {
+    config.compilerOptions.types ||= [];
+    config.compilerOptions.types.push("./worker-configuration.d.ts");
+  }
+  return JSON.stringify(config, null, 4);
 }
 
 function createHealthRoute(adapter) {
