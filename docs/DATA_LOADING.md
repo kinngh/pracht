@@ -39,13 +39,13 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 
 ### When loaders run
 
-| Scenario          | Loader runs on                                              |
-| ----------------- | ----------------------------------------------------------- |
-| SSG build         | Build machine, once per path                                |
-| SSR request       | Server, every request                                       |
-| ISG initial       | Build machine, then server on revalidation                  |
-| SPA               | Server, during client navigation fetch                      |
-| Client navigation | Server (fetched as JSON via `x-pracht-route-state-request`) |
+| Scenario          | Loader runs on                                                    |
+| ----------------- | ----------------------------------------------------------------- |
+| SSG build         | Build machine, once per path                                      |
+| SSR request       | Server, every request                                             |
+| ISG initial       | Build machine, then server on revalidation                        |
+| SPA               | Server, during route-state fetches; initial HTML stays shell-only |
+| Client navigation | Server (fetched as JSON via `x-pracht-route-state-request`)       |
 
 Loaders **never** run in the browser. This keeps server secrets (DB connections,
 API keys) safe.
@@ -53,6 +53,10 @@ API keys) safe.
 Framework-generated route-state responses add `Vary: x-pracht-route-state-request`
 so caches keep HTML and JSON variants separate. Those JSON responses also default
 to `Cache-Control: no-store` unless your app sets a stricter policy explicitly.
+
+For SPA routes, the initial HTML can still include the matched shell and an
+optional shell `Loading` export so the page is not blank before the route-state
+request resolves.
 
 ### Error handling
 

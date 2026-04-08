@@ -104,15 +104,19 @@ test("dashboard form posts to API route and keeps the current route hydrated", a
 // SPA route: Settings
 // ---------------------------------------------------------------------------
 
-test("settings returns SPA shell without SSR content", async ({ page, context }) => {
+test("settings returns SPA shell chrome and loading UI without SSR route content", async ({
+  page,
+  context,
+}) => {
   await context.addCookies([{ name: "session", value: "abc123", domain: "localhost", path: "/" }]);
 
   const response = await page.goto("/settings");
   expect(response?.status()).toBe(200);
 
-  // SPA mode: pracht-root should be empty in the initial HTML
   const html = await response?.text();
-  expect(html).toContain('<div id="pracht-root"></div>');
+  expect(html).toContain("Loading page...");
+  expect(html).toContain("Back to home");
+  expect(html).not.toContain("<h1>Settings</h1>");
 });
 
 test("settings hydrates correctly on a direct authenticated load", async ({ page, context }) => {

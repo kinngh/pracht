@@ -26,6 +26,7 @@ export interface PrachtHydrationState<TData = unknown> {
   routeId: string;
   data: TData;
   error?: SerializedRouteError | null;
+  pending?: boolean;
 }
 
 export interface SerializedRouteError {
@@ -436,17 +437,36 @@ export async function handlePrachtRequest<TContext>(
     const cssUrls = resolvePageCssUrls(options, match.route.shellFile, match.route.file);
     const modulePreloadUrls = resolvePageJsUrls(options, match.route.shellFile, match.route.file);
 
-    // --- SPA mode: shell HTML with empty body, no SSR ---
+    // --- SPA mode: render shell chrome / loading state, but keep route component client-only ---
     if (match.route.render === "spa") {
+      let body = "";
+
+      if (shellModule?.Shell || shellModule?.Loading) {
+        const { renderToStringAsync } = await import("preact-render-to-string");
+        const Shell = shellModule?.Shell as any;
+        const Loading = shellModule?.Loading as any;
+        const loadingTree =
+          Shell != null
+            ? h(Shell, null, Loading ? h(Loading, null) : null)
+            : Loading
+              ? h(Loading, null)
+              : null;
+
+        if (loadingTree) {
+          body = await renderToStringAsync(loadingTree);
+        }
+      }
+
       return htmlResponse(
         buildHtmlDocument({
           head,
-          body: "",
+          body,
           hydrationState: {
             url: url.pathname,
             routeId: match.route.id ?? "",
             data: null,
             error: null,
+            pending: true,
           },
           clientEntryUrl: options.clientEntryUrl,
           cssUrls,

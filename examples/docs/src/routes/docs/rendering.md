@@ -105,11 +105,25 @@ import { webhookRevalidate } from "@pracht/core";
 route("/settings", "./routes/settings.tsx", { render: "spa" });
 ```
 
-No server-side rendering. The server returns a minimal HTML shell, and the component renders entirely in the browser. The loader runs during client-side navigation only.
+The route component is not server-rendered. On the first document request, pracht renders the assigned shell immediately and includes an optional shell `Loading` export if you provide one. The route component still renders entirely in the browser after the client router fetches route-state JSON.
+
+```ts
+import type { ShellProps } from "@pracht/core";
+
+export function Shell({ children }: ShellProps) {
+  return <div class="app-shell">{children}</div>;
+}
+
+export function Loading() {
+  return <p>Loading page...</p>;
+}
+```
+
+This improves first paint without serializing loader data into the initial document by default.
 
 ### When to use SPA
 
-- Auth-gated pages where SEO doesn't matter
+- Auth-gated pages where SEO doesn't matter, but shell chrome should paint fast
 - Complex interactive UIs (editors, rich dashboards)
 - Pages where server rendering adds no value
 
