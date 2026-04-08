@@ -425,6 +425,21 @@ function createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }) {
   return {
     version: 3,
     routes,
+    headers: [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "permissions-policy",
+            value:
+              "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+          },
+          { key: "referrer-policy", value: "strict-origin-when-cross-origin" },
+          { key: "x-content-type-options", value: "nosniff" },
+          { key: "x-frame-options", value: "SAMEORIGIN" },
+        ],
+      },
+    ],
     framework: {
       version: VERSION,
     },

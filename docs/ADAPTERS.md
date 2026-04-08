@@ -122,7 +122,8 @@ the executable production server entry.
 ### Features
 
 - **Asset serving**: uses `env.ASSETS.fetch()` binding for static files
-  (Cloudflare handles caching and CDN distribution).
+  (Cloudflare handles caching and CDN distribution). Static responses inherit
+  the same default security headers applied to dynamic responses.
 - **Default request context**: generated worker entries pass `{ env,
 executionContext }` to pracht so loaders, actions, and middleware can access
   bindings without extra wiring.
@@ -217,6 +218,9 @@ export default {
 - **Dynamic fallback**: SSR, API, and ISG routes are routed to the generated edge
   function. ISG paths currently bypass the static fallback so freshness stays
   correct even without native Vercel ISR integration yet.
+- **Static security headers**: the generated `config.json` includes a `headers`
+  section that applies the same baseline security headers to all responses,
+  including static assets served by Vercel's CDN.
 
 ### Entry module
 

@@ -1,5 +1,6 @@
 import type { PrachtAdapter } from "@pracht/vite-plugin";
 import {
+  applyDefaultSecurityHeaders,
   handlePrachtRequest,
   type HandlePrachtRequestOptions,
   type ModuleRegistry,
@@ -107,6 +108,7 @@ export function createCloudflareServerEntryModule(
     "  // Vary on the route-state header so the CDN caches HTML and JSON responses separately",
     "  const headers = new Headers(response.headers);",
     "  headers.append('Vary', 'x-pracht-route-state-request');",
+    "  applyDefaultSecurityHeaders(headers);",
     "  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });",
     "}",
     "",
@@ -157,6 +159,7 @@ async function maybeServeAsset(
   // Vary on the route-state header so the CDN caches HTML and JSON responses separately
   const headers = new Headers(response.headers);
   headers.append("Vary", "x-pracht-route-state-request");
+  applyDefaultSecurityHeaders(headers);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -180,7 +183,7 @@ export function cloudflareAdapter(options: CloudflareServerEntryModuleOptions = 
   return {
     id: "cloudflare",
     serverImports:
-      'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
+      'import { applyDefaultSecurityHeaders, handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },
