@@ -111,9 +111,9 @@ export function GET({ params, url }: BaseRouteArgs) {
 
 After creating module files, **always update `src/routes.ts`** to register the new module:
 
-- **Routes**: Add a `route("/path", "./routes/filename.tsx", { id: "name", render: "ssr" })` call inside the appropriate group or at the top level.
-- **Shells**: Add to the `shells` record: `shellName: "./shells/filename.tsx"`.
-- **Middleware**: Add to the `middleware` record: `mwName: "./middleware/filename.ts"`.
+- **Routes**: Add a `route("/path", () => import("./routes/filename.tsx"), { id: "name", render: "ssr" })` call inside the appropriate group or at the top level. Plain strings like `"./routes/filename.tsx"` also work.
+- **Shells**: Add to the `shells` record: `shellName: () => import("./shells/filename.tsx")` (or `"./shells/filename.tsx"`).
+- **Middleware**: Add to the `middleware` record: `mwName: () => import("./middleware/filename.ts")` (or `"./middleware/filename.ts"`).
 - **API routes**: No manifest change needed — auto-discovered from `src/api/` by the Vite plugin.
 
 Available render modes: `"ssr"` (default), `"ssg"` (static at build), `"isg"` (incremental static with `revalidate: timeRevalidate(seconds)`), `"spa"` (client-only).

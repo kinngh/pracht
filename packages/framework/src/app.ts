@@ -2,6 +2,7 @@ import type {
   ApiRouteMatch,
   GroupDefinition,
   GroupMeta,
+  ModuleRef,
   ResolvedApiRoute,
   ResolvedRoute,
   ResolvedPrachtApp,
@@ -35,18 +36,18 @@ export function timeRevalidate(seconds: number): TimeRevalidatePolicy {
   };
 }
 
-export function route(path: string, file: string, meta?: RouteMeta): RouteDefinition;
+export function route(path: string, file: ModuleRef, meta?: RouteMeta): RouteDefinition;
 export function route(path: string, config: RouteConfig): RouteDefinition;
 export function route(
   path: string,
-  fileOrConfig: string | RouteConfig,
+  fileOrConfig: ModuleRef | RouteConfig,
   meta: RouteMeta = {},
 ): RouteDefinition {
-  if (typeof fileOrConfig === "string") {
+  if (typeof fileOrConfig === "string" || typeof fileOrConfig === "function") {
     return {
       kind: "route",
       path: normalizeRoutePath(path),
-      file: fileOrConfig,
+      file: resolveModuleRef(fileOrConfig),
       ...meta,
     };
   }
@@ -55,10 +56,26 @@ export function route(
   return {
     kind: "route",
     path: normalizeRoutePath(path),
-    file: component,
-    loaderFile: loader,
+    file: resolveModuleRef(component),
+    loaderFile: resolveModuleRef(loader),
     ...routeMeta,
   };
+}
+
+/**
+ * Resolve a ModuleRef to a string file path.
+ * When the vite plugin is active, import functions are transformed to strings
+ * at build time, so this typically receives strings. When called without the
+ * transform (e.g. in tests), functions pass through as empty strings.
+ */
+function resolveModuleRef(ref: ModuleRef): string;
+function resolveModuleRef(ref: ModuleRef | undefined): string | undefined;
+function resolveModuleRef(ref: ModuleRef | undefined): string | undefined {
+  if (ref === undefined) return undefined;
+  if (typeof ref === "string") return ref;
+  // Function refs are transformed to strings by the vite plugin.
+  // Without the plugin, we can't extract the path — return empty string.
+  return "";
 }
 
 export function group(meta: GroupMeta, routes: RouteTreeNode[]): GroupDefinition {
@@ -71,11 +88,19 @@ export function group(meta: GroupMeta, routes: RouteTreeNode[]): GroupDefinition
 
 export function defineApp(config: PrachtAppConfig): PrachtApp {
   return {
-    shells: config.shells ?? {},
-    middleware: config.middleware ?? {},
+    shells: resolveModuleRefRecord(config.shells ?? {}),
+    middleware: resolveModuleRefRecord(config.middleware ?? {}),
     api: config.api ?? {},
     routes: config.routes,
   };
+}
+
+function resolveModuleRefRecord(record: Record<string, ModuleRef>): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(record)) {
+    result[key] = resolveModuleRef(value);
+  }
+  return result;
 }
 
 export function resolveApp(app: PrachtApp): ResolvedPrachtApp {

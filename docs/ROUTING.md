@@ -15,36 +15,43 @@ import { defineApp, group, route, timeRevalidate } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
-    public: "./shells/public.tsx",
-    app: "./shells/app.tsx",
+    public: () => import("./shells/public.tsx"),
+    app: () => import("./shells/app.tsx"),
   },
   middleware: {
-    auth: "./middleware/auth.ts",
+    auth: () => import("./middleware/auth.ts"),
   },
   routes: [
     group({ shell: "public" }, [
-      route("/", "./routes/home.tsx", { render: "ssg" }),
-      route("/pricing", "./routes/pricing.tsx", {
+      route("/", () => import("./routes/home.tsx"), { render: "ssg" }),
+      route("/pricing", () => import("./routes/pricing.tsx"), {
         render: "isg",
         revalidate: timeRevalidate(3600),
       }),
     ]),
     group({ shell: "app", middleware: ["auth"] }, [
-      route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" }),
+      route("/dashboard", () => import("./routes/dashboard.tsx"), { render: "ssr" }),
     ]),
   ],
 });
 ```
 
+Module references accept two forms — both are fully supported:
+
+- **`() => import("./path")`** — enables IDE ctrl+click navigation (recommended)
+- **`"./path"`** — plain string, shorter syntax
+
+The vite plugin transforms import functions to strings at build time, so both produce identical runtime behavior.
+
 ### `defineApp(config)`
 
 Top-level configuration:
 
-| Field        | Type                                     | Description                                            |
-| ------------ | ---------------------------------------- | ------------------------------------------------------ |
-| `shells`     | `Record<string, string>`                 | Named shell modules, keyed by name, value is file path |
-| `middleware` | `Record<string, string>`                 | Named middleware modules                               |
-| `routes`     | `(RouteDefinition \| GroupDefinition)[]` | Route tree                                             |
+| Field        | Type                                     | Description                                                           |
+| ------------ | ---------------------------------------- | --------------------------------------------------------------------- |
+| `shells`     | `Record<string, ModuleRef>`              | Named shell modules — use `() => import("./path")` for IDE navigation |
+| `middleware` | `Record<string, ModuleRef>`              | Named middleware modules                                              |
+| `routes`     | `(RouteDefinition \| GroupDefinition)[]` | Route tree                                                            |
 
 ### `route(path, file, meta?)`
 
@@ -53,7 +60,7 @@ Defines a single route:
 | Param  | Type        | Description                                            |
 | ------ | ----------- | ------------------------------------------------------ |
 | `path` | `string`    | URL pattern (e.g. `/blog/:slug`)                       |
-| `file` | `string`    | Relative path to route module                          |
+| `file` | `ModuleRef` | Module reference — `() => import("./path")` or string  |
 | `meta` | `RouteMeta` | Optional: render mode, shell, middleware, revalidation |
 
 ### `group(meta, routes)`
@@ -88,7 +95,7 @@ interface RouteMeta {
 ### Static paths
 
 ```typescript
-route("/about", "./routes/about.tsx");
+route("/about", () => import("./routes/about.tsx"));
 ```
 
 Matches `/about` exactly.
@@ -96,7 +103,7 @@ Matches `/about` exactly.
 ### Dynamic segments
 
 ```typescript
-route("/blog/:slug", "./routes/blog-post.tsx");
+route("/blog/:slug", () => import("./routes/blog-post.tsx"));
 ```
 
 Matches `/blog/hello-world` with `params.slug = "hello-world"`.
@@ -104,13 +111,13 @@ Matches `/blog/hello-world` with `params.slug = "hello-world"`.
 Multiple dynamic segments:
 
 ```typescript
-route("/users/:userId/posts/:postId", "./routes/user-post.tsx");
+route("/users/:userId/posts/:postId", () => import("./routes/user-post.tsx"));
 ```
 
 ### Catch-all segments
 
 ```typescript
-route("/docs/*", "./routes/docs.tsx");
+route("/docs/*", () => import("./routes/docs.tsx"));
 ```
 
 Matches `/docs/a/b/c` — the catch-all value is available in params.
@@ -124,7 +131,7 @@ of resolved routes. Each resolved route has all inherited properties applied:
 
 ```
 group({ shell: "public" }, [
-  route("/", "./routes/home.tsx", { render: "ssg" })
+  route("/", () => import("./routes/home.tsx"), { render: "ssg" })
 ])
 ```
 
@@ -191,7 +198,7 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 Apply middleware to routes or groups:
 
 ```typescript
-group({ middleware: ["auth"] }, [route("/dashboard", "./routes/dashboard.tsx")]);
+group({ middleware: ["auth"] }, [route("/dashboard", () => import("./routes/dashboard.tsx"))]);
 ```
 
 Middleware from groups stacks — a route inside a group with `["auth"]` that also
@@ -205,8 +212,8 @@ Groups can add a URL prefix to all child routes:
 
 ```typescript
 group({ pathPrefix: "/admin", shell: "admin", middleware: ["auth"] }, [
-  route("/", "./routes/admin/index.tsx"), // → /admin
-  route("/users", "./routes/admin/users.tsx"), // → /admin/users
+  route("/", () => import("./routes/admin/index.tsx")), // → /admin
+  route("/users", () => import("./routes/admin/users.tsx")), // → /admin/users
 ]);
 ```
 

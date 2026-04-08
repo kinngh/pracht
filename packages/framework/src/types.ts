@@ -23,6 +23,13 @@ export type RenderMode = "spa" | "ssr" | "ssg" | "isg";
 
 export type RouteParams = Record<string, string>;
 
+/**
+ * A reference to a module file — either a plain string path or a lazy import
+ * function. Using `() => import("./path")` enables IDE click-to-navigate.
+ * The vite plugin transforms import functions back to strings at build time.
+ */
+export type ModuleRef = string | (() => Promise<any>);
+
 export interface TimeRevalidatePolicy {
   kind: "time";
   seconds: number;
@@ -81,8 +88,8 @@ export interface ApiConfig {
 }
 
 export interface RouteConfig extends RouteMeta {
-  component: string;
-  loader?: string;
+  component: ModuleRef;
+  loader?: ModuleRef;
 }
 
 export interface RouteDefinition extends RouteMeta {
@@ -101,8 +108,8 @@ export interface GroupDefinition {
 export type RouteTreeNode = RouteDefinition | GroupDefinition;
 
 export interface PrachtAppConfig {
-  shells?: Record<string, string>;
-  middleware?: Record<string, string>;
+  shells?: Record<string, ModuleRef>;
+  middleware?: Record<string, ModuleRef>;
   api?: ApiConfig;
   routes: RouteTreeNode[];
 }

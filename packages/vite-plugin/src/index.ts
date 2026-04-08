@@ -182,6 +182,18 @@ export async function pracht(options: PrachtPluginOptions = {}): Promise<Plugin[
       return null;
     },
 
+    transform(code, id) {
+      // Transform () => import("./path") to "./path" in the app manifest file.
+      // This lets users write import() for IDE click-to-navigate while keeping
+      // the framework's string-based file resolution intact.
+      const appFileAbs = resolve(root, resolved.appFile.slice(1));
+      if (id !== appFileAbs) return null;
+
+      const transformed = code.replace(/\(\)\s*=>\s*import\(\s*(['"])([^'"]+)\1\s*\)/g, "$1$2$1");
+      if (transformed === code) return null;
+      return { code: transformed, map: null };
+    },
+
     configureServer(server) {
       // Watch pages directory for file add/unlink → restart (new routes need new globs)
       if (isPagesMode) {

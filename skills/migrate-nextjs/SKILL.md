@@ -59,30 +59,30 @@ For pages router projects, you can **skip manual manifest wiring entirely** (Pha
 
 ## Concept Mapping
 
-| Next.js                         | Pracht                                              | Notes                                                                 |
-| ------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------- |
-| `pages/` directory              | `pagesDir` plugin option                            | Auto-discovers routes from file system                                |
-| `app/page.tsx`                  | `src/routes/*.tsx` + `route()` in manifest          | File is a module; wiring is explicit                                  |
-| `app/layout.tsx`                | `src/shells/*.tsx` + `shells` in `defineApp`        | Shells are named, not directory-nested                                |
-| `app/loading.tsx`               | No direct equivalent                                | Use Suspense in component if needed                                   |
-| `app/error.tsx`                 | `ErrorBoundary` export in route module              | Same concept, different wiring                                        |
-| `app/not-found.tsx`             | 404 route: `route("*", "./routes/not-found.tsx")`   | Catch-all at end of routes array                                      |
-| `middleware.ts`                 | `src/middleware/*.ts` + `middleware` in `defineApp` | Named, applied per route/group                                        |
-| `app/api/*/route.ts`            | `src/api/*.ts` with `GET`/`POST` exports            | Auto-discovered, no manifest entry                                    |
-| `generateStaticParams`          | `getStaticPaths()` export                           | Returns `RouteParams[]` of param objects                              |
-| `generateMetadata`              | `head()` export                                     | Returns `{ title, meta }`                                             |
-| Server Components               | `loader()` export                                   | Data fetching moves to loader; component is always a Preact component |
-| `"use server"` actions          | `action()` export                                   | Returns data/redirect/revalidation hints                              |
-| `useRouter()` (next/navigation) | `useNavigate()` from pracht                         | Client-side navigation                                                |
-| `useSearchParams()`             | `useRouteData()` or parse from loader args          | Loaders receive `url` with searchParams                               |
-| `useParams()`                   | `useRouteData()` or `params` in loader              | Params flow through loader data                                       |
-| `next/link` `<Link>`            | Plain `<a>` tags                                    | Pracht client router intercepts `<a>` clicks automatically            |
-| `next/image`                    | Standard `<img>`                                    | Use `vite-imagetools` plugin if optimization needed                   |
-| `next/head` or Metadata API     | `head()` export on route/shell                      | Per-route and per-shell head merging                                  |
-| `className`                     | `class`                                             | Preact uses `class` attribute                                         |
-| `React.useState` etc.           | `import { useState } from "preact/hooks"`           | Preact hooks API is compatible                                        |
-| `React.useEffect`               | `import { useEffect } from "preact/hooks"`          | Same API                                                              |
-| `import React from "react"`     | Remove — no import needed                           | Pracht's Vite plugin handles JSX automatically                        |
+| Next.js                         | Pracht                                                          | Notes                                                                 |
+| ------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `pages/` directory              | `pagesDir` plugin option                                        | Auto-discovers routes from file system                                |
+| `app/page.tsx`                  | `src/routes/*.tsx` + `route()` in manifest                      | File is a module; wiring is explicit                                  |
+| `app/layout.tsx`                | `src/shells/*.tsx` + `shells` in `defineApp`                    | Shells are named, not directory-nested                                |
+| `app/loading.tsx`               | No direct equivalent                                            | Use Suspense in component if needed                                   |
+| `app/error.tsx`                 | `ErrorBoundary` export in route module                          | Same concept, different wiring                                        |
+| `app/not-found.tsx`             | 404 route: `route("*", () => import("./routes/not-found.tsx"))` | Catch-all at end of routes array                                      |
+| `middleware.ts`                 | `src/middleware/*.ts` + `middleware` in `defineApp`             | Named, applied per route/group                                        |
+| `app/api/*/route.ts`            | `src/api/*.ts` with `GET`/`POST` exports                        | Auto-discovered, no manifest entry                                    |
+| `generateStaticParams`          | `getStaticPaths()` export                                       | Returns `RouteParams[]` of param objects                              |
+| `generateMetadata`              | `head()` export                                                 | Returns `{ title, meta }`                                             |
+| Server Components               | `loader()` export                                               | Data fetching moves to loader; component is always a Preact component |
+| `"use server"` actions          | `action()` export                                               | Returns data/redirect/revalidation hints                              |
+| `useRouter()` (next/navigation) | `useNavigate()` from pracht                                     | Client-side navigation                                                |
+| `useSearchParams()`             | `useRouteData()` or parse from loader args                      | Loaders receive `url` with searchParams                               |
+| `useParams()`                   | `useRouteData()` or `params` in loader                          | Params flow through loader data                                       |
+| `next/link` `<Link>`            | Plain `<a>` tags                                                | Pracht client router intercepts `<a>` clicks automatically            |
+| `next/image`                    | Standard `<img>`                                                | Use `vite-imagetools` plugin if optimization needed                   |
+| `next/head` or Metadata API     | `head()` export on route/shell                                  | Per-route and per-shell head merging                                  |
+| `className`                     | `class`                                                         | Preact uses `class` attribute                                         |
+| `React.useState` etc.           | `import { useState } from "preact/hooks"`                       | Preact hooks API is compatible                                        |
+| `React.useEffect`               | `import { useEffect } from "preact/hooks"`                      | Same API                                                              |
+| `import React from "react"`     | Remove — no import needed                                       | Pracht's Vite plugin handles JSX automatically                        |
 
 ## Migration Procedure
 
@@ -299,7 +299,9 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 Then apply it in the manifest:
 
 ```ts
-group({ middleware: ["auth"] }, [route("/dashboard", "./routes/dashboard.tsx", { render: "ssr" })]);
+group({ middleware: ["auth"] }, [
+  route("/dashboard", () => import("./routes/dashboard.tsx"), { render: "ssr" }),
+]);
 ```
 
 Key transforms:
@@ -312,28 +314,28 @@ Key transforms:
 
 **Note:** For pages router projects using `pagesDir`, this phase is automatic. Skip to Phase 8.
 
-Build `src/routes.ts` mapping every migrated page:
+Build `src/routes.ts` mapping every migrated page. Module references accept `() => import("./path")` (enables IDE navigation) or plain `"./path"` strings — both work:
 
 ```ts
 import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
-    main: "./shells/main.tsx",
+    main: () => import("./shells/main.tsx"),
   },
   middleware: {
-    auth: "./middleware/auth.ts",
+    auth: () => import("./middleware/auth.ts"),
   },
   routes: [
     group({ shell: "main" }, [
-      route("/", "./routes/home.tsx", { render: "ssg" }),
-      route("/about", "./routes/about.tsx", { render: "ssg" }),
-      route("/dashboard", "./routes/dashboard.tsx", {
+      route("/", () => import("./routes/home.tsx"), { render: "ssg" }),
+      route("/about", () => import("./routes/about.tsx"), { render: "ssg" }),
+      route("/dashboard", () => import("./routes/dashboard.tsx"), {
         render: "ssr",
         middleware: ["auth"],
       }),
-      route("/blog/:slug", "./routes/blog-post.tsx", { render: "isg" }),
-      route("*", "./routes/not-found.tsx", { render: "ssr" }),
+      route("/blog/:slug", () => import("./routes/blog-post.tsx"), { render: "isg" }),
+      route("*", () => import("./routes/not-found.tsx"), { render: "ssr" }),
     ]),
   ],
 });

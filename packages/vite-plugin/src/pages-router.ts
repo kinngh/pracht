@@ -139,13 +139,16 @@ function extractRenderMode(source: string): string | undefined {
 
 export function generatePagesManifestSource(
   pages: ScannedPage[],
-  options: PagesRouterOptions & { pagesDirPrefix?: string },
+  options: PagesRouterOptions & { pagesDirPrefix?: string; useImportSyntax?: boolean },
 ): string {
   const pagesDir = options.pagesDir;
   const defaultRender = options.pagesDefaultRender ?? "ssr";
   // pagesDirPrefix is the project-root-relative prefix (e.g. "/src/pages")
   // used to build Vite-resolvable paths in virtual modules.
   const prefix = options.pagesDirPrefix;
+  // useImportSyntax: when true, emit `() => import("path")` for IDE navigation.
+  // Only used for ejected files; virtual modules must use plain strings.
+  const useImport = options.useImportSyntax ?? false;
 
   // Check if _app exists by scanning for it
   const allFiles = scanAllFiles(pagesDir);
@@ -162,8 +165,11 @@ export function generatePagesManifestSource(
     const filePath = prefix
       ? `${prefix}/${page.relativePath.replace(/\\/g, "/")}`
       : `./${page.relativePath.replace(/\\/g, "/")}`;
+    const fileRef = useImport
+      ? `() => import(${JSON.stringify(filePath)})`
+      : JSON.stringify(filePath);
     routeEntries.push(
-      `    route(${JSON.stringify(page.routePath)}, ${JSON.stringify(filePath)}, { render: ${JSON.stringify(render)} })`,
+      `    route(${JSON.stringify(page.routePath)}, ${fileRef}, { render: ${JSON.stringify(render)} })`,
     );
   }
 
@@ -171,9 +177,12 @@ export function generatePagesManifestSource(
     const appPath = prefix
       ? `${prefix}/_app.${extname(appFile).slice(1)}`
       : `./${relative(join(pagesDir, ".."), appFile).replace(/\\/g, "/")}`;
+    const shellRef = useImport
+      ? `() => import(${JSON.stringify(appPath)})`
+      : JSON.stringify(appPath);
     lines.push("const app = defineApp({");
     lines.push("  shells: {");
-    lines.push(`    pages: ${JSON.stringify(appPath)},`);
+    lines.push(`    pages: ${shellRef},`);
     lines.push("  },");
     lines.push("  routes: [");
     lines.push(`    group({ shell: "pages" }, [`);
@@ -225,10 +234,10 @@ export function generateRoutesFile(
 ): void {
   const pages = scanPagesDirectory(pagesDir);
   // For standalone files, replace `const app` with `export const app`
-  const manifestSource = generatePagesManifestSource(pages, options).replace(
-    "const app = defineApp(",
-    "export const app = defineApp(",
-  );
+  const manifestSource = generatePagesManifestSource(pages, {
+    ...options,
+    useImportSyntax: true,
+  }).replace("const app = defineApp(", "export const app = defineApp(");
   const source = [
     "// Auto-generated from pages/ directory by @pracht/vite-plugin.",
     "// Customize this file and remove `pagesDir` from pracht config to use it directly.",
