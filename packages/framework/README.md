@@ -1,0 +1,45 @@
+# @pracht/core
+
+Core routing, rendering, server/client runtime, and type utilities for pracht.
+
+## Install
+
+```bash
+npm install @pracht/core preact preact-render-to-string
+```
+
+## API
+
+### Route Manifest
+
+- `defineApp()` — define the application and its route tree
+- `route()` — declare a route with path, component, loader, and rendering mode
+- `group()` — group routes under a shared shell or middleware
+
+### Server
+
+- `handlePrachtRequest()` — server renderer that produces full HTML with hydration markers
+- `matchAppRoute()` — segment-based route matching
+
+### Client
+
+- `startApp()` — client-side hydration and runtime
+- `useRouteData()` — access loader data inside a route component
+- `useRevalidateRoute()` — trigger a revalidation of the current route's data
+- `useSubmitAction()` — submit a form action programmatically
+- `<Form>` — progressive enhancement form component
+
+### Types
+
+- `LoaderData<T>` — infer the return type of a loader
+- `RouteComponentProps<T>` — props type for route components
+- `LoaderArgs` — argument type passed to loaders and actions
+
+## Rendering Modes
+
+Each route can specify its rendering mode:
+
+- `ssr` — server-rendered on every request
+- `ssg` — pre-rendered at build time
+- `isg` — pre-rendered with time-based revalidation
+- `spa` — client-only rendering
