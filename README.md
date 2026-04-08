@@ -16,7 +16,7 @@ For CI-parity checks, run `pnpm typecheck`, `pnpm format:check`, `pnpm lint`, `p
 
 ## Contributing
 
-Use the GitHub issue templates for bug reports and feature requests. When opening a pull request, follow [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md). Agent-specific PR guidance lives in [claude/agents.md](claude/agents.md).
+Use the GitHub issue templates for bug reports and feature requests. When opening a pull request, follow [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md). Agent-specific PR guidance lives in [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md).
 
 ## Create An App
 
