@@ -248,15 +248,16 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
     };
 
     if (initialMatch.route.render === "spa" && options.initialState.pending) {
+      // Kick off the data fetch in parallel with shell hydration
+      const dataPromise = fetchPrachtRouteState(options.initialState.url);
+
       const pendingTree = await buildSpaPendingTree(initialMatch, initialShellPromise);
       if (pendingTree) {
         hydrate(pendingTree, root);
       }
-    }
 
-    if (initialMatch.route.render === "spa" && options.initialState.pending) {
       try {
-        const result = await fetchPrachtRouteState(options.initialState.url);
+        const result = await dataPromise;
         if (result.type === "redirect") {
           window.location.href = result.location;
           return;
