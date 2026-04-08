@@ -1,6 +1,6 @@
 ---
 title: CLI
-lead: The <code>@pracht/cli</code> package provides three commands for development, building, and previewing your app.
+lead: The <code>@pracht/cli</code> package provides development, build, preview, scaffolding, and doctor commands for your app.
 breadcrumb: CLI
 prev:
   href: /docs/shells
@@ -54,6 +54,41 @@ PORT=4000 pracht preview
 
 ---
 
+## pracht generate
+
+Framework-native scaffolding keeps route, shell, middleware, and API module conventions in one place.
+
+```sh
+pracht generate shell --name app
+pracht generate middleware --name auth
+pracht generate route --path /dashboard --render ssr --shell app --middleware auth
+pracht generate api --path /health --methods GET,POST
+```
+
+- Manifest apps update `src/routes.ts` automatically for routes, shells, and middleware.
+- Pages-router apps scaffold route files into `src/pages/`.
+- Add `--json` when another tool or agent needs machine-readable output.
+
+---
+
+## pracht doctor
+
+Validate the current app wiring and surface missing files or configuration drift.
+
+```sh
+pracht doctor
+pracht doctor --json
+```
+
+The doctor command checks:
+
+- `vite.config.*` presence and `pracht()` registration
+- App manifest or pages-router directory wiring
+- Referenced shell, middleware, and route modules
+- Package-level CLI and adapter dependencies
+
+---
+
 ## Installation
 
 The CLI is included in scaffolded projects. For existing projects, add it as a dev dependency:
@@ -69,7 +104,8 @@ Then add scripts to your `package.json`:
   "scripts": {
     "dev": "pracht dev",
     "build": "pracht build",
-    "preview": "pracht preview"
+    "preview": "pracht preview",
+    "doctor": "pracht doctor"
   }
 }
 ```

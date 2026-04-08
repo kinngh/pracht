@@ -2,8 +2,9 @@
 name: scaffold
 version: 1.0.0
 description: |
-  Pracht code scaffolding. Generates routes, shells, middleware, and API route
-  modules with correct types, exports, and manifest wiring. Knows pracht
+  Pracht code scaffolding. Prefer the framework-native CLI generators
+  (`pracht generate route|shell|middleware|api`) and only fall back to manual
+  edits when the CLI flags cannot express the requested shape. Knows pracht
   conventions (Preact idioms, render modes, route manifest).
   Use when asked to "scaffold", "generate a route", "create a new page",
   "add middleware", "add an API route", or "create a shell".
@@ -21,16 +22,31 @@ allowed-tools:
 
 Generate pracht framework modules with correct types, exports, and manifest wiring.
 
+## First Choice
+
+Use the CLI first:
+
+```bash
+pracht generate route --path /dashboard --render ssr
+pracht generate shell --name app
+pracht generate middleware --name auth
+pracht generate api --path /health --methods GET,POST
+```
+
+- Add `--json` when another agent/tool needs machine-readable output.
+- If the CLI can express the request, do not reimplement the scaffold by hand.
+- Only edit files manually when the CLI cannot cover the requested shape.
+
 The user will describe what they want to create. Parse their request and generate the appropriate module(s). Always ask if anything is ambiguous (e.g. render mode, shell assignment).
 
 ## What You Can Scaffold
 
-| Kind       | Directory         | Key exports                                                                | Example                        |
-| ---------- | ----------------- | -------------------------------------------------------------------------- | ------------------------------ |
-| Route      | `src/routes/`     | `loader`, `action`, `head`, `Component`, `ErrorBoundary`, `getStaticPaths` | `src/routes/blog.tsx`          |
-| Shell      | `src/shells/`     | `Shell`, `head`                                                            | `src/shells/marketing.tsx`     |
-| Middleware | `src/middleware/` | `middleware`                                                               | `src/middleware/rate-limit.ts` |
-| API route  | `src/api/`        | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)       | `src/api/users/[id].ts`        |
+| Kind       | Directory         | Key exports                                                          | Example                        |
+| ---------- | ----------------- | -------------------------------------------------------------------- | ------------------------------ |
+| Route      | `src/routes/`     | `loader`, `head`, `Component`, `ErrorBoundary`, `getStaticPaths`     | `src/routes/blog.tsx`          |
+| Shell      | `src/shells/`     | `Shell`, `head`                                                      | `src/shells/marketing.tsx`     |
+| Middleware | `src/middleware/` | `middleware`                                                         | `src/middleware/rate-limit.ts` |
+| API route  | `src/api/`        | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) | `src/api/users/[id].ts`        |
 
 ## Templates
 
@@ -54,11 +70,9 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 }
 ```
 
-- Include `action` only if the user asks for form handling or mutations.
 - Include `ErrorBoundary` only if requested.
 - Include `getStaticPaths` only for SSG/ISG routes with dynamic segments.
 - Use `RouteComponentProps<typeof loader>` for typed `data` prop.
-- Import `Form` from `"@pracht/core"` when adding actions.
 
 ### Shell
 
@@ -122,10 +136,11 @@ Import `timeRevalidate` from `"@pracht/core"` when using ISG.
 
 ## Rules
 
-1. Read the project's existing `src/routes.ts` to determine current shells, middleware, and route structure before adding.
-2. Place files in the conventional directories (`src/routes/`, `src/shells/`, `src/middleware/`, `src/api/`).
-3. Keep generated code minimal — only include exports the user actually needs.
-4. Use Preact idioms: `class` not `className`, functional components, `import type` for type-only imports.
-5. After scaffolding, summarize what was created and how it was wired.
+1. Prefer `pracht generate ...` over manual edits.
+2. Read the project's existing `src/routes.ts` to determine current shells, middleware, and route structure before adding when the CLI cannot finish the job on its own.
+3. Place files in the conventional directories (`src/routes/`, `src/shells/`, `src/middleware/`, `src/api/`).
+4. Keep generated code minimal — only include exports the user actually needs.
+5. Use Preact idioms: `class` not `className`, functional components, `import type` for type-only imports.
+6. After scaffolding, summarize what was created and how it was wired.
 
 $ARGUMENTS
