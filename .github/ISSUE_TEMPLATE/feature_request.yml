@@ -1,0 +1,35 @@
+name: Feature Request
+description: Suggest an improvement to the framework, examples, docs, or tooling.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: Share the problem first, then the proposed change.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What limitation or workflow problem are you trying to solve?
+      placeholder: I am trying to...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior, API, or docs change you want.
+      placeholder: The framework should...
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any workarounds or other options you evaluated.
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links, examples, or related issues.
