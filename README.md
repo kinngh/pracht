@@ -12,6 +12,9 @@ pnpm test
 pnpm e2e
 ```
 
+`pnpm install` now runs the repo `prepare` hook, which installs the Playwright
+Chromium browser used by the E2E suite.
+
 For CI-parity checks, run `pnpm typecheck`, `pnpm format:check`, `pnpm lint`, `pnpm test`, and `pnpm e2e`.
 
 ## Contributing
