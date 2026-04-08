@@ -100,4 +100,31 @@ describe("create-pracht", () => {
     expect(readme).toContain("pnpm deploy");
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
   });
+
+  it("scaffolds a pages-router starter", async () => {
+    const root = await mkdtemp(join(tmpdir(), "pracht-start-pages-"));
+    const targetDir = join(root, "my-pages-app");
+
+    await scaffoldProject({
+      adapter: {
+        description: "Node.js server with pracht preview",
+        id: "node",
+        label: "Node.js",
+        packageName: "@pracht/adapter-node",
+        short: "node",
+      },
+      packageManager: "pnpm",
+      router: "pages",
+      targetDir,
+    });
+
+    const viteConfig = await readFile(join(targetDir, "vite.config.ts"), "utf-8");
+    const readme = await readFile(join(targetDir, "README.md"), "utf-8");
+
+    expect(viteConfig).toContain('pagesDir: "/src/pages"');
+    expect(existsSync(join(targetDir, "src/pages/index.tsx"))).toBe(true);
+    expect(existsSync(join(targetDir, "src/pages/_app.tsx"))).toBe(true);
+    expect(existsSync(join(targetDir, "src/routes.ts"))).toBe(false);
+    expect(readme).toContain("src/pages/");
+  });
 });

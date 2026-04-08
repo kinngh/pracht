@@ -59,6 +59,7 @@ export async function run(argv = process.argv.slice(2)) {
   try {
     const dir = options.dir ?? (await promptForDirectory(readline));
     const adapterId = options.adapter ?? (await promptForAdapter(readline));
+    const router = options.router ?? (await promptForRouter(readline));
     const targetDir = resolve(process.cwd(), dir);
 
     await ensureTargetDirectory(targetDir);
@@ -66,6 +67,7 @@ export async function run(argv = process.argv.slice(2)) {
     await scaffoldProject({
       adapter: ADAPTERS[adapterId],
       packageManager,
+      router,
       targetDir,
     });
 
@@ -88,12 +90,13 @@ export async function run(argv = process.argv.slice(2)) {
   }
 }
 
-export async function scaffoldProject({ adapter, packageManager, targetDir }) {
+export async function scaffoldProject({ adapter, packageManager, router = "manifest", targetDir }) {
   const packageName = toPackageName(basename(targetDir));
   const files = await buildProjectFiles({
     adapter,
     packageManager,
     projectName: packageName,
+    router,
   });
 
   await mkdir(targetDir, { recursive: true });
@@ -116,6 +119,7 @@ export function parseArgs(argv) {
   const options = {
     adapter: undefined,
     dir: undefined,
+    router: undefined,
     skipInstall: false,
   };
 
@@ -127,6 +131,11 @@ export function parseArgs(argv) {
 
     if (arg.startsWith("--adapter=")) {
       options.adapter = normalizeAdapter(arg.slice("--adapter=".length));
+      continue;
+    }
+
+    if (arg.startsWith("--router=")) {
+      options.router = normalizeRouter(arg.slice("--router=".length));
       continue;
     }
 
@@ -179,6 +188,23 @@ async function promptForAdapter(readline) {
   }
 }
 
+async function promptForRouter(readline) {
+  console.log("Router:");
+  console.log("  1. Manifest (explicit routes.ts)");
+  console.log("  2. Pages (file-system routing)");
+
+  while (true) {
+    const answer = await readline.question("Router (1): ");
+    const normalized = normalizeRouter(answer.trim() || "1");
+
+    if (normalized) {
+      return normalized;
+    }
+
+    console.log("Choose 1/2 or manifest/pages.");
+  }
+}
+
 async function ensureTargetDirectory(targetDir) {
   const error = await validateTargetDirectory(targetDir);
 
@@ -200,6 +226,20 @@ async function validateTargetDirectory(targetDir) {
   const entries = await readdir(targetDir);
   if (entries.length > 0) {
     return "Target directory already exists and is not empty.";
+  }
+
+  return null;
+}
+
+function normalizeRouter(value) {
+  const normalized = value.toLowerCase();
+
+  if (normalized === "1" || normalized === "manifest") {
+    return "manifest";
+  }
+
+  if (normalized === "2" || normalized === "pages") {
+    return "pages";
   }
 
   return null;
@@ -238,7 +278,7 @@ async function resolveVersions(packageNames) {
   return Object.fromEntries(entries);
 }
 
-async function buildProjectFiles({ adapter, packageManager, projectName }) {
+async function buildProjectFiles({ adapter, packageManager, projectName, router }) {
   const packagesToResolve = [
     "@pracht/cli",
     "@pracht/vite-plugin",
@@ -253,14 +293,20 @@ async function buildProjectFiles({ adapter, packageManager, projectName }) {
 
   const files = {
     ".gitignore": "dist\nnode_modules\n.wrangler\n.vercel\n",
-    "README.md": createReadme({ adapter, packageManager, projectName }),
+    "README.md": createReadme({ adapter, packageManager, projectName, router }),
     "package.json": createPackageJson({ adapter, projectName, versions }),
     "src/api/health.ts": createHealthRoute(adapter),
-    "src/routes.ts": createRoutesFile(),
-    "src/routes/home.tsx": createHomeRoute(adapter),
-    "src/shells/public.tsx": createShellFile(projectName),
-    "vite.config.ts": createViteConfig(adapter),
+    "vite.config.ts": createViteConfig(adapter, router),
   };
+
+  if (router === "pages") {
+    files["src/pages/_app.tsx"] = createShellFile(projectName);
+    files["src/pages/index.tsx"] = createPagesHomeRoute(adapter);
+  } else {
+    files["src/routes.ts"] = createRoutesFile();
+    files["src/routes/home.tsx"] = createHomeRoute(adapter);
+    files["src/shells/public.tsx"] = createShellFile(projectName);
+  }
 
   if (adapter.id === "cloudflare") {
     files["wrangler.jsonc"] = createWranglerConfig(projectName);
@@ -313,7 +359,7 @@ function createPackageJson({ adapter, projectName, versions }) {
   )}\n`;
 }
 
-function createViteConfig(adapter) {
+function createViteConfig(adapter, router) {
   const ADAPTER_IMPORTS = {
     node: { fn: "nodeAdapter", pkg: "@pracht/adapter-node" },
     cloudflare: { fn: "cloudflareAdapter", pkg: "@pracht/adapter-cloudflare" },
@@ -322,13 +368,18 @@ function createViteConfig(adapter) {
 
   const info = ADAPTER_IMPORTS[adapter.id] ?? ADAPTER_IMPORTS.node;
 
+  const prachtOptions =
+    router === "pages"
+      ? `{ pagesDir: "/src/pages", adapter: ${info.fn}() }`
+      : `{ adapter: ${info.fn}() }`;
+
   return [
     'import { defineConfig } from "vite";',
     'import { pracht } from "@pracht/vite-plugin";',
     `import { ${info.fn} } from "${info.pkg}";`,
     "",
     "export default defineConfig({",
-    `  plugins: [pracht({ adapter: ${info.fn}() })],`,
+    `  plugins: [pracht(${prachtOptions})],`,
     "});",
     "",
   ].join("\n");
@@ -414,6 +465,46 @@ function createHomeRoute(adapter) {
   ].join("\n");
 }
 
+function createPagesHomeRoute(adapter) {
+  return [
+    'import type { LoaderArgs, RouteComponentProps } from "@pracht/core";',
+    "",
+    'export const RENDER_MODE = "ssg";',
+    "",
+    "export async function loader(_args: LoaderArgs) {",
+    "  return {",
+    `    adapter: ${JSON.stringify(adapter.label)},`,
+    "    steps: [",
+    '      "Edit src/pages/index.tsx to change this page.",',
+    '      "Add more pages in src/pages/.",',
+    '      "Add API handlers in src/api/*.ts.",',
+    "    ],",
+    "  };",
+    "}",
+    "",
+    "export function Component({ data }: RouteComponentProps<typeof loader>) {",
+    "  return (",
+    "    <section>",
+    '      <p style={{ color: "#555", marginBottom: "8px" }}>Starter ready.</p>',
+    '      <h1 style={{ fontSize: "2.5rem", lineHeight: 1.1, margin: "0 0 16px" }}>Your pracht app is up and running.</h1>',
+    '      <p style={{ fontSize: "1.1rem", lineHeight: 1.6, marginBottom: "24px" }}>',
+    "        This starter is configured for <strong>{data.adapter}</strong>.",
+    "      </p>",
+    '      <ul style={{ lineHeight: 1.8, paddingLeft: "20px" }}>',
+    "        {data.steps.map((step) => (",
+    "          <li key={step}>{step}</li>",
+    "        ))}",
+    "      </ul>",
+    '      <p style={{ marginTop: "24px" }}>',
+    "        Check <code>/api/health</code> for a simple API route.",
+    "      </p>",
+    "    </section>",
+    "  );",
+    "}",
+    "",
+  ].join("\n");
+}
+
 function createHealthRoute(adapter) {
   return [
     "export function GET() {",
@@ -461,7 +552,7 @@ function createCloudflareEnvDeclaration() {
   ].join("\n");
 }
 
-function createReadme({ adapter, packageManager, projectName }) {
+function createReadme({ adapter, packageManager, projectName, router }) {
   const installCommand = packageManager === "npm" ? "npm install" : `${packageManager} install`;
   const devCommand = packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
   const previewCommand = packageManager === "npm" ? "npm run preview" : `${packageManager} preview`;
@@ -496,8 +587,16 @@ function createReadme({ adapter, packageManager, projectName }) {
   lines.push("");
   lines.push("## Files");
   lines.push("");
-  lines.push("- `src/routes.ts` defines your app manifest.");
-  lines.push("- `src/routes/home.tsx` is the first page.");
+
+  if (router === "pages") {
+    lines.push("- `src/pages/` contains your file-system routes.");
+    lines.push("- `src/pages/_app.tsx` is the app shell.");
+    lines.push("- `src/pages/index.tsx` is the home page.");
+  } else {
+    lines.push("- `src/routes.ts` defines your app manifest.");
+    lines.push("- `src/routes/home.tsx` is the first page.");
+  }
+
   lines.push("- `src/api/health.ts` is a sample API route.");
 
   return `${lines.join("\n")}\n`;
@@ -549,7 +648,7 @@ function printHelp() {
   console.log(`create-pracht
 
 Usage:
-  create-pracht [directory] [--adapter=node|cf|vercel] [--skip-install]
+  create-pracht [directory] [--adapter=node|cf|vercel] [--router=manifest|pages] [--skip-install]
 `);
 }
 
