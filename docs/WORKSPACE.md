@@ -78,7 +78,9 @@ described in `VISION_MVP.md`.
 - **E2E tests** — Playwright tests cover SSR rendering, loader data, head
   metadata, middleware redirects, auth-gated routes, SPA mode, route-state JSON,
   404 handling, hydration, client-side navigation, API routes (GET, POST, 405,
-  404), and the Cloudflare/Vercel build outputs.
+  404), and the Cloudflare/Vercel build outputs. The root `prepare` script
+  installs Playwright Chromium during `pnpm install` so local E2E runs have
+  their browser dependency ready by default.
 - **Custom Vite plugins** — Users bring their own Vite plugins (MDX, Tailwind,
   image tools, PWA, etc.) alongside `pracht()` in `vite.config.ts`. No special
   integration required — plugins participate in the full Vite pipeline for both

@@ -8,6 +8,7 @@
     "check": "pnpm build && pnpm typecheck && pnpm test",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "prepare": "playwright install chromium",
     "pracht": "node ./packages/cli/bin/pracht.js",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
