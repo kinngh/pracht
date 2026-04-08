@@ -21,6 +21,11 @@ npm install @pracht/core preact preact-render-to-string
 - `handlePrachtRequest()` — server renderer that produces full HTML with hydration markers
 - `matchAppRoute()` — segment-based route matching
 
+`handlePrachtRequest()` sanitizes unexpected 5xx errors by default so raw server
+messages do not leak into SSR HTML or route-state JSON. Explicit
+`PrachtHttpError` 4xx messages are preserved. Pass `debugErrors: true` to expose
+raw details intentionally during debugging.
+
 ### Client
 
 - `startApp()` — client-side hydration and runtime

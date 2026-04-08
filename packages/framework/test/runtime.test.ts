@@ -247,6 +247,33 @@ describe("handlePrachtRequest ErrorBoundary", () => {
     await expect(response.text()).resolves.toContain("Error: Post not found");
   });
 
+  it("sanitizes unexpected 5xx loader failures in SSR output and hydration state", async () => {
+    const app = defineApp({
+      routes: [route("/posts/:slug", "./routes/post.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+            ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+            loader: async () => {
+              throw new Error("Database credentials invalid");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing"),
+    });
+
+    expect(response.status).toBe(500);
+    const html = await response.text();
+    expect(html).toContain("Error: Internal Server Error");
+    expect(html).not.toContain("Database credentials invalid");
+  });
+
   it("returns a route-state error payload for loader failures", async () => {
     const app = defineApp({
       routes: [route("/posts/:slug", "./routes/post.tsx")],
@@ -278,6 +305,112 @@ describe("handlePrachtRequest ErrorBoundary", () => {
         message: "Post not found",
         name: "PrachtHttpError",
         status: 404,
+      },
+    });
+  });
+
+  it("sanitizes unexpected 5xx loader failures in route-state responses", async () => {
+    const app = defineApp({
+      routes: [route("/posts/:slug", "./routes/post.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+            ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+            loader: async () => {
+              throw new Error("token parse failed");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        message: "Internal Server Error",
+        name: "Error",
+        status: 500,
+      },
+    });
+  });
+
+  it("sanitizes explicit 5xx PrachtHttpError messages by default", async () => {
+    const app = defineApp({
+      routes: [route("/posts/:slug", "./routes/post.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+            ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+            loader: async () => {
+              throw new PrachtHttpError(503, "Upstream token service failed");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        message: "Internal Server Error",
+        name: "Error",
+        status: 503,
+      },
+    });
+  });
+
+  it("can expose raw server errors when debugErrors is enabled", async () => {
+    const app = defineApp({
+      routes: [route("/posts/:slug", "./routes/post.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      debugErrors: true,
+      registry: {
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+            ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+            loader: async () => {
+              throw new Error("debug details");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        message: "debug details",
+        name: "Error",
+        status: 500,
       },
     });
   });
