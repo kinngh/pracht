@@ -4,6 +4,19 @@ import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
+async function fetchLatestVersion(packageName) {
+  const res = await fetch(
+    `https://registry.npmjs.org/${packageName}/latest`,
+  );
+  if (!res.ok) {
+    throw new Error(
+      `Failed to fetch version for ${packageName}: ${res.statusText}`,
+    );
+  }
+  const data = await res.json();
+  return data.version;
+}
+
 const ADAPTERS = {
   node: {
     description: "Node.js server with pracht preview",
@@ -77,7 +90,7 @@ export async function run(argv = process.argv.slice(2)) {
 
 export async function scaffoldProject({ adapter, packageManager, targetDir }) {
   const packageName = toPackageName(basename(targetDir));
-  const files = buildProjectFiles({
+  const files = await buildProjectFiles({
     adapter,
     packageManager,
     projectName: packageName,
@@ -215,11 +228,33 @@ function normalizeAdapter(value) {
   return null;
 }
 
-function buildProjectFiles({ adapter, packageManager, projectName }) {
+async function resolveVersions(packageNames) {
+  const entries = await Promise.all(
+    packageNames.map(async (name) => [
+      name,
+      `^${await fetchLatestVersion(name)}`,
+    ]),
+  );
+  return Object.fromEntries(entries);
+}
+
+async function buildProjectFiles({ adapter, packageManager, projectName }) {
+  const packagesToResolve = [
+    "@pracht/cli",
+    "@pracht/vite-plugin",
+    "@pracht/core",
+    adapter.packageName,
+  ];
+  if (adapter.id === "vercel") {
+    packagesToResolve.push("vercel");
+  }
+
+  const versions = await resolveVersions(packagesToResolve);
+
   const files = {
     ".gitignore": "dist\nnode_modules\n.wrangler\n.vercel\n",
     "README.md": createReadme({ adapter, packageManager, projectName }),
-    "package.json": createPackageJson({ adapter, projectName }),
+    "package.json": createPackageJson({ adapter, projectName, versions }),
     "src/api/health.ts": createHealthRoute(adapter),
     "src/routes.ts": createRoutesFile(),
     "src/routes/home.tsx": createHomeRoute(adapter),
@@ -235,7 +270,7 @@ function buildProjectFiles({ adapter, packageManager, projectName }) {
   return files;
 }
 
-function createPackageJson({ adapter, projectName }) {
+function createPackageJson({ adapter, projectName, versions }) {
   const scripts = {
     build: "pracht build",
     dev: "pracht dev",
@@ -243,8 +278,8 @@ function createPackageJson({ adapter, projectName }) {
   };
 
   const devDependencies = {
-    "@pracht/cli": "latest",
-    "@pracht/vite-plugin": "latest",
+    "@pracht/cli": versions["@pracht/cli"],
+    "@pracht/vite-plugin": versions["@pracht/vite-plugin"],
     preact: "^10.26.9",
     "preact-render-to-string": "^6.5.13",
     vite: "^8.0.0",
@@ -257,14 +292,14 @@ function createPackageJson({ adapter, projectName }) {
 
   if (adapter.id === "vercel") {
     scripts.deploy = "pracht build && vercel deploy --prebuilt";
-    devDependencies.vercel = "latest";
+    devDependencies.vercel = versions["vercel"];
   }
 
   return `${JSON.stringify(
     {
       dependencies: {
-        [adapter.packageName]: "latest",
-        "@pracht/core": "latest",
+        [adapter.packageName]: versions[adapter.packageName],
+        "@pracht/core": versions["@pracht/core"],
       },
       devDependencies,
       name: projectName,

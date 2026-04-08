@@ -34,8 +34,8 @@ describe("create-pracht", () => {
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const routes = await readFile(join(targetDir, "src/routes.ts"), "utf-8");
 
-    expect(packageJson).toContain('"@pracht/cli": "latest"');
-    expect(packageJson).toContain('"@pracht/adapter-node": "latest"');
+    expect(packageJson).toMatch(/"@pracht\/cli": "\^\d+\.\d+\.\d+"/);
+    expect(packageJson).toMatch(/"@pracht\/adapter-node": "\^\d+\.\d+\.\d+"/);
     expect(packageJson).not.toContain("wrangler");
     expect(routes).toContain('route("/", "./routes/home.tsx"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
@@ -60,8 +60,9 @@ describe("create-pracht", () => {
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const wranglerConfig = await readFile(join(targetDir, "wrangler.jsonc"), "utf-8");
 
-    expect(packageJson).toContain('"@pracht/cli": "latest"');
-    expect(packageJson).toContain('"@pracht/adapter-cloudflare": "latest"');
+    expect(packageJson).toMatch(/"@pracht\/cli": "\^\d+\.\d+\.\d+"/);
+    expect(packageJson).toMatch(/"@pracht\/adapter-cloudflare": "\^\d+\.\d+\.\d+"/);
+
     expect(packageJson).toContain('"wrangler": "^4.81.0"');
     expect(packageJson).not.toContain('"@cloudflare/vite-plugin"');
     expect(wranglerConfig).toContain('"main": "dist/server/server.js"');
@@ -91,8 +92,9 @@ describe("create-pracht", () => {
     const packageJson = await readFile(join(targetDir, "package.json"), "utf-8");
     const readme = await readFile(join(targetDir, "README.md"), "utf-8");
 
-    expect(packageJson).toContain('"@pracht/adapter-vercel": "latest"');
-    expect(packageJson).toContain('"vercel": "latest"');
+    expect(packageJson).toMatch(/"@pracht\/adapter-vercel": "\^\d+\.\d+\.\d+"/);
+    expect(packageJson).toMatch(/"vercel": "\^\d+\.\d+\.\d+"/);
+
     expect(packageJson).toContain('"deploy": "pracht build && vercel deploy --prebuilt"');
     expect(readme).toContain("configured for Vercel");
     expect(readme).toContain("pnpm deploy");
