@@ -10,6 +10,9 @@
     "README.md"
   ],
   "type": "module",
+  "publishConfig": {
+    "provenance": true
+  },
   "scripts": {
     "build": "node -e \"\""
   }

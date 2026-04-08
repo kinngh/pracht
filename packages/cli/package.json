@@ -5,6 +5,9 @@
     "pracht": "./bin/pracht.js"
   },
   "type": "module",
+  "publishConfig": {
+    "provenance": true
+  },
   "dependencies": {
     "@pracht/core": "workspace:*"
   }
