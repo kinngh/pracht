@@ -290,6 +290,7 @@ async function buildProjectFiles({ adapter, packageManager, projectName, router 
     "package.json": createPackageJson({ adapter, projectName, versions }),
     "src/api/health.ts": createHealthRoute(adapter),
     "vite.config.ts": createViteConfig(adapter, router),
+    "tsconfig.json": createBaseTSConfig(adapter),
   };
 
   if (router === "pages") {
@@ -496,6 +497,17 @@ function createPagesHomeRoute(adapter) {
     "}",
     "",
   ].join("\n");
+}
+
+function createBaseTSConfig(_adapter) {
+  const config = {
+    compilerOptions: {
+      jsx: "react-jsx",
+      jsxImportSource: "preact",
+      lib: ["ES2022"],
+    },
+  };
+  return JSON.stringify(config, null, 4);
 }
 
 function createHealthRoute(adapter) {
