@@ -41,6 +41,8 @@ const NAV = [
       { href: "/docs/recipes/auth", icon: "🔒", title: "Authentication" },
       { href: "/docs/recipes/forms", icon: "📝", title: "Forms" },
       { href: "/docs/recipes/testing", icon: "🧪", title: "Testing" },
+      { href: "/docs/recipes/fullstack-cloudflare", icon: "☁", title: "Full-Stack Cloudflare" },
+      { href: "/docs/recipes/fullstack-vercel", icon: "▲", title: "Full-Stack Vercel" },
     ],
   },
   {

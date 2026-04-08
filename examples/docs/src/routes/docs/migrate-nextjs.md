@@ -3,8 +3,8 @@ title: Migrating from Next.js
 lead: A practical guide to moving your Next.js App Router project to pracht. Covers routing, data loading, rendering modes, middleware, layouts, and API routes — with side-by-side code examples.
 breadcrumb: Migrate from Next.js
 prev:
-  href: /docs/recipes/testing
-  title: Testing
+  href: /docs/recipes/fullstack-vercel
+  title: Full-Stack Vercel
 ---
 
 ## Overview

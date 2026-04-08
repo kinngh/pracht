@@ -6,8 +6,8 @@ prev:
   href: /docs/recipes/forms
   title: Forms
 next:
-  href: /docs/migrate/nextjs
-  title: Migrate from Next.js
+  href: /docs/recipes/fullstack-cloudflare
+  title: Full-Stack Cloudflare
 ---
 
 ## Recommended Setup

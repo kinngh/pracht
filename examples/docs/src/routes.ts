@@ -73,6 +73,14 @@ export const app = defineApp({
         id: "recipes-testing",
         render: "ssg",
       }),
+      route("/docs/recipes/fullstack-cloudflare", "./routes/docs/recipes-fullstack-cloudflare.md", {
+        id: "recipes-fullstack-cloudflare",
+        render: "ssg",
+      }),
+      route("/docs/recipes/fullstack-vercel", "./routes/docs/recipes-fullstack-vercel.md", {
+        id: "recipes-fullstack-vercel",
+        render: "ssg",
+      }),
       route("/docs/migrate/nextjs", "./routes/docs/migrate-nextjs.md", {
         id: "migrate-nextjs",
         render: "ssg",
