@@ -19,7 +19,8 @@
     }
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "preact-suspense": "^0.2.0"
