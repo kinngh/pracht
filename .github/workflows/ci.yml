@@ -9,8 +9,8 @@ on:
       - main
 
 jobs:
-  build:
-    name: Build & Test
+  install:
+    name: Install & Build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,6 +33,40 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Cache build output
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        with:
+          path: packages/*/dist
+          key: build-${{ github.sha }}
+
+  unit-tests:
+    name: Unit Tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.28.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Restore build output
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        with:
+          path: packages/*/dist
+          key: build-${{ github.sha }}
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -44,6 +78,34 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  e2e-tests:
+    name: E2E Tests
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+        with:
+          version: 10.28.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Restore build output
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        with:
+          path: packages/*/dist
+          key: build-${{ github.sha }}
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps --only-shell chromium
