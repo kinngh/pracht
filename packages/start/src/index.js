@@ -264,7 +264,7 @@ function createPackageJson({ adapter, projectName }) {
     {
       dependencies: {
         [adapter.packageName]: "latest",
-        pracht: "latest",
+        "@pracht/core": "latest",
       },
       devDependencies,
       name: projectName,

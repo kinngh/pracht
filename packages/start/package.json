@@ -1,6 +1,6 @@
 {
   "name": "create-pracht",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "bin": {
     "create-pracht": "./bin/create-pracht.js"
   },
