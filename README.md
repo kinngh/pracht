@@ -14,6 +14,10 @@ pnpm e2e
 
 For CI-parity checks, run `pnpm typecheck`, `pnpm format:check`, `pnpm lint`, `pnpm test`, and `pnpm e2e`.
 
+## Contributing
+
+Use the GitHub issue templates for bug reports and feature requests. When opening a pull request, follow [.github/PULL_REQUEST_TEMPLATE.md](.github/PULL_REQUEST_TEMPLATE.md).
+
 ## Create An App
 
 ```bash

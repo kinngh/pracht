@@ -1,0 +1,46 @@
+name: Bug Report
+description: Report a defect in the framework, examples, docs, or tooling.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem and the impact.
+      placeholder: What broke, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Share clear steps, a repo, or a minimal example.
+      placeholder: |
+        1. Run ...
+        2. Visit ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include versions and relevant runtime details.
+      placeholder: |
+        pracht version:
+        node version:
+        package manager:
+        adapter:
+        browser:
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Logs, screenshots, or related links.
