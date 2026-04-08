@@ -594,19 +594,7 @@ function isPrachtHttpError(error: unknown): error is PrachtHttpError {
 }
 
 function shouldExposeServerErrors(options: HandlePrachtRequestOptions<unknown>): boolean {
-  if (typeof options.debugErrors === "boolean") {
-    return options.debugErrors;
-  }
-
-  const runtime = globalThis as typeof globalThis & {
-    process?: {
-      env?: {
-        NODE_ENV?: string;
-      };
-    };
-  };
-
-  return runtime.process?.env?.NODE_ENV === "development";
+  return options.debugErrors === true;
 }
 
 function normalizeRouteError(

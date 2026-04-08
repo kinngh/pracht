@@ -414,4 +414,50 @@ describe("handlePrachtRequest ErrorBoundary", () => {
       },
     });
   });
+
+  it("does not infer debug error exposure from NODE_ENV", async () => {
+    const app = defineApp({
+      routes: [route("/posts/:slug", "./routes/post.tsx")],
+    });
+
+    const previousNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+
+    try {
+      const response = await handlePrachtRequest({
+        app,
+        registry: {
+          routeModules: {
+            "./routes/post.tsx": async () => ({
+              Component: () => h("main", null, "post"),
+              ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+              loader: async () => {
+                throw new Error("env details");
+              },
+            }),
+          },
+        },
+        request: new Request("http://localhost/posts/missing", {
+          headers: {
+            "x-pracht-route-state-request": "1",
+          },
+        }),
+      });
+
+      expect(response.status).toBe(500);
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          message: "Internal Server Error",
+          name: "Error",
+          status: 500,
+        },
+      });
+    } finally {
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
+    }
+  });
 });

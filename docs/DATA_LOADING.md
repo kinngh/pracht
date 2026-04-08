@@ -69,7 +69,8 @@ Unexpected 5xx errors are sanitized by default in both SSR HTML and
 `x-pracht-route-state-request` JSON responses, including the hydration payload.
 Throw `PrachtHttpError` for expected client-facing failures; 4xx messages stay
 intact. If you need raw server error details while debugging, pass
-`debugErrors: true` to `handlePrachtRequest()`.
+`debugErrors: true` to `handlePrachtRequest()`. `@pracht/core` does not infer
+this from `NODE_ENV` or other environment variables.
 
 ---
 
