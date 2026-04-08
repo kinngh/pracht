@@ -165,7 +165,7 @@ For integration tests, use `handlePrachtRequest()` to test the full server pipel
 
 ```ts [test/integration.test.ts]
 import { describe, it, expect } from "vitest";
-import { handlePrachtRequest, resolveApp } from "pracht";
+import { handlePrachtRequest, resolveApp } from "@pracht/core";
 
 // Build a test app with mock modules
 const app = resolveApp({

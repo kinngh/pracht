@@ -158,7 +158,7 @@ Bindings are available via `context.env` in loaders, actions, and API routes:
 
 ```typescript
 // src/api/items.ts
-import type { BaseRouteArgs } from "pracht";
+import type { BaseRouteArgs } from "@pracht/core";
 
 export async function GET({ context }: BaseRouteArgs) {
   const value = await context.env.MY_KV.get("key");
@@ -170,7 +170,7 @@ export async function GET({ context }: BaseRouteArgs) {
 
 ```javascript
 // virtual:pracht/server (generated in cloudflare mode)
-import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";
+import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";
 import { app } from "./src/routes.ts";
 
 const resolvedApp = resolveApp(app);
@@ -222,7 +222,7 @@ export default {
 
 ```javascript
 // virtual:pracht/server (generated in vercel mode)
-import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";
+import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";
 import { app } from "./src/routes.ts";
 
 const resolvedApp = resolveApp(app);
@@ -255,7 +255,7 @@ import type { PrachtAdapter } from "@pracht/vite-plugin";
 export function myAdapter(options?: MyOptions): PrachtAdapter {
   return {
     id: "my-platform",
-    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";',
+    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       // Return JavaScript source code that will be appended to the
       // generated virtual:pracht/server module.

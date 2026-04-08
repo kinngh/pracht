@@ -1,4 +1,4 @@
-import { defineApp, group, route } from "pracht";
+import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {

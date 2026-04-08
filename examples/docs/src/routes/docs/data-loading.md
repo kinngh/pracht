@@ -15,7 +15,7 @@ next:
 A **loader** is an async function exported from a route module. It runs server-side and returns serializable data that flows into the route component.
 
 ```ts [src/routes/dashboard.tsx]
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader({ request, params, context }: LoaderArgs) {
   const user = await getUser(request);
@@ -63,7 +63,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 ### Error handling
 
 ```ts
-import { PrachtHttpError } from "pracht";
+import { PrachtHttpError } from "@pracht/core";
 
 export async function loader({ params }: LoaderArgs) {
   const post = await getPost(params.slug);
@@ -128,7 +128,7 @@ export function Component() {
 Declarative form submission with progressive enhancement. Use the `action` prop to target an API route:
 
 ```ts
-import { Form } from "pracht";
+import { Form } from "@pracht/core";
 
 export function Component() {
   return (

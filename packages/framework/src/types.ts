@@ -7,7 +7,7 @@ import type { ComponentChildren, FunctionComponent } from "preact";
  *
  * ```ts
  * // src/env.d.ts
- * declare module "pracht" {
+ * declare module "@pracht/core" {
  *   interface Register {
  *     context: { env: Env; executionContext: ExecutionContext };
  *   }

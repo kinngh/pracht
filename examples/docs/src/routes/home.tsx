@@ -1,4 +1,4 @@
-import type { RouteComponentProps } from "pracht";
+import type { RouteComponentProps } from "@pracht/core";
 import { CodeBlock } from "../components/CodeBlock";
 
 export async function loader() {
@@ -107,7 +107,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
             <p class="hero-code-label">src/routes.ts</p>
             <CodeBlock
               filename="routes.ts"
-              code={`import { defineApp, group, route, timeRevalidate } from "pracht";
+              code={`import { defineApp, group, route, timeRevalidate } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -201,7 +201,7 @@ export const app = defineApp({
           <div>
             <CodeBlock
               filename="routes/dashboard.tsx"
-              code={`import type { LoaderArgs, RouteComponentProps } from "pracht";
+              code={`import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader({ request, context }: LoaderArgs) {
   const user = await getUser(request);

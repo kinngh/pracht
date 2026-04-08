@@ -53,7 +53,7 @@ export interface PrachtAdapter {
 function createDefaultNodeAdapter(): PrachtAdapter {
   return {
     id: "node",
-    serverImports: 'import { resolveApp, resolveApiRoutes } from "pracht";',
+    serverImports: 'import { resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       return [
         'import { existsSync, readFileSync } from "node:fs";',
@@ -275,7 +275,7 @@ export function createPrachtClientModuleSource(
     : `${resolved.shellsDir}/**/*.{ts,tsx,js,jsx,md,mdx}`;
 
   return [
-    'import { resolveApp, initClientRouter, readHydrationState } from "pracht";',
+    'import { resolveApp, initClientRouter, readHydrationState } from "@pracht/core";',
     appImport,
     "",
     `const routeModules = import.meta.glob(${JSON.stringify(routeGlob)});`,
@@ -323,7 +323,7 @@ export function createPrachtServerModuleSource(
   // The adapter tells us what extra imports it needs (e.g. handlePrachtRequest)
   const prachtImports = adapter?.serverImports
     ? adapter.serverImports
-    : 'import { resolveApp, resolveApiRoutes } from "pracht";';
+    : 'import { resolveApp, resolveApiRoutes } from "@pracht/core";';
 
   const appImport = isPagesMode
     ? generatePagesAppInlineSource(resolved, buildOptions.root)
@@ -418,7 +418,7 @@ function createDevSSRMiddleware(
     try {
       // Load the framework and server module through Vite's SSR pipeline
       const [framework, serverMod] = await Promise.all([
-        server.ssrLoadModule("pracht"),
+        server.ssrLoadModule("@pracht/core"),
         server.ssrLoadModule(PRACHT_SERVER_MODULE_ID),
       ]);
 

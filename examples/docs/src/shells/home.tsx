@@ -1,4 +1,4 @@
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 import "../styles/global.css";
 
 export function Shell({ children }: ShellProps) {

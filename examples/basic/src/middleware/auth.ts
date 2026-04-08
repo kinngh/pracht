@@ -1,4 +1,4 @@
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 // ⚠️ NOT FOR PRODUCTION — This is a minimal example only.
 // A real implementation should:

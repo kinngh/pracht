@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@pracht/adapter-node": "workspace:*",
-    "pracht": "workspace:*"
+    "@pracht/core": "workspace:*"
   },
   "devDependencies": {
     "@pracht/cli": "workspace:*",

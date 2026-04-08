@@ -153,7 +153,7 @@ export function generatePagesManifestSource(
     (f) => basename(f, extname(f)) === "_app" && PAGE_EXTENSIONS.has(extname(f)),
   );
 
-  const lines: string[] = ['import { defineApp, group, route } from "pracht";', ""];
+  const lines: string[] = ['import { defineApp, group, route } from "@pracht/core";', ""];
 
   const routeEntries: string[] = [];
 

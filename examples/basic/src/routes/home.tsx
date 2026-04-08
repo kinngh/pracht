@@ -1,4 +1,4 @@
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader(_args: LoaderArgs) {
   return {

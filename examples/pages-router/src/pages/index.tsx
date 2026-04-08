@@ -1,4 +1,4 @@
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export const RENDER_MODE = "ssg";
 

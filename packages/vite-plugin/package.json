@@ -22,7 +22,7 @@
     "@preact/preset-vite": "^2.10.5",
     "@pracht/adapter-cloudflare": "workspace:*",
     "@pracht/adapter-vercel": "workspace:*",
-    "pracht": "workspace:*"
+    "@pracht/core": "workspace:*"
   },
   "peerDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",

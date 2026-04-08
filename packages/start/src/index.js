@@ -301,7 +301,7 @@ function createViteConfig(adapter) {
 
 function createRoutesFile() {
   return [
-    'import { defineApp, route } from "pracht";',
+    'import { defineApp, route } from "@pracht/core";',
     "",
     "export const app = defineApp({",
     "  shells: {",
@@ -317,7 +317,7 @@ function createRoutesFile() {
 
 function createShellFile(projectName) {
   return [
-    'import type { ShellProps } from "pracht";',
+    'import type { ShellProps } from "@pracht/core";',
     "",
     "export function Shell({ children }: ShellProps) {",
     "  return (",
@@ -343,7 +343,7 @@ function createShellFile(projectName) {
 
 function createHomeRoute(adapter) {
   return [
-    'import type { LoaderArgs, RouteComponentProps } from "pracht";',
+    'import type { LoaderArgs, RouteComponentProps } from "@pracht/core";',
     "",
     "export async function loader(_args: LoaderArgs) {",
     "  return {",
@@ -413,8 +413,8 @@ function createWranglerConfig(projectName) {
 
 function createCloudflareEnvDeclaration() {
   return [
-    'import "pracht";',
-    'declare module "pracht" {',
+    'import "@pracht/core";',
+    'declare module "@pracht/core" {',
     "  interface Register {",
     "    context: {",
     "      env: Env;",

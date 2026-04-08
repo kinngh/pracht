@@ -15,7 +15,7 @@ next:
 Shell modules live in `src/shells/` and export a `Shell` component:
 
 ```ts [src/shells/app.tsx]
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (

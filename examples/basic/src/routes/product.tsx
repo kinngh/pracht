@@ -1,4 +1,4 @@
-import type { LoaderArgs, RouteComponentProps, RouteParams } from "pracht";
+import type { LoaderArgs, RouteComponentProps, RouteParams } from "@pracht/core";
 
 const PRODUCTS = [
   { id: "1", name: "Widget", price: "$9.99" },

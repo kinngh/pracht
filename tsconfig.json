@@ -14,7 +14,7 @@
     "jsxImportSource": "preact",
     "baseUrl": ".",
     "paths": {
-      "pracht": ["./packages/framework/src/index.ts"],
+      "@pracht/core": ["./packages/framework/src/index.ts"],
       "@pracht/vite-plugin": ["./packages/vite-plugin/src/index.ts"],
       "@pracht/adapter-node": ["./packages/adapter-node/src/index.ts"],
       "@pracht/adapter-cloudflare": ["./packages/adapter-cloudflare/src/index.ts"],

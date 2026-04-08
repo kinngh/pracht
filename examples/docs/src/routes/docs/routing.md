@@ -15,7 +15,7 @@ next:
 The manifest is the central source of truth for your app's routing. Define it in `src/routes.ts` using `defineApp`, `route`, and `group`:
 
 ```ts [src/routes.ts]
-import { defineApp, group, route, timeRevalidate } from "pracht";
+import { defineApp, group, route, timeRevalidate } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -114,7 +114,7 @@ route("/docs/*", "./routes/docs.tsx");
 Shells are Preact layout components that wrap route content. They are **decoupled from URL structure** — a flat URL like `/settings` can use the `app` shell without nesting under `/app/settings`.
 
 ```ts [src/shells/app.tsx]
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
@@ -141,7 +141,7 @@ export function head() {
 Middleware runs server-side before the loader. It can redirect, modify context, or throw errors.
 
 ```ts [src/middleware/auth.ts]
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
   const session = await getSession(request);
@@ -202,7 +202,7 @@ When `pagesDir` is set, the `appFile` option is ignored. The plugin scans the pa
 If `pages/_app.tsx` exists, it is registered as a shell named `"pages"` and all discovered routes are automatically wrapped in it:
 
 ```tsx [src/pages/_app.tsx]
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
