@@ -45,7 +45,7 @@ You don't need to configure anything for most apps. The defaults are:
 Override the default strategy with the `prefetch` field on a route:
 
 ```ts [src/routes.ts]
-import { defineApp, route, group } from "pracht";
+import { defineApp, route, group } from "@pracht/core";
 
 export const app = defineApp({
   routes: [

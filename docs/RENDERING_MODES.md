@@ -33,7 +33,7 @@ returns the params for each page to generate:
 
 ```typescript
 // src/routes/blog-post.tsx
-import type { LoaderArgs, RouteParams } from "pracht";
+import type { LoaderArgs, RouteParams } from "@pracht/core";
 
 export function getStaticPaths(): RouteParams[] {
   const posts = getAllPosts();
@@ -89,7 +89,7 @@ the stale page is served while a new version is generated in the background.
 ### Time-based revalidation
 
 ```typescript
-import { timeRevalidate } from "pracht";
+import { timeRevalidate } from "@pracht/core";
 
 {
   revalidate: timeRevalidate(3600);
@@ -102,7 +102,7 @@ against the revalidation window. If stale, it triggers regeneration.
 ### Webhook-based revalidation (Phase 2)
 
 ```typescript
-import { webhookRevalidate } from "pracht";
+import { webhookRevalidate } from "@pracht/core";
 
 {
   revalidate: webhookRevalidate({ key: "pricing-update" });

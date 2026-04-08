@@ -134,7 +134,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 **Pracht:**
 
 ```tsx
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
@@ -181,7 +181,7 @@ export async function generateMetadata() {
 **Pracht:**
 
 ```tsx
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader(_args: LoaderArgs) {
   const res = await fetch("https://api.example.com/data");
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
 **Pracht (`src/api/users.ts`):**
 
 ```ts
-import type { BaseRouteArgs } from "pracht";
+import type { BaseRouteArgs } from "@pracht/core";
 
 export function GET({ request }: BaseRouteArgs) {
   const users = await getUsers();
@@ -287,7 +287,7 @@ export const config = { matcher: ["/dashboard/:path*"] };
 **Pracht (`src/middleware/auth.ts`):**
 
 ```ts
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
   const session = request.headers.get("cookie")?.includes("session");
@@ -315,7 +315,7 @@ Key transforms:
 Build `src/routes.ts` mapping every migrated page:
 
 ```ts
-import { defineApp, group, route } from "pracht";
+import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -379,7 +379,7 @@ const router = useRouter();
 router.push("/dashboard");
 
 // Pracht
-import { useNavigate } from "pracht";
+import { useNavigate } from "@pracht/core";
 const navigate = useNavigate();
 navigate("/dashboard");
 ```

@@ -78,7 +78,7 @@ async function sign(data: string): Promise<string> {
 This middleware redirects unauthenticated users to the login page. Apply it to any route group that requires auth.
 
 ```ts [src/middleware/auth.ts]
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 import { getSession } from "../server/session";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
@@ -136,8 +136,8 @@ async function verifyCredentials(email: string, password: string) {
 ```
 
 ```ts [src/routes/login.tsx]
-import type { LoaderArgs, RouteComponentProps } from "pracht";
-import { Form } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
+import { Form } from "@pracht/core";
 
 export async function loader({ url }: LoaderArgs) {
   return { redirect: url.searchParams.get("redirect") ?? "/dashboard" };
@@ -197,7 +197,7 @@ Trigger logout from anywhere with a form:
 Behind the auth middleware, loaders can safely read user info from the headers set by middleware:
 
 ```ts [src/routes/dashboard.tsx]
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader({ request }: LoaderArgs) {
   const userId = request.headers.get("x-user-id")!;
@@ -224,7 +224,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 ## 6. Wire It Up
 
 ```ts [src/routes.ts]
-import { defineApp, group, route } from "pracht";
+import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {

@@ -64,7 +64,7 @@ app/
 
 ```ts [src/routes.ts]
 // pracht equivalent
-import { defineApp, group, route } from "pracht";
+import { defineApp, group, route } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -111,7 +111,7 @@ export default function RootLayout({ children }) {
 
 ```tsx [src/shells/public.tsx]
 // pracht — named shell
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
@@ -150,7 +150,7 @@ export default async function BlogPost({ params }) {
 
 ```tsx [src/routes/blog-post.tsx]
 // pracht
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 import { useRouteData } from "pracht/client";
 
 export async function loader({ params }: LoaderArgs) {
@@ -183,7 +183,7 @@ async function createPost(formData: FormData) {
 
 ```tsx [src/routes/new-post.tsx]
 // pracht
-import type { ActionArgs } from "pracht";
+import type { ActionArgs } from "@pracht/core";
 import { Form } from "pracht/client";
 
 export async function action({ request }: ActionArgs) {
@@ -219,7 +219,7 @@ export async function generateMetadata({ params }) {
 
 ```tsx [src/routes/about.tsx]
 // pracht
-import type { HeadArgs } from "pracht";
+import type { HeadArgs } from "@pracht/core";
 
 export function head({ data }: HeadArgs) {
   return {
@@ -243,7 +243,7 @@ Next.js controls caching with `export const dynamic` and `revalidate`. pracht se
 | Client component with `"use client"` | `render: "spa"`                          | Client-only UI (dashboards)     |
 
 ```ts [src/routes.ts]
-import { route, timeRevalidate } from "pracht";
+import { route, timeRevalidate } from "@pracht/core";
 
 route("/pricing", "./routes/pricing.tsx", {
   render: "isg",
@@ -271,7 +271,7 @@ export const config = { matcher: ["/dashboard/:path*", "/settings/:path*"] };
 
 ```ts [src/middleware/auth.ts]
 // pracht — named middleware
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
   const session = await getSession(request);

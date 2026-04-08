@@ -73,7 +73,7 @@ After the initial load, client-side navigation takes over — subsequent navigat
 ## ISG — Incremental Static Generation
 
 ```ts
-import { timeRevalidate } from "pracht";
+import { timeRevalidate } from "@pracht/core";
 
 route("/pricing", "./routes/pricing.tsx", {
   render: "isg",
@@ -89,7 +89,7 @@ ISG generates HTML at build time (like SSG) but regenerates it after a configura
 ### Webhook revalidation (Phase 2)
 
 ```ts
-import { webhookRevalidate } from "pracht";
+import { webhookRevalidate } from "@pracht/core";
 
 {
   revalidate: webhookRevalidate({ key: "pricing-update" });

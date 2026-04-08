@@ -1,4 +1,4 @@
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (

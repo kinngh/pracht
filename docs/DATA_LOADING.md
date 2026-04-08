@@ -12,7 +12,7 @@ and returns serializable data that flows into the route component.
 
 ```typescript
 // src/routes/dashboard.tsx
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader({ request, params, context, signal }: LoaderArgs) {
   const user = await getUser(request);
@@ -119,7 +119,7 @@ export function Component() {
 Declarative form submission:
 
 ```typescript
-import { Form } from "pracht";
+import { Form } from "@pracht/core";
 
 export function Component() {
   return (

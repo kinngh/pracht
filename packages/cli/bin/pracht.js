@@ -95,7 +95,7 @@ async function build() {
 
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
-    const { prerenderApp } = await import("pracht");
+    const { prerenderApp } = await import("@pracht/core");
 
     // Read the Vite manifest for asset URLs
     const manifestPath = resolve(clientDir, ".vite/manifest.json");
@@ -195,7 +195,7 @@ async function preview() {
   }
 
   const serverMod = await import(serverEntry);
-  const { handlePrachtRequest } = await import("pracht");
+  const { handlePrachtRequest } = await import("@pracht/core");
 
   // Load ISG manifest if it exists
   const isgManifestPath = resolve(root, "dist/server/isg-manifest.json");

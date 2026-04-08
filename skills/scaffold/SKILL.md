@@ -37,7 +37,7 @@ The user will describe what they want to create. Parse their request and generat
 ### Route
 
 ```tsx
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 export async function loader(_args: LoaderArgs) {
   return {
@@ -58,12 +58,12 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 - Include `ErrorBoundary` only if requested.
 - Include `getStaticPaths` only for SSG/ISG routes with dynamic segments.
 - Use `RouteComponentProps<typeof loader>` for typed `data` prop.
-- Import `Form` from `"pracht"` when adding actions.
+- Import `Form` from `"@pracht/core"` when adding actions.
 
 ### Shell
 
 ```tsx
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
@@ -82,7 +82,7 @@ export function head() {
 ### Middleware
 
 ```ts
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
   // Return void to continue, { redirect: "/path" } to redirect,
@@ -93,7 +93,7 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 ### API Route
 
 ```ts
-import type { BaseRouteArgs } from "pracht";
+import type { BaseRouteArgs } from "@pracht/core";
 
 export function GET({ params, url }: BaseRouteArgs) {
   return Response.json({
@@ -118,7 +118,7 @@ After creating module files, **always update `src/routes.ts`** to register the n
 
 Available render modes: `"ssr"` (default), `"ssg"` (static at build), `"isg"` (incremental static with `revalidate: timeRevalidate(seconds)`), `"spa"` (client-only).
 
-Import `timeRevalidate` from `"pracht"` when using ISG.
+Import `timeRevalidate` from `"@pracht/core"` when using ISG.
 
 ## Rules
 

@@ -27,7 +27,7 @@ API routes live in `src/api/`. The file path maps to the URL:
 Export named functions for each HTTP method you want to handle. Unhandled methods return 405.
 
 ```ts [src/api/users.ts]
-import type { LoaderArgs } from "pracht";
+import type { LoaderArgs } from "@pracht/core";
 
 export function GET({ request }: LoaderArgs) {
   return Response.json([

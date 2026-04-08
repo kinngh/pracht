@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@pracht/adapter-cloudflare": "workspace:*",
-    "pracht": "workspace:*",
+    "@pracht/core": "workspace:*",
     "wrangler": "^4.80.0"
   },
   "devDependencies": {

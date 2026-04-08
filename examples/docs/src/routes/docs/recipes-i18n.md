@@ -68,7 +68,7 @@ Create middleware that detects the locale and makes it available to loaders. You
 The cleanest approach for SEO — each locale has its own URL namespace like `/fr/about` or `/en/about`.
 
 ```ts [src/middleware/i18n.ts]
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 import { supportedLocales, defaultLocale } from "../i18n";
 
 export const middleware: MiddlewareFn = async ({ request, url }) => {
@@ -101,7 +101,7 @@ export const middleware: MiddlewareFn = async ({ request, url }) => {
 If you prefer clean URLs without a locale prefix, store the preference in a cookie:
 
 ```ts [src/middleware/i18n.ts]
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 import { supportedLocales, defaultLocale } from "../i18n";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
@@ -120,7 +120,7 @@ export const middleware: MiddlewareFn = async ({ request }) => {
 Read the locale set by middleware and return the translated content:
 
 ```ts [src/routes/home.tsx]
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 import { t } from "../i18n";
 
 export async function loader({ request }: LoaderArgs) {
@@ -157,7 +157,7 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 Use `group` with `pathPrefix` to create locale-scoped route groups:
 
 ```ts [src/routes.ts]
-import { defineApp, group, route } from "pracht";
+import { defineApp, group, route } from "@pracht/core";
 
 const localizedRoutes = [
   route("/", "./routes/home.tsx", { render: "ssr" }),
@@ -188,7 +188,7 @@ export const app = defineApp({
 A simple component that links to the same page in a different locale:
 
 ```ts [src/components/LanguageSwitcher.tsx]
-import { useLocation } from "pracht";
+import { useLocation } from "@pracht/core";
 import { supportedLocales } from "../i18n";
 
 const labels: Record<string, string> = { en: "English", fr: "Fran\u00E7ais" };

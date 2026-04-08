@@ -11,7 +11,7 @@ shells, middleware, and render modes.
 Define your app's routes in `src/routes.ts`:
 
 ```typescript
-import { defineApp, group, route, timeRevalidate } from "pracht";
+import { defineApp, group, route, timeRevalidate } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -255,7 +255,7 @@ routes are automatically wrapped in it:
 
 ```tsx
 // src/pages/_app.tsx
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (

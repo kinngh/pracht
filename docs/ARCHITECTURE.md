@@ -42,7 +42,7 @@ The current repo scaffold and package boundaries are tracked in
 The route manifest is the central configuration. Users define it in `src/routes.ts`:
 
 ```typescript
-import { defineApp, group, route, timeRevalidate } from "pracht";
+import { defineApp, group, route, timeRevalidate } from "@pracht/core";
 
 export const app = defineApp({
   shells: {
@@ -163,7 +163,7 @@ Shells are Preact layout components that wrap route content:
 
 ```typescript
 // src/shells/public.tsx
-import type { ShellProps } from "pracht";
+import type { ShellProps } from "@pracht/core";
 
 export function Shell({ children }: ShellProps) {
   return (
@@ -193,7 +193,7 @@ Server-side functions that run before loaders:
 
 ```typescript
 // src/middleware/auth.ts
-import type { MiddlewareFn } from "pracht";
+import type { MiddlewareFn } from "@pracht/core";
 
 export const middleware: MiddlewareFn = async ({ request }) => {
   const session = await getSession(request);

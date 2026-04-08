@@ -1,5 +1,5 @@
-import { useParams } from "pracht";
-import type { LoaderArgs, RouteComponentProps } from "pracht";
+import { useParams } from "@pracht/core";
+import type { LoaderArgs, RouteComponentProps } from "@pracht/core";
 
 const PRODUCTS: Record<string, { name: string; price: number }> = {
   "1": { name: "Widget", price: 9.99 },

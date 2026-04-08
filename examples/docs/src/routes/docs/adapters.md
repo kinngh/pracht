@@ -44,7 +44,7 @@ export default defineConfig({
 ```json [package.json]
 {
   "dependencies": {
-    "pracht": "*",
+    "@pracht/core": "*",
     "@pracht/adapter-cloudflare": "*"
   }
 }
@@ -183,7 +183,7 @@ import type { PrachtAdapter } from "@pracht/vite-plugin";
 export function myAdapter(): PrachtAdapter {
   return {
     id: "my-platform",
-    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "pracht";',
+    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       return `
 export default async function handle(request) {

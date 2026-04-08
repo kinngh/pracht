@@ -12,7 +12,7 @@ import {
   type ModuleRegistry,
   type ResolvedApiRoute,
   type PrachtApp,
-} from "pracht";
+} from "@pracht/core";
 
 export interface NodeAdapterContextArgs {
   request: Request;
@@ -297,7 +297,7 @@ const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 export function nodeAdapter(options: NodeServerEntryModuleOptions = {}): PrachtAdapter {
   return {
     id: "node",
-    serverImports: 'import { resolveApp, resolveApiRoutes } from "pracht";',
+    serverImports: 'import { resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       return createNodeServerEntryModule(options);
     },

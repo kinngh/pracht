@@ -1,6 +1,6 @@
-import "pracht";
+import "@pracht/core";
 
-declare module "pracht" {
+declare module "@pracht/core" {
   interface Register {
     context: {
       env: Env;

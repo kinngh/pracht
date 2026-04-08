@@ -1,5 +1,5 @@
-import { useLocation } from "pracht";
-import type { ShellProps } from "pracht";
+import { useLocation } from "@pracht/core";
+import type { ShellProps } from "@pracht/core";
 import "../styles/global.css";
 
 const NAV = [
