@@ -459,6 +459,7 @@ function createDevSSRMiddleware(
         app: serverMod.resolvedApp,
         registry: serverMod.registry,
         request: webRequest,
+        debugErrors: true,
         clientEntryUrl: CLIENT_BROWSER_PATH,
         apiRoutes: serverMod.apiRoutes,
       });

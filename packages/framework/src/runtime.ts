@@ -43,6 +43,8 @@ export interface HandlePrachtRequestOptions<TContext = unknown> {
   request: Request;
   context?: TContext;
   registry?: ModuleRegistry;
+  /** Expose raw server error details in rendered HTML and route-state JSON. */
+  debugErrors?: boolean;
   clientEntryUrl?: string;
   /** Per-source-file CSS map produced by the vite plugin (preferred over cssUrls). */
   cssManifest?: Record<string, string[]>;
@@ -591,19 +593,59 @@ function isPrachtHttpError(error: unknown): error is PrachtHttpError {
   return error instanceof Error && error.name === "PrachtHttpError" && "status" in error;
 }
 
-function normalizeRouteError(error: unknown): SerializedRouteError {
+function shouldExposeServerErrors(options: HandlePrachtRequestOptions<unknown>): boolean {
+  return options.debugErrors === true;
+}
+
+function normalizeRouteError(
+  error: unknown,
+  options: { exposeDetails: boolean },
+): SerializedRouteError {
   if (isPrachtHttpError(error)) {
+    const status = typeof error.status === "number" ? error.status : 500;
+    if (status >= 400 && status < 500) {
+      return {
+        message: error.message,
+        name: error.name,
+        status,
+      };
+    }
+
+    if (options.exposeDetails) {
+      return {
+        message: error.message || "Internal Server Error",
+        name: error.name || "Error",
+        status,
+      };
+    }
+
     return {
-      message: error.message,
-      name: error.name,
-      status: typeof error.status === "number" ? error.status : 500,
+      message: "Internal Server Error",
+      name: "Error",
+      status,
     };
   }
 
   if (error instanceof Error) {
+    if (options.exposeDetails) {
+      return {
+        message: error.message || "Internal Server Error",
+        name: error.name || "Error",
+        status: 500,
+      };
+    }
+
     return {
-      message: error.message || "Internal Server Error",
-      name: error.name || "Error",
+      message: "Internal Server Error",
+      name: "Error",
+      status: 500,
+    };
+  }
+
+  if (options.exposeDetails) {
+    return {
+      message: typeof error === "string" && error ? error : "Internal Server Error",
+      name: "Error",
       status: 500,
     };
   }
@@ -633,7 +675,9 @@ async function renderRouteErrorResponse<TContext>(options: {
   shellModule: ShellModule | undefined;
   urlPathname: string;
 }): Promise<Response> {
-  const routeError = normalizeRouteError(options.error);
+  const routeError = normalizeRouteError(options.error, {
+    exposeDetails: shouldExposeServerErrors(options.options),
+  });
 
   if (!options.routeModule?.ErrorBoundary) {
     if (options.isRouteStateRequest) {
