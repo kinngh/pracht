@@ -11,7 +11,7 @@ prev:
 
 Next.js and pracht share many of the same concepts — server rendering, file-based conventions, loaders, middleware — but pracht takes a more explicit approach. This guide walks through the key differences so you can migrate incrementally.
 
-| Concept         | Next.js (App Router)                  | pracht                                    |
+| Concept         | Next.js (App Router)                  | pracht                                   |
 | --------------- | ------------------------------------- | ---------------------------------------- |
 | UI library      | React                                 | Preact                                   |
 | Bundler         | Turbopack / Webpack                   | Vite                                     |
@@ -86,7 +86,7 @@ export const app = defineApp({
 
 ### Dynamic Routes
 
-| Next.js            | pracht           |
+| Next.js            | pracht          |
 | ------------------ | --------------- |
 | `[slug]` folder    | `:slug` in path |
 | `[...slug]` folder | `*` catch-all   |
@@ -235,7 +235,7 @@ export function head({ data }: HeadArgs) {
 
 Next.js controls caching with `export const dynamic` and `revalidate`. pracht sets rendering mode per-route in the manifest:
 
-| Next.js                              | pracht                                    | When to use                     |
+| Next.js                              | pracht                                   | When to use                     |
 | ------------------------------------ | ---------------------------------------- | ------------------------------- |
 | `dynamic = "force-static"`           | `render: "ssg"`                          | Content known at build time     |
 | `dynamic = "force-dynamic"`          | `render: "ssr"`                          | Personalized or real-time data  |
@@ -336,8 +336,8 @@ export default {
 };
 ```
 
-| Target             | Adapter                     | Notes                                |
-| ------------------ | --------------------------- | ------------------------------------ |
+| Target             | Adapter                      | Notes                                |
+| ------------------ | ---------------------------- | ------------------------------------ |
 | Node.js            | `@pracht/adapter-node`       | Express-compatible, ISG revalidation |
 | Cloudflare Workers | `@pracht/adapter-cloudflare` | KV, D1, R2 bindings via context      |
 | Vercel             | `@pracht/adapter-vercel`     | Edge Functions, Build Output API v3  |

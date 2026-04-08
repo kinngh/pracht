@@ -96,7 +96,7 @@ Work through these in order, stopping when you find the root cause:
 | File                  | Purpose                                               |
 | --------------------- | ----------------------------------------------------- |
 | `src/routes.ts`       | App manifest — all route/shell/middleware definitions |
-| `vite.config.ts`      | Vite config with `pracht()` plugin                     |
+| `vite.config.ts`      | Vite config with `pracht()` plugin                    |
 | `src/routes/*.tsx`    | Route modules (loader, action, Component)             |
 | `src/shells/*.tsx`    | Shell layout components                               |
 | `src/middleware/*.ts` | Server-side middleware                                |

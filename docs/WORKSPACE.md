@@ -5,15 +5,15 @@ described in `VISION_MVP.md`.
 
 ## Packages
 
-| Path                          | Package                     | Current role                                                                                                |
-| ----------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `packages/framework`          | `pracht`                     | Core manifest API, route resolution, API routes, SSR rendering, client runtime                              |
-| `packages/vite-plugin`        | `@pracht/vite-plugin`        | Virtual modules, `import.meta.glob()` registries, API route auto-discovery, HMR, dev SSR middleware         |
-| `packages/adapter-node`       | `@pracht/adapter-node`       | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate                                  |
-| `packages/adapter-cloudflare` | `@pracht/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source                                          |
-| `packages/adapter-vercel`     | `@pracht/adapter-vercel`     | Vercel Edge handler and Build Output API entry source                                                       |
+| Path                          | Package                      | Current role                                                                                                 |
+| ----------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `packages/framework`          | `pracht`                     | Core manifest API, route resolution, API routes, SSR rendering, client runtime                               |
+| `packages/vite-plugin`        | `@pracht/vite-plugin`        | Virtual modules, `import.meta.glob()` registries, API route auto-discovery, HMR, dev SSR middleware          |
+| `packages/adapter-node`       | `@pracht/adapter-node`       | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate                                   |
+| `packages/adapter-cloudflare` | `@pracht/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source                                           |
+| `packages/adapter-vercel`     | `@pracht/adapter-vercel`     | Vercel Edge handler and Build Output API entry source                                                        |
 | `packages/cli`                | `@pracht/cli`                | `pracht dev`, `build` (with ISG manifest and adapter build output), and `preview` (with ISG revalidation)    |
-| `examples/cloudflare`         | `@pracht/example-cloudflare` | Cloudflare-targeted example app with SSG, ISG, SSR, SPA routes, auth middleware, and API routes             |
+| `examples/cloudflare`         | `@pracht/example-cloudflare` | Cloudflare-targeted example app with SSG, ISG, SSR, SPA routes, auth middleware, and API routes              |
 | `examples/docs`               | `@pracht/example-docs`       | Documentation website built with pracht + Cloudflare adapter; all routes SSG-prerendered; dark design system |
 
 ## What Exists Today

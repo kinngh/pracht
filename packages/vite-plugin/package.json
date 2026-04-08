@@ -1,22 +1,19 @@
 {
   "name": "@pracht/vite-plugin",
   "version": "0.0.1",
+  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/vite-plugin",
+  "bugs": {
+    "url": "https://github.com/JoviDeCroock/pracht/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/JoviDeCroock/pracht",
     "directory": "packages/vite-plugin"
   },
-  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/vite-plugin",
-  "bugs": {
-    "url": "https://github.com/JoviDeCroock/pracht/issues"
-  },
   "files": [
     "dist"
   ],
   "type": "module",
-  "publishConfig": {
-    "provenance": true
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -27,15 +24,18 @@
       "default": "./dist/pages-router.mjs"
     }
   },
+  "publishConfig": {
+    "provenance": true
+  },
   "scripts": {
     "build": "tsdown",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@preact/preset-vite": "^2.10.5",
     "@pracht/adapter-cloudflare": "workspace:*",
     "@pracht/adapter-vercel": "workspace:*",
-    "@pracht/core": "workspace:*"
+    "@pracht/core": "workspace:*",
+    "@preact/preset-vite": "^2.10.5"
   },
   "peerDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",

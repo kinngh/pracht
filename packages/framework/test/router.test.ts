@@ -114,4 +114,17 @@ describe("matchAppRoute", () => {
     expect(match?.route.file).toBe("./routes/docs.tsx");
     expect(match?.params).toEqual({ "*": "guides/intro" });
   });
+
+  it("returns null for malformed percent-encoded dynamic params", () => {
+    const match = matchAppRoute(app, "/blog/%E0");
+
+    expect(match).toBeUndefined();
+  });
+
+  it("decodes valid percent-encoded dynamic params", () => {
+    const match = matchAppRoute(app, "/blog/hello%20world");
+
+    expect(match?.route.file).toBe("./routes/post.tsx");
+    expect(match?.params).toEqual({ slug: "hello world" });
+  });
 });

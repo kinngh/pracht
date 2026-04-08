@@ -59,7 +59,7 @@ For pages router projects, you can **skip manual manifest wiring entirely** (Pha
 
 ## Concept Mapping
 
-| Next.js                         | Pracht                                               | Notes                                                                 |
+| Next.js                         | Pracht                                              | Notes                                                                 |
 | ------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------- |
 | `pages/` directory              | `pagesDir` plugin option                            | Auto-discovers routes from file system                                |
 | `app/page.tsx`                  | `src/routes/*.tsx` + `route()` in manifest          | File is a module; wiring is explicit                                  |
@@ -73,16 +73,16 @@ For pages router projects, you can **skip manual manifest wiring entirely** (Pha
 | `generateMetadata`              | `head()` export                                     | Returns `{ title, meta }`                                             |
 | Server Components               | `loader()` export                                   | Data fetching moves to loader; component is always a Preact component |
 | `"use server"` actions          | `action()` export                                   | Returns data/redirect/revalidation hints                              |
-| `useRouter()` (next/navigation) | `useNavigate()` from pracht                          | Client-side navigation                                                |
+| `useRouter()` (next/navigation) | `useNavigate()` from pracht                         | Client-side navigation                                                |
 | `useSearchParams()`             | `useRouteData()` or parse from loader args          | Loaders receive `url` with searchParams                               |
 | `useParams()`                   | `useRouteData()` or `params` in loader              | Params flow through loader data                                       |
-| `next/link` `<Link>`            | Plain `<a>` tags                                    | Pracht client router intercepts `<a>` clicks automatically             |
+| `next/link` `<Link>`            | Plain `<a>` tags                                    | Pracht client router intercepts `<a>` clicks automatically            |
 | `next/image`                    | Standard `<img>`                                    | Use `vite-imagetools` plugin if optimization needed                   |
 | `next/head` or Metadata API     | `head()` export on route/shell                      | Per-route and per-shell head merging                                  |
 | `className`                     | `class`                                             | Preact uses `class` attribute                                         |
 | `React.useState` etc.           | `import { useState } from "preact/hooks"`           | Preact hooks API is compatible                                        |
 | `React.useEffect`               | `import { useEffect } from "preact/hooks"`          | Same API                                                              |
-| `import React from "react"`     | Remove — no import needed                           | Pracht's Vite plugin handles JSX automatically                         |
+| `import React from "react"`     | Remove — no import needed                           | Pracht's Vite plugin handles JSX automatically                        |
 
 ## Migration Procedure
 
@@ -431,15 +431,15 @@ export async function loader({ request }: LoaderArgs) {
 
 ## Dependency Mapping
 
-| Next.js package | Pracht equivalent                                     |
-| --------------- | ---------------------------------------------------- |
+| Next.js package | Pracht equivalent                                       |
+| --------------- | ------------------------------------------------------- |
 | `next`          | `pracht`, `@pracht/vite-plugin`, `@pracht/adapter-node` |
-| `react`         | `preact`                                             |
-| `react-dom`     | `preact`                                             |
-| `@next/font`    | CSS `@font-face` or `fontsource` packages            |
-| `@next/mdx`     | `@mdx-js/rollup` (Vite plugin)                       |
-| `next-auth`     | Direct integration in middleware/loaders             |
-| `next/og`       | `@vercel/og` or custom solution                      |
+| `react`         | `preact`                                                |
+| `react-dom`     | `preact`                                                |
+| `@next/font`    | CSS `@font-face` or `fontsource` packages               |
+| `@next/mdx`     | `@mdx-js/rollup` (Vite plugin)                          |
+| `next-auth`     | Direct integration in middleware/loaders                |
+| `next/og`       | `@vercel/og` or custom solution                         |
 
 ## React Library Compatibility
 

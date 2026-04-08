@@ -66,7 +66,7 @@ The adapter factory calls the entry module generator internally to create a virt
 
 | Option          | Type                 | Description                         |
 | --------------- | -------------------- | ----------------------------------- |
-| `app`           | `PrachtApp`           | The resolved app from `defineApp()` |
+| `app`           | `PrachtApp`          | The resolved app from `defineApp()` |
 | `registry`      | `ModuleRegistry`     | Lazy module importers               |
 | `staticDir`     | `string`             | Path to `dist/client/`              |
 | `viteManifest`  | `ViteManifest`       | Client asset manifest for injection |
@@ -115,7 +115,7 @@ the executable production server entry.
 
 | Option          | Type                                        | Description                               |
 | --------------- | ------------------------------------------- | ----------------------------------------- |
-| `app`           | `PrachtApp`                                  | The resolved app                          |
+| `app`           | `PrachtApp`                                 | The resolved app                          |
 | `registry`      | `ModuleRegistry`                            | Module importers                          |
 | `createContext` | `(args: CloudflareContextArgs) => TContext` | Context with `env` and `executionContext` |
 
@@ -200,7 +200,7 @@ export default {
 
 | Option          | Type                                    | Description                                     |
 | --------------- | --------------------------------------- | ----------------------------------------------- |
-| `app`           | `PrachtApp`                              | The resolved app                                |
+| `app`           | `PrachtApp`                             | The resolved app                                |
 | `registry`      | `ModuleRegistry`                        | Module importers                                |
 | `createContext` | `(args: VercelContextArgs) => TContext` | Context with the incoming edge-function context |
 
@@ -255,7 +255,8 @@ import type { PrachtAdapter } from "@pracht/vite-plugin";
 export function myAdapter(options?: MyOptions): PrachtAdapter {
   return {
     id: "my-platform",
-    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
+    serverImports:
+      'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       // Return JavaScript source code that will be appended to the
       // generated virtual:pracht/server module.

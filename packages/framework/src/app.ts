@@ -193,7 +193,11 @@ function matchRouteSegments(
         return null;
       }
     } else {
-      params[currentSegment.name] = decodeURIComponent(targetSegment);
+      try {
+        params[currentSegment.name] = decodeURIComponent(targetSegment);
+      } catch {
+        return null;
+      }
     }
 
     routeIndex += 1;

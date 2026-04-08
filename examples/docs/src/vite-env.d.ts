@@ -9,7 +9,6 @@ declare module "*.css" {
   export default mod;
 }
 
-
 declare module "*.mdx" {
   const mod: Record<string, unknown>;
   export default mod;

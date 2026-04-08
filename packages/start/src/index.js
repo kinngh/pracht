@@ -5,13 +5,9 @@ import { basename, dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 async function fetchLatestVersion(packageName) {
-  const res = await fetch(
-    `https://registry.npmjs.org/${packageName}/latest`,
-  );
+  const res = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
   if (!res.ok) {
-    throw new Error(
-      `Failed to fetch version for ${packageName}: ${res.statusText}`,
-    );
+    throw new Error(`Failed to fetch version for ${packageName}: ${res.statusText}`);
   }
   const data = await res.json();
   return data.version;
@@ -270,10 +266,7 @@ function normalizeAdapter(value) {
 
 async function resolveVersions(packageNames) {
   const entries = await Promise.all(
-    packageNames.map(async (name) => [
-      name,
-      `^${await fetchLatestVersion(name)}`,
-    ]),
+    packageNames.map(async (name) => [name, `^${await fetchLatestVersion(name)}`]),
   );
   return Object.fromEntries(entries);
 }

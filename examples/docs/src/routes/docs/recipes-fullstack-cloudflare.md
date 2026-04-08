@@ -179,9 +179,7 @@ export async function POST({ request, context }: ApiRouteArgs) {
     return Response.json({ error: "Title and body are required" }, { status: 400 });
   }
 
-  const result = await context.env.DB.prepare(
-    "INSERT INTO posts (title, body) VALUES (?, ?)"
-  )
+  const result = await context.env.DB.prepare("INSERT INTO posts (title, body) VALUES (?, ?)")
     .bind(title, body)
     .run();
 
@@ -230,7 +228,7 @@ export async function loader({ context }: LoaderArgs) {
 
   // Expensive query
   const stats = await context.env.DB.prepare(
-    "SELECT COUNT(*) as total, MAX(created_at) as latest FROM posts"
+    "SELECT COUNT(*) as total, MAX(created_at) as latest FROM posts",
   ).first();
 
   // Cache for 5 minutes

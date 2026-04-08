@@ -1,14 +1,14 @@
 {
   "name": "create-pracht",
   "version": "0.1.0",
+  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/start",
+  "bugs": {
+    "url": "https://github.com/JoviDeCroock/pracht/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/JoviDeCroock/pracht",
     "directory": "packages/start"
-  },
-  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/start",
-  "bugs": {
-    "url": "https://github.com/JoviDeCroock/pracht/issues"
   },
   "bin": {
     "create-pracht": "./bin/create-pracht.js"

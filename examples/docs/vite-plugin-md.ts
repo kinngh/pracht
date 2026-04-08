@@ -297,7 +297,9 @@ export function markdown(): Plugin {
         .replace(/<\/table>/g, "</table></div>");
       const pageHtml = buildDocPage(frontmatter, contentHtml);
 
-      const headTitle = frontmatter.title ? `${frontmatter.title} \u2014 pracht docs` : "pracht docs";
+      const headTitle = frontmatter.title
+        ? `${frontmatter.title} \u2014 pracht docs`
+        : "pracht docs";
 
       const output = [
         `import { h } from "preact";`,

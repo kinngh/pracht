@@ -39,12 +39,12 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 
 ### When loaders run
 
-| Scenario          | Loader runs on                                             |
-| ----------------- | ---------------------------------------------------------- |
-| SSG build         | Build machine, once per path                               |
-| SSR request       | Server, every request                                      |
-| ISG initial       | Build machine, then server on revalidation                 |
-| SPA               | Server, during client navigation fetch                     |
+| Scenario          | Loader runs on                                              |
+| ----------------- | ----------------------------------------------------------- |
+| SSG build         | Build machine, once per path                                |
+| SSR request       | Server, every request                                       |
+| ISG initial       | Build machine, then server on revalidation                  |
+| SPA               | Server, during client navigation fetch                      |
 | Client navigation | Server (fetched as JSON via `x-pracht-route-state-request`) |
 
 Loaders **never** run in the browser. This keeps server secrets (DB connections,

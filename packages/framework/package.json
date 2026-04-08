@@ -1,22 +1,19 @@
 {
   "name": "@pracht/core",
   "version": "0.0.1",
+  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/framework",
+  "bugs": {
+    "url": "https://github.com/JoviDeCroock/pracht/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/JoviDeCroock/pracht",
     "directory": "packages/framework"
   },
-  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/framework",
-  "bugs": {
-    "url": "https://github.com/JoviDeCroock/pracht/issues"
-  },
   "files": [
     "dist"
   ],
   "type": "module",
-  "publishConfig": {
-    "provenance": true
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -26,6 +23,9 @@
       "types": "./dist/error-overlay.d.mts",
       "default": "./dist/error-overlay.mjs"
     }
+  },
+  "publishConfig": {
+    "provenance": true
   },
   "scripts": {
     "build": "tsdown",

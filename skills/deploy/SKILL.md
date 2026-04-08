@@ -28,8 +28,8 @@ Ask the user where they want to deploy if not already clear from their message.
 
 ## Supported Adapters
 
-| Adapter            | Package                     | Status |
-| ------------------ | --------------------------- | ------ |
+| Adapter            | Package                      | Status |
+| ------------------ | ---------------------------- | ------ |
 | Node.js            | `@pracht/adapter-node`       | Stable |
 | Cloudflare Workers | `@pracht/adapter-cloudflare` | Stable |
 | Vercel             | `@pracht/adapter-vercel`     | Stable |

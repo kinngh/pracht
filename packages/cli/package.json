@@ -1,14 +1,14 @@
 {
   "name": "@pracht/cli",
   "version": "0.0.1",
+  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/cli",
+  "bugs": {
+    "url": "https://github.com/JoviDeCroock/pracht/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/JoviDeCroock/pracht",
     "directory": "packages/cli"
-  },
-  "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/cli",
-  "bugs": {
-    "url": "https://github.com/JoviDeCroock/pracht/issues"
   },
   "bin": {
     "pracht": "./bin/pracht.js"

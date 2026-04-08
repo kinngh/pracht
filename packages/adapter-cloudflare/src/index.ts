@@ -179,7 +179,8 @@ function isFetcher(value: unknown): value is CloudflareFetcher {
 export function cloudflareAdapter(options: CloudflareServerEntryModuleOptions = {}): PrachtAdapter {
   return {
     id: "cloudflare",
-    serverImports: 'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
+    serverImports:
+      'import { handlePrachtRequest, resolveApp, resolveApiRoutes } from "@pracht/core";',
     createServerEntryModule() {
       return createCloudflareServerEntryModule(options);
     },
