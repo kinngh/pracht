@@ -5,6 +5,7 @@ import type { VNode } from "preact";
 
 import { matchAppRoute } from "./app.ts";
 import { getCachedRouteState, setupPrefetching } from "./prefetch.ts";
+import type { ModuleWarmFn } from "./prefetch.ts";
 import type { ResolvedPrachtApp, RouteMatch } from "./types.ts";
 import { fetchPrachtRouteState, PrachtRuntimeProvider } from "./runtime.ts";
 import type { SerializedRouteError, PrachtHydrationState } from "./runtime.ts";
@@ -39,24 +40,50 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
   const { app, routeModules, shellModules, root, findModuleKey } = options;
 
   // ------------------------------------------------------------------
+  // Module cache — avoids re-importing the same shell/route chunk
+  // ------------------------------------------------------------------
+
+  const moduleCache = new Map<string, Promise<any>>();
+
+  function loadModule(modules: ModuleMap, key: string): Promise<any> {
+    let cached = moduleCache.get(key);
+    if (!cached) {
+      cached = modules[key]();
+      moduleCache.set(key, cached);
+    }
+    return cached;
+  }
+
+  function startRouteImport(match: RouteMatch): Promise<any> | null {
+    const routeKey = findModuleKey(routeModules, match.route.file);
+    if (!routeKey) return null;
+    return loadModule(routeModules, routeKey);
+  }
+
+  function startShellImport(match: RouteMatch): Promise<any> | null {
+    if (!match.route.shellFile) return null;
+    const shellKey = findModuleKey(shellModules, match.route.shellFile);
+    if (!shellKey) return null;
+    return loadModule(shellModules, shellKey);
+  }
+
+  // ------------------------------------------------------------------
   // Build a Preact VNode tree for a matched route
   // ------------------------------------------------------------------
 
   async function buildRouteTree(
     match: RouteMatch,
     state: { data: unknown; error?: SerializedRouteError | null },
+    routeModPromise?: Promise<any> | null,
+    shellModPromise?: Promise<any> | null,
   ): Promise<VNode<any> | null> {
-    const routeKey = findModuleKey(routeModules, match.route.file);
-    if (!routeKey) return null;
-    const routeMod = await routeModules[routeKey]();
+    const routeMod = await (routeModPromise ?? startRouteImport(match));
+    if (!routeMod) return null;
 
     let Shell: any = null;
-    if (match.route.shellFile) {
-      const shellKey = findModuleKey(shellModules, match.route.shellFile);
-      if (shellKey) {
-        const shellMod = await shellModules[shellKey]();
-        Shell = shellMod.Shell;
-      }
+    const resolvedShell = await (shellModPromise ?? startShellImport(match));
+    if (resolvedShell) {
+      Shell = resolvedShell.Shell;
     }
 
     const Component = (state.error ? routeMod.ErrorBoundary : routeMod.Component) as any;
@@ -98,13 +125,18 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       return;
     }
 
-    // Check prefetch cache, then fetch route state from server
+    // Start route-state fetch and module imports in parallel
+    const statePromise = getCachedRouteState(to) ?? fetchPrachtRouteState(to);
+    const routeModPromise = startRouteImport(match);
+    const shellModPromise = startShellImport(match);
+
+    // Await route state (need it to handle redirects before rendering)
     let state: { data: unknown; error?: SerializedRouteError | null } = {
       data: undefined,
       error: null,
     };
     try {
-      const result = await (getCachedRouteState(to) ?? fetchPrachtRouteState(to));
+      const result = await statePromise;
       if (result.type === "redirect") {
         if (result.location) {
           await navigate(result.location, opts);
@@ -140,8 +172,8 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       }
     }
 
-    // Render the new route
-    const tree = await buildRouteTree(match, state);
+    // Render — module imports started above are already in-flight
+    const tree = await buildRouteTree(match, state, routeModPromise, shellModPromise);
     if (tree) {
       render(tree, root);
       window.scrollTo(0, 0);
@@ -264,7 +296,11 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
   window.__PRACHT_ROUTER_READY__ = true;
 
   // Start prefetching after hydration is complete
-  setupPrefetching(app);
+  const warmModules: ModuleWarmFn = (match) => {
+    startRouteImport(match);
+    startShellImport(match);
+  };
+  setupPrefetching(app, warmModules);
 }
 
 // ---------------------------------------------------------------------------

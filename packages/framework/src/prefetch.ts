@@ -1,7 +1,9 @@
 import { matchAppRoute } from "./app.ts";
 import { fetchPrachtRouteState } from "./runtime.ts";
 import type { RouteStateResult } from "./runtime.ts";
-import type { ResolvedPrachtApp, PrefetchStrategy } from "./types.ts";
+import type { ResolvedPrachtApp, PrefetchStrategy, RouteMatch } from "./types.ts";
+
+export type ModuleWarmFn = (match: RouteMatch) => void;
 
 const CACHE_TTL_MS = 30_000;
 
@@ -31,7 +33,7 @@ export function prefetchRouteState(url: string): Promise<RouteStateResult> {
   return promise;
 }
 
-export function setupPrefetching(app: ResolvedPrachtApp): void {
+export function setupPrefetching(app: ResolvedPrachtApp, warmModules?: ModuleWarmFn): void {
   let hoverTimer: ReturnType<typeof setTimeout> | null = null;
 
   function getInternalHref(anchor: HTMLAnchorElement): string | null {
@@ -75,6 +77,10 @@ export function setupPrefetching(app: ResolvedPrachtApp): void {
       if (hoverTimer) clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
         prefetchRouteState(href);
+        if (warmModules) {
+          const m = matchAppRoute(app, href);
+          if (m) warmModules(m);
+        }
       }, 50);
     },
     true,
@@ -106,6 +112,10 @@ export function setupPrefetching(app: ResolvedPrachtApp): void {
       if (strategy !== "hover" && strategy !== "intent") return;
 
       prefetchRouteState(href);
+      if (warmModules) {
+        const m = matchAppRoute(app, href);
+        if (m) warmModules(m);
+      }
     },
     true,
   );
@@ -121,6 +131,10 @@ export function setupPrefetching(app: ResolvedPrachtApp): void {
         const href = getInternalHref(anchor);
         if (!href) continue;
         prefetchRouteState(href);
+        if (warmModules) {
+          const m = matchAppRoute(app, href);
+          if (m) warmModules(m);
+        }
         observer.unobserve(anchor);
       }
     },
