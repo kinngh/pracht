@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { build as viteBuild } from "vite";
@@ -6,9 +14,11 @@ import { build as viteBuild } from "vite";
 import { writeVercelBuildOutput } from "../build-shared.js";
 
 export async function buildCommand() {
+  const root = process.cwd();
+
   console.log("\n  Building client...\n");
   await viteBuild({
-    root: process.cwd(),
+    root,
     build: {
       outDir: "dist",
       manifest: true,
@@ -20,16 +30,29 @@ export async function buildCommand() {
 
   console.log("\n  Building server...\n");
   await viteBuild({
-    root: process.cwd(),
+    root,
     build: {
       outDir: "dist/server",
       ssr: "virtual:pracht/server",
     },
   });
 
-  const root = process.cwd();
   const serverEntry = resolve(root, "dist/server/server.js");
-  const clientDir = resolve(root, "dist/client");
+  let clientDir;
+  if (existsSync(resolve(root, "dist/client/.vite/manifest.json"))) {
+    clientDir = resolve(root, "dist/client");
+  } else {
+    clientDir = resolve(root, "dist/client");
+    const distRoot = resolve(root, "dist");
+    mkdirSync(clientDir, { recursive: true });
+    for (const entry of readdirSync(distRoot)) {
+      if (entry === "server" || entry === "client") continue;
+      const sourcePath = join(distRoot, entry);
+      const destinationPath = join(clientDir, entry);
+      cpSync(sourcePath, destinationPath, { recursive: true });
+      rmSync(sourcePath, { force: true, recursive: true });
+    }
+  }
 
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
