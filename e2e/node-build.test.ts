@@ -78,6 +78,18 @@ test("pracht build emits a deployable Node server entry", async () => {
         refreshedAt: "Build time",
       },
     });
+
+    // Hashed assets should have immutable cache headers
+    const homeHtml = await (await fetch(`http://127.0.0.1:${port}/`)).text();
+    const assetMatch = homeHtml.match(/"(\/assets\/[^"]+)"/);
+    expect(assetMatch).toBeTruthy();
+
+    const assetResponse = await fetch(`http://127.0.0.1:${port}${assetMatch![1]}`);
+    expect(assetResponse.status).toBe(200);
+    expect(assetResponse.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+
+    // HTML responses should have conservative cache headers
+    expect(homeResponse.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
   } finally {
     server.kill("SIGTERM");
     await waitForExit(server);

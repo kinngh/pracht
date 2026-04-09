@@ -80,7 +80,9 @@ The adapter factory calls the entry module generator internally to create a virt
 ### Features
 
 - **Static file serving**: reads from `dist/client/` with proper content-type
-  headers and cache-control for hashed assets.
+  headers. Hashed assets under `/assets/` get `Cache-Control: public,
+  max-age=31536000, immutable`; HTML and other files get `public, max-age=0,
+  must-revalidate`. Clean URLs (e.g. `/about`) resolve to `about/index.html`.
 - **ISG revalidation**: checks `pracht-isg-manifest.json` for time revalidation
   metadata. Compares file mtime against revalidation window. Regenerates stale
   pages and writes updated HTML to disk. Route-state requests bypass the cached
