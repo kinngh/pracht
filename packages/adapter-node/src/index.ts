@@ -14,6 +14,8 @@ import {
   type PrachtApp,
 } from "@pracht/core";
 
+const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
+
 export interface NodeAdapterContextArgs {
   request: Request;
   req: IncomingMessage;
@@ -57,9 +59,15 @@ export function createNodeRequestHandler<TContext = unknown>(
       throw err;
     }
     const url = new URL(request.url);
+    const isRouteStateRequest = request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
 
     // --- ISG stale-while-revalidate for GET requests ---
-    if (staticDir && request.method === "GET" && url.pathname in isgManifest) {
+    if (
+      staticDir &&
+      request.method === "GET" &&
+      !isRouteStateRequest &&
+      url.pathname in isgManifest
+    ) {
       const entry = isgManifest[url.pathname];
       const htmlPath =
         url.pathname === "/"
@@ -78,6 +86,7 @@ export function createNodeRequestHandler<TContext = unknown>(
           new Headers({
             "content-type": "text/html; charset=utf-8",
             "x-pracht-isg": isStale ? "stale" : "fresh",
+            vary: ROUTE_STATE_REQUEST_HEADER,
           }),
         );
         headers.forEach((value, key) => {
@@ -115,8 +124,10 @@ export function createNodeRequestHandler<TContext = unknown>(
     if (
       staticDir &&
       request.method === "GET" &&
+      !isRouteStateRequest &&
       url.pathname in isgManifest &&
-      response.status === 200
+      response.status === 200 &&
+      response.headers.get("content-type")?.includes("text/html")
     ) {
       const html = await response.clone().text();
       const htmlPath =

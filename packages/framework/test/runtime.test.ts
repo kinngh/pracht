@@ -163,6 +163,60 @@ describe("handlePrachtRequest with separate data modules", () => {
   });
 });
 
+describe("handlePrachtRequest cache variance", () => {
+  it("adds a route-state vary header to HTML responses", async () => {
+    const app = defineApp({
+      routes: [route("/pricing", "./routes/pricing.tsx", { render: "ssr" })],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/pricing.tsx": async () => ({
+            Component: ({ data }) => h("main", null, (data as { plan: string }).plan),
+            loader: async () => ({ plan: "MVP" }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/pricing"),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("vary")).toContain("x-pracht-route-state-request");
+    expect(response.headers.get("cache-control")).toBeNull();
+  });
+
+  it("defaults route-state responses to no-store and varies on the route-state header", async () => {
+    const app = defineApp({
+      routes: [route("/pricing", "./routes/pricing.tsx", { render: "ssr" })],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/pricing.tsx": async () => ({
+            Component: ({ data }) => h("main", null, (data as { plan: string }).plan),
+            loader: async () => ({ plan: "MVP" }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/pricing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("vary")).toContain("x-pracht-route-state-request");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toEqual({ data: { plan: "MVP" } });
+  });
+});
+
 describe("useParams", () => {
   it("provides route params to nested components during SSR", async () => {
     const app = defineApp({
