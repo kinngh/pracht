@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { DEFAULT_SECURITY_HEADERS, VERSION } from "./constants.js";
 
+const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
+
 export function setDefaultSecurityHeaders(res, headers = {}) {
   for (const [key, value] of Object.entries({
     ...DEFAULT_SECURITY_HEADERS,
@@ -38,7 +40,13 @@ export function writeVercelBuildOutput({ functionName, regions, root, staticRout
 
 function createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }) {
   const target = `/${functionName || "render"}`;
-  const routes = [];
+  const routes = [
+    {
+      dest: target,
+      has: [{ type: "header", key: ROUTE_STATE_REQUEST_HEADER, value: "1" }],
+      src: "/(.*)",
+    },
+  ];
 
   for (const route of sortStaticRoutes(staticRoutes)) {
     routes.push({
