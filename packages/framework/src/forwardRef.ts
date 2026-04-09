@@ -16,7 +16,7 @@ let oldDiffHook = (options as any).__b;
  * of the wrapped component instead of one of the wrapper itself.
  */
 export function forwardRef<P = {}>(
-  fn: (props: P, ref: any) => any,
+  fn: ((props: P, ref: any) => any) & { displayName?: string },
 ): FunctionComponent<P & { ref?: any }> {
   function Forwarded(props: any) {
     const clone = { ...props };
