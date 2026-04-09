@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { dirname, join } from "node:path";
+import { dirname, extname, join } from "node:path";
 
 import type { PrachtAdapter } from "@pracht/vite-plugin";
 import {
@@ -15,6 +15,41 @@ import {
 } from "@pracht/core";
 
 const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
+
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript",
+  ".css": "text/css",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".otf": "font/otf",
+  ".txt": "text/plain",
+  ".xml": "application/xml",
+  ".webmanifest": "application/manifest+json",
+};
+
+/**
+ * Hashed assets (e.g. `assets/chunk-AbCd1234.js`) are safe to cache
+ * indefinitely.  Everything else gets a conservative policy.
+ */
+const HASHED_ASSET_RE = /\/assets\//;
+
+function getCacheControl(urlPath: string): string {
+  if (HASHED_ASSET_RE.test(urlPath)) {
+    return "public, max-age=31536000, immutable";
+  }
+
+  return "public, max-age=0, must-revalidate";
+}
 
 export interface NodeAdapterContextArgs {
   request: Request;
@@ -61,6 +96,27 @@ export function createNodeRequestHandler<TContext = unknown>(
     const url = new URL(request.url);
     const isRouteStateRequest = request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
 
+    // --- Serve static assets from the client build directory ---
+    // Skip index.html resolution for ISG routes (handled below with staleness logic).
+    if (staticDir && request.method === "GET") {
+      const staticResult = resolveStaticFile(staticDir, url.pathname, isgManifest);
+      if (staticResult) {
+        const body = await readFile(staticResult.filePath);
+        res.statusCode = 200;
+        const headers = applyDefaultSecurityHeaders(
+          new Headers({
+            "content-type": staticResult.contentType,
+            "cache-control": staticResult.cacheControl,
+          }),
+        );
+        headers.forEach((value, key) => {
+          res.setHeader(key, value);
+        });
+        res.end(body);
+        return;
+      }
+    }
+
     // --- ISG stale-while-revalidate for GET requests ---
     if (
       staticDir &&
@@ -85,6 +141,7 @@ export function createNodeRequestHandler<TContext = unknown>(
         const headers = applyDefaultSecurityHeaders(
           new Headers({
             "content-type": "text/html; charset=utf-8",
+            "cache-control": "public, max-age=0, must-revalidate",
             "x-pracht-isg": isStale ? "stale" : "fresh",
             vary: ROUTE_STATE_REQUEST_HEADER,
           }),
@@ -296,6 +353,71 @@ function getFirstHeaderValue(value: string | string[] | undefined): string | und
 }
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
+
+interface StaticFileResult {
+  filePath: string;
+  contentType: string;
+  cacheControl: string;
+}
+
+/**
+ * Resolve a URL pathname to a static file inside `staticDir`.
+ *
+ * Tries the exact path first (e.g. `/assets/chunk-Ab12.js`), then falls back
+ * to `{pathname}/index.html` for clean-URL pages (e.g. `/about` →
+ * `about/index.html`).  Returns `null` when no matching file is found.
+ */
+function resolveStaticFile(
+  staticDir: string,
+  pathname: string,
+  isgManifest: Record<string, ISGManifestEntry> = {},
+): StaticFileResult | null {
+  // Try exact file path
+  const exactPath = join(staticDir, pathname);
+  if (!exactPath.startsWith(staticDir + "/") && exactPath !== staticDir) {
+    return null; // Directory traversal
+  }
+
+  try {
+    if (statSync(exactPath).isFile()) {
+      const ext = extname(exactPath);
+      return {
+        filePath: exactPath,
+        contentType: MIME_TYPES[ext] || "application/octet-stream",
+        cacheControl: getCacheControl(pathname),
+      };
+    }
+  } catch {
+    // Not found, try index.html fallback
+  }
+
+  // ISG routes need staleness checks — let the ISG handler below deal with them.
+  if (pathname in isgManifest) {
+    return null;
+  }
+
+  // Try {pathname}/index.html for clean URLs (SSG pages)
+  const indexPath =
+    pathname === "/" ? join(staticDir, "index.html") : join(staticDir, pathname, "index.html");
+
+  if (!indexPath.startsWith(staticDir + "/")) {
+    return null;
+  }
+
+  try {
+    if (statSync(indexPath).isFile()) {
+      return {
+        filePath: indexPath,
+        contentType: "text/html; charset=utf-8",
+        cacheControl: "public, max-age=0, must-revalidate",
+      };
+    }
+  } catch {
+    // Not found
+  }
+
+  return null;
+}
 
 /**
  * Create a pracht adapter for Node.js.

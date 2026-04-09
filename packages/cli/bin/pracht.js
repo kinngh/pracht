@@ -9,6 +9,7 @@ import {
   writeFileSync,
   createReadStream,
   readFileSync,
+  readdirSync,
   rmSync,
   cpSync,
 } from "node:fs";
@@ -66,12 +67,17 @@ async function dev() {
 }
 
 async function build() {
+  const root = process.cwd();
+
   // 1. Client build
-  // Use outDir "dist" — Vite 8's environment API (used by @cloudflare/vite-plugin)
-  // outputs the client environment to <outDir>/client/, so "dist" → "dist/client/".
+  // outDir is "dist" for all adapters. Cloudflare's environment API (via
+  // @cloudflare/vite-plugin) writes the client environment to dist/client/
+  // automatically.  For plain Vite builds (Node, Vercel) assets land directly
+  // in dist/.  After the build we detect where the manifest ended up and set
+  // clientDir accordingly.
   console.log("\n  Building client...\n");
   await viteBuild({
-    root: process.cwd(),
+    root,
     build: {
       outDir: "dist",
       manifest: true,
@@ -84,7 +90,7 @@ async function build() {
   // 2. SSR build
   console.log("\n  Building server...\n");
   await viteBuild({
-    root: process.cwd(),
+    root,
     build: {
       ssr: "virtual:pracht/server",
       outDir: "dist/server",
@@ -92,9 +98,28 @@ async function build() {
   });
 
   // 3. SSG prerendering
-  const root = process.cwd();
   const serverEntry = resolve(root, "dist/server/server.js");
-  const clientDir = resolve(root, "dist/client");
+
+  // Detect where the client build landed — Cloudflare env API writes to
+  // dist/client/, plain Vite writes directly to dist/.  Normalize to
+  // dist/client/ so the server adapter can always resolve staticDir as
+  // "../client" relative to dist/server/.
+  let clientDir;
+  if (existsSync(resolve(root, "dist/client/.vite/manifest.json"))) {
+    clientDir = resolve(root, "dist/client");
+  } else {
+    clientDir = resolve(root, "dist/client");
+    // Move assets from dist/ into dist/client/
+    const distRoot = resolve(root, "dist");
+    mkdirSync(clientDir, { recursive: true });
+    for (const entry of readdirSync(distRoot)) {
+      if (entry === "server" || entry === "client") continue;
+      const src = join(distRoot, entry);
+      const dest = join(clientDir, entry);
+      cpSync(src, dest, { recursive: true });
+      rmSync(src, { force: true, recursive: true });
+    }
+  }
 
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
@@ -226,10 +251,29 @@ async function preview() {
     ".json": "application/json",
     ".png": "image/png",
     ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
     ".svg": "image/svg+xml",
+    ".ico": "image/x-icon",
     ".woff": "font/woff",
     ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+    ".txt": "text/plain",
+    ".xml": "application/xml",
+    ".webmanifest": "application/manifest+json",
   };
+
+  const HASHED_ASSET_RE = /\/assets\//;
+
+  function getCacheControl(urlPath) {
+    if (HASHED_ASSET_RE.test(urlPath)) {
+      return "public, max-age=31536000, immutable";
+    }
+
+    return "public, max-age=0, must-revalidate";
+  }
 
   const port = parseInt(process.argv[3] || "3000", 10);
 
@@ -253,6 +297,7 @@ async function preview() {
 
         setDefaultSecurityHeaders(res, {
           "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=0, must-revalidate",
           "x-pracht-isg": isStale ? "stale" : "fresh",
           vary: ROUTE_STATE_REQUEST_HEADER,
         });
@@ -294,8 +339,10 @@ async function preview() {
     }
     if (existsSync(filePath) && statSync(filePath).isFile()) {
       const ext = extname(filePath);
+      const cacheControl = getCacheControl(url);
       const headers = {
         "content-type": MIME_TYPES[ext] || "application/octet-stream",
+        "cache-control": cacheControl,
       };
       if (ext === ".html") {
         setDefaultSecurityHeaders(res, headers);
