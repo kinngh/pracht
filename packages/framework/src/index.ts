@@ -9,6 +9,7 @@ export {
   route,
   timeRevalidate,
 } from "./app.ts";
+export { forwardRef } from "./forwardRef.ts";
 export { Suspense, lazy } from "preact-suspense";
 export {
   applyDefaultSecurityHeaders,
