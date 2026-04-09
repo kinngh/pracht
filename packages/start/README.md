@@ -43,7 +43,10 @@ Cloudflare scaffolds also include:
 
 - `dev` -> `pracht dev`
 - `build` -> `pracht build`
-- `preview` -> `pracht preview`
+
+Node starters also include:
+
+- `start` -> `node dist/server/server.js`
 
 Cloudflare starters also include:
 
@@ -52,9 +55,3 @@ Cloudflare starters also include:
 Vercel starters also include:
 
 - `deploy` -> `pracht build && vercel deploy --prebuilt`
-
-Node starters can be run in production with:
-
-```bash
-node dist/server/server.js
-```

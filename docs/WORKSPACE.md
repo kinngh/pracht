@@ -12,7 +12,7 @@ described in `VISION_MVP.md`.
 | `packages/adapter-node`       | `@pracht/adapter-node`       | Node `IncomingMessage`/`ServerResponse` bridge, ISG stale-while-revalidate                                   |
 | `packages/adapter-cloudflare` | `@pracht/adapter-cloudflare` | Cloudflare Workers fetch handler and generated worker entry source                                           |
 | `packages/adapter-vercel`     | `@pracht/adapter-vercel`     | Vercel Edge handler and Build Output API entry source                                                        |
-| `packages/cli`                | `@pracht/cli`                | `pracht dev`, `build` (with ISG manifest and adapter build output), and `preview` (with ISG revalidation)    |
+| `packages/cli`                | `@pracht/cli`                | `pracht dev`, `build`, the `generate` subcommands, and `doctor`                                              |
 | `examples/cloudflare`         | `@pracht/example-cloudflare` | Cloudflare-targeted example app with SSG, ISG, SSR, SPA routes, auth middleware, and API routes              |
 | `examples/docs`               | `@pracht/example-docs`       | Documentation website built with pracht + Cloudflare adapter; all routes SSG-prerendered; dark design system |
 
@@ -37,10 +37,10 @@ described in `VISION_MVP.md`.
   returned when the `x-pracht-route-state-request` header is present.
 - **ISG revalidation** — At build time, ISG routes are prerendered alongside SSG
   routes and an `isg-manifest.json` is generated mapping paths to revalidation
-  config. At runtime, the Node adapter and CLI preview server implement
-  stale-while-revalidate: cached HTML is served immediately, and if the file's
-  mtime exceeds the `revalidate.seconds` threshold, background regeneration
-  refreshes the cached page.
+  config. At runtime, the Node adapter implements stale-while-revalidate:
+  cached HTML is served immediately, and if the file's mtime exceeds the
+  `revalidate.seconds` threshold, background regeneration refreshes the cached
+  page.
 - **Middleware** — Named middleware from the manifest runs before loaders and can
   redirect, return a Response, or augment the context.
 - **Actions** — POST/PUT/PATCH/DELETE requests are routed to the route module's
@@ -59,8 +59,8 @@ described in `VISION_MVP.md`.
   client + server builds (with Vite manifest generation, SSG/ISG prerendering,
   ISG manifest output, executable Node server output in `dist/server/server.js`,
   and Vercel `.vercel/output/` generation when the app targets those adapters),
-  and `pracht preview` serves the production build with static-file fallback and
-  ISG revalidation.
+  `pracht generate route|shell|middleware|api` scaffolds framework-native
+  files, and `pracht doctor` validates app wiring.
 - **Package builds** — `tsdown` compiles `pracht`, `@pracht/vite-plugin`,
   `@pracht/adapter-node`, `@pracht/adapter-cloudflare`, and
   `@pracht/adapter-vercel` from TypeScript to ESM (`dist/index.mjs` +
@@ -86,11 +86,12 @@ described in `VISION_MVP.md`.
   integration required — plugins participate in the full Vite pipeline for both
   client and SSR builds.
 
-- **Claude Code skills** — Three repo-local slash commands in `.claude/commands/`:
-  - `/scaffold` — generate routes, shells, middleware, API routes with correct
-    types and manifest wiring.
-  - `/debug` — framework-aware debugging (route matching, loader errors,
-    hydration mismatches, middleware, API routes, build issues).
+- **Claude Code skills** — Three repo-local skills in `skills/`:
+  - `/scaffold` — wraps `pracht generate route|shell|middleware|api` and only
+    falls back to manual wiring when the CLI flags are insufficient.
+  - `/debug` — framework-aware debugging plus `pracht doctor` for fast wiring
+    validation (route matching, loader errors, hydration mismatches,
+    middleware, API routes, build issues).
   - `/deploy` — guided adapter setup and deployment for Node.js, Cloudflare,
     and Vercel (build, configure, deploy checklist).
 

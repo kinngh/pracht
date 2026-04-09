@@ -1,0 +1,572 @@
+import { readFileSync, writeFileSync } from "node:fs";
+
+import {
+  ensureTrailingNewline,
+  parseApiMethods,
+  parseCommaList,
+  parseFlags,
+  printGenerateHelp,
+  quote,
+  requireEnumOption,
+  requireOptionalString,
+  requirePositiveIntegerOption,
+  requireStringOption,
+} from "../cli.js";
+import {
+  extractRegistryEntries,
+  insertArrayItem,
+  toManifestModulePath,
+  upsertObjectEntry,
+  ensureCoreNamedImport,
+} from "../manifest.js";
+import {
+  assertFileExists,
+  displayPath,
+  readProjectConfig,
+  resolveApiModulePath,
+  resolvePagesRouteModulePath,
+  resolveProjectPath,
+  resolveRouteModulePath,
+  resolveScopedFile,
+  writeGeneratedFile,
+} from "../project.js";
+
+export async function generateCommand(args) {
+  const [kind, ...rest] = args;
+  if (!kind || kind === "--help" || kind === "-h") {
+    printGenerateHelp();
+    return;
+  }
+
+  const options = parseFlags(rest);
+  const project = readProjectConfig(process.cwd());
+  const result = runGenerate(kind, options, project);
+
+  if (options.json) {
+    console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+    return;
+  }
+
+  console.log(`Created ${result.kind}:`);
+  for (const file of result.created) {
+    console.log(`  ${file}`);
+  }
+  for (const file of result.updated) {
+    console.log(`  updated ${file}`);
+  }
+}
+
+function runGenerate(kind, options, project) {
+  if (kind === "route") {
+    return generateRoute(options, project);
+  }
+  if (kind === "shell") {
+    return generateShell(options, project);
+  }
+  if (kind === "middleware") {
+    return generateMiddleware(options, project);
+  }
+  if (kind === "api") {
+    return generateApi(options, project);
+  }
+
+  throw new Error(`Unknown generate kind: ${kind}`);
+}
+
+function generateRoute(options, project) {
+  const routePath = normalizeRoutePathString(requireStringOption(options, "path"));
+  const render = requireEnumOption(options, "render", ["spa", "ssr", "ssg", "isg"], "ssr");
+  const includeLoader = Boolean(options.loader);
+  const includeErrorBoundary = Boolean(options["error-boundary"]);
+  const middleware = parseCommaList(options.middleware);
+  const includeStaticPaths =
+    Boolean(options["static-paths"]) ||
+    (hasDynamicSegments(routePath) && (render === "ssg" || render === "isg"));
+  const title = requireOptionalString(options, "title") ?? titleFromPath(routePath);
+
+  if (project.mode === "pages") {
+    if (options.shell) {
+      throw new Error("`pracht generate route --shell` is only available for manifest apps.");
+    }
+    if (middleware.length > 0) {
+      throw new Error("`pracht generate route --middleware` is only available for manifest apps.");
+    }
+    return generatePagesRoute({
+      includeErrorBoundary,
+      includeLoader,
+      includeStaticPaths,
+      project,
+      render,
+      routePath,
+      title,
+    });
+  }
+
+  const manifestPath = resolveProjectPath(project.root, project.appFile);
+  assertFileExists(manifestPath, `App manifest not found at ${project.appFile}.`);
+
+  const manifestSource = readFileSync(manifestPath, "utf-8");
+  const registeredShells = new Set(
+    extractRegistryEntries(manifestSource, "shells").map((entry) => entry.name),
+  );
+  const registeredMiddleware = new Set(
+    extractRegistryEntries(manifestSource, "middleware").map((entry) => entry.name),
+  );
+
+  const shellName = requireOptionalString(options, "shell");
+  if (shellName && !registeredShells.has(shellName)) {
+    throw new Error(`Shell "${shellName}" is not registered in ${project.appFile}.`);
+  }
+
+  for (const name of middleware) {
+    if (!registeredMiddleware.has(name)) {
+      throw new Error(`Middleware "${name}" is not registered in ${project.appFile}.`);
+    }
+  }
+
+  const routeFile = resolveRouteModulePath(project, routePath, ".tsx");
+  writeGeneratedFile(
+    routeFile.absolutePath,
+    buildManifestRouteModuleSource({
+      includeErrorBoundary,
+      includeLoader,
+      includeStaticPaths,
+      routePath,
+      title,
+    }),
+  );
+
+  let nextManifestSource = ensureCoreNamedImport(manifestSource, "route");
+  if (render === "isg") {
+    nextManifestSource = ensureCoreNamedImport(nextManifestSource, "timeRevalidate");
+  }
+
+  const routeModulePath = toManifestModulePath(manifestPath, routeFile.absolutePath);
+  const routeId = routeIdFromPath(routePath);
+  const meta = [`id: ${quote(routeId)}`, `render: ${quote(render)}`];
+
+  if (shellName) {
+    meta.push(`shell: ${quote(shellName)}`);
+  }
+  if (middleware.length > 0) {
+    meta.push(`middleware: [${middleware.map((item) => quote(item)).join(", ")}]`);
+  }
+  if (render === "isg") {
+    const seconds = requirePositiveIntegerOption(options, "revalidate", 3600);
+    meta.push(`revalidate: timeRevalidate(${seconds})`);
+  }
+
+  nextManifestSource = insertArrayItem(
+    nextManifestSource,
+    "routes",
+    [
+      `route(${quote(routePath)}, ${quote(routeModulePath)}, {`,
+      ...meta.map((line) => `  ${line},`),
+      "})",
+    ].join("\n"),
+  );
+  writeFileSync(manifestPath, ensureTrailingNewline(nextManifestSource), "utf-8");
+
+  return {
+    created: [displayPath(project.root, routeFile.absolutePath)],
+    kind: "route",
+    updated: [displayPath(project.root, manifestPath)],
+  };
+}
+
+function generatePagesRoute({
+  includeErrorBoundary,
+  includeLoader,
+  includeStaticPaths,
+  project,
+  render,
+  routePath,
+  title,
+}) {
+  const routeFile = resolvePagesRouteModulePath(project, routePath, ".tsx");
+  writeGeneratedFile(
+    routeFile.absolutePath,
+    buildPagesRouteModuleSource({
+      includeErrorBoundary,
+      includeLoader,
+      includeStaticPaths,
+      render,
+      routePath,
+      title,
+    }),
+  );
+
+  return {
+    created: [displayPath(project.root, routeFile.absolutePath)],
+    kind: "route",
+    updated: [],
+  };
+}
+
+function generateShell(options, project) {
+  if (project.mode === "pages") {
+    throw new Error(
+      "Pages router apps use a single `_app` shell. `pracht generate shell` is only available for manifest apps.",
+    );
+  }
+
+  const name = requireStringOption(options, "name");
+  const manifestPath = resolveProjectPath(project.root, project.appFile);
+  assertFileExists(manifestPath, `App manifest not found at ${project.appFile}.`);
+
+  const shellFile = resolveScopedFile(project.root, project.shellsDir, `${name}.tsx`);
+  writeGeneratedFile(shellFile, buildShellModuleSource(name));
+
+  const manifestSource = readFileSync(manifestPath, "utf-8");
+  const updatedSource = upsertObjectEntry(
+    manifestSource,
+    "shells",
+    `${name}: ${quote(toManifestModulePath(manifestPath, shellFile))}`,
+  );
+  writeFileSync(manifestPath, ensureTrailingNewline(updatedSource), "utf-8");
+
+  return {
+    created: [displayPath(project.root, shellFile)],
+    kind: "shell",
+    updated: [displayPath(project.root, manifestPath)],
+  };
+}
+
+function generateMiddleware(options, project) {
+  if (project.mode === "pages") {
+    throw new Error(
+      "Pages router apps do not use manifest middleware registration. `pracht generate middleware` is only available for manifest apps.",
+    );
+  }
+
+  const name = requireStringOption(options, "name");
+  const manifestPath = resolveProjectPath(project.root, project.appFile);
+  assertFileExists(manifestPath, `App manifest not found at ${project.appFile}.`);
+
+  const middlewareFile = resolveScopedFile(project.root, project.middlewareDir, `${name}.ts`);
+  writeGeneratedFile(middlewareFile, buildMiddlewareModuleSource());
+
+  const manifestSource = readFileSync(manifestPath, "utf-8");
+  const updatedSource = upsertObjectEntry(
+    manifestSource,
+    "middleware",
+    `${name}: ${quote(toManifestModulePath(manifestPath, middlewareFile))}`,
+  );
+  writeFileSync(manifestPath, ensureTrailingNewline(updatedSource), "utf-8");
+
+  return {
+    created: [displayPath(project.root, middlewareFile)],
+    kind: "middleware",
+    updated: [displayPath(project.root, manifestPath)],
+  };
+}
+
+function generateApi(options, project) {
+  const endpointPath = normalizeApiPath(requireStringOption(options, "path"));
+  const methods = parseApiMethods(options.methods);
+  const apiFile = resolveApiModulePath(project, endpointPath);
+  writeGeneratedFile(apiFile.absolutePath, buildApiRouteSource({ endpointPath, methods }));
+
+  return {
+    created: [displayPath(project.root, apiFile.absolutePath)],
+    kind: "api",
+    updated: [],
+  };
+}
+
+function buildManifestRouteModuleSource({
+  includeErrorBoundary,
+  includeLoader,
+  includeStaticPaths,
+  routePath,
+  title,
+}) {
+  const params = dynamicParamNames(routePath);
+  const imports = [];
+  const sections = [];
+
+  if (includeLoader) {
+    imports.push("LoaderArgs", "RouteComponentProps");
+  }
+  if (includeErrorBoundary) {
+    imports.push("ErrorBoundaryProps");
+  }
+
+  if (imports.length > 0) {
+    sections.push(`import type { ${imports.join(", ")} } from "@pracht/core";`);
+    sections.push("");
+  }
+
+  if (includeLoader) {
+    sections.push(
+      "export async function loader(_args: LoaderArgs) {",
+      `  return { message: ${quote(`Welcome to ${title}.`)} };`,
+      "}",
+      "",
+    );
+  }
+
+  if (includeStaticPaths) {
+    sections.push(
+      "export function getStaticPaths() {",
+      `  return [${buildStaticPathsStub(params)}];`,
+      "}",
+      "",
+    );
+  }
+
+  sections.push("export function head() {", `  return { title: ${quote(title)} };`, "}", "");
+
+  if (includeLoader) {
+    sections.push(
+      "export function Component({ data }: RouteComponentProps<typeof loader>) {",
+      "  return (",
+      "    <section>",
+      `      <h1>${escapeJsxText(title)}</h1>`,
+      "      <p>{data.message}</p>",
+      "    </section>",
+      "  );",
+      "}",
+    );
+  } else {
+    sections.push(
+      "export function Component() {",
+      "  return (",
+      "    <section>",
+      `      <h1>${escapeJsxText(title)}</h1>`,
+      "    </section>",
+      "  );",
+      "}",
+    );
+  }
+
+  if (includeErrorBoundary) {
+    sections.push(
+      "",
+      "export function ErrorBoundary({ error }: ErrorBoundaryProps) {",
+      "  return <p>{error.message}</p>;",
+      "}",
+    );
+  }
+
+  return `${sections.join("\n")}\n`;
+}
+
+function buildPagesRouteModuleSource({
+  includeErrorBoundary,
+  includeLoader,
+  includeStaticPaths,
+  render,
+  routePath,
+  title,
+}) {
+  const params = dynamicParamNames(routePath);
+  const imports = [];
+  const sections = [];
+
+  if (includeLoader) {
+    imports.push("LoaderArgs", "RouteComponentProps");
+  }
+  if (includeErrorBoundary) {
+    imports.push("ErrorBoundaryProps");
+  }
+
+  if (imports.length > 0) {
+    sections.push(`import type { ${imports.join(", ")} } from "@pracht/core";`);
+    sections.push("");
+  }
+
+  sections.push(`export const RENDER_MODE = ${quote(render)};`, "");
+
+  if (includeLoader) {
+    sections.push(
+      "export async function loader(_args: LoaderArgs) {",
+      `  return { message: ${quote(`Welcome to ${title}.`)} };`,
+      "}",
+      "",
+    );
+  }
+
+  if (includeStaticPaths) {
+    sections.push(
+      "export function getStaticPaths() {",
+      `  return [${buildStaticPathsStub(params)}];`,
+      "}",
+      "",
+    );
+  }
+
+  if (includeLoader) {
+    sections.push(
+      "export function Component({ data }: RouteComponentProps<typeof loader>) {",
+      "  return (",
+      "    <section>",
+      `      <h1>${escapeJsxText(title)}</h1>`,
+      "      <p>{data.message}</p>",
+      "    </section>",
+      "  );",
+      "}",
+    );
+  } else {
+    sections.push(
+      "export function Component() {",
+      "  return (",
+      "    <section>",
+      `      <h1>${escapeJsxText(title)}</h1>`,
+      "    </section>",
+      "  );",
+      "}",
+    );
+  }
+
+  if (includeErrorBoundary) {
+    sections.push(
+      "",
+      "export function ErrorBoundary({ error }: ErrorBoundaryProps) {",
+      "  return <p>{error.message}</p>;",
+      "}",
+    );
+  }
+
+  return `${sections.join("\n")}\n`;
+}
+
+function buildShellModuleSource(name) {
+  const title = titleCase(name);
+  return [
+    'import type { ShellProps } from "@pracht/core";',
+    "",
+    "export function Shell({ children }: ShellProps) {",
+    "  return (",
+    `    <div class=${quote(`${name}-shell`)}>`,
+    "      <main>{children}</main>",
+    "    </div>",
+    "  );",
+    "}",
+    "",
+    "export function head() {",
+    `  return { title: ${quote(title)} };`,
+    "}",
+    "",
+  ].join("\n");
+}
+
+function buildMiddlewareModuleSource() {
+  return [
+    'import type { MiddlewareFn } from "@pracht/core";',
+    "",
+    "export const middleware: MiddlewareFn = async (_args) => {",
+    "  return;",
+    "};",
+    "",
+  ].join("\n");
+}
+
+function buildApiRouteSource({ endpointPath, methods }) {
+  const methodLines = methods.flatMap((method, index) => {
+    const lines = buildApiMethodSource(method, methods, endpointPath);
+    if (index === methods.length - 1) return lines;
+    return [...lines, ""];
+  });
+
+  return ['import type { BaseRouteArgs } from "@pracht/core";', "", ...methodLines, ""].join("\n");
+}
+
+function buildApiMethodSource(method, methods, endpointPath) {
+  if (method === "DELETE" || method === "HEAD") {
+    return [
+      `export function ${method}(_args: BaseRouteArgs) {`,
+      "  return new Response(null, { status: 204 });",
+      "}",
+    ];
+  }
+
+  if (method === "OPTIONS") {
+    return [
+      `export function ${method}(_args: BaseRouteArgs) {`,
+      "  return new Response(null, {",
+      `    headers: { allow: ${quote(methods.join(", "))} },`,
+      "    status: 204,",
+      "  });",
+      "}",
+    ];
+  }
+
+  if (method === "GET") {
+    return [
+      `export function ${method}(_args: BaseRouteArgs) {`,
+      `  return Response.json({ endpoint: ${quote(`/api${endpointPath}`)}, ok: true });`,
+      "}",
+    ];
+  }
+
+  const status = method === "POST" ? 201 : 200;
+  return [
+    `export async function ${method}({ request }: BaseRouteArgs) {`,
+    "  const body = await request.json();",
+    `  return Response.json({ body, ok: true }, { status: ${status} });`,
+    "}",
+  ];
+}
+
+function normalizeRoutePathString(value) {
+  if (!value || value === "/") return "/";
+  const normalized = `/${value}`.replace(/\/+/g, "/");
+  return normalized !== "/" && normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
+}
+
+function normalizeApiPath(value) {
+  const normalized = normalizeRoutePathString(value).replace(/^\/api(?=\/|$)/, "");
+  return normalized || "/";
+}
+
+function hasDynamicSegments(routePath) {
+  return routePath.split("/").some((segment) => segment.startsWith(":") || segment === "*");
+}
+
+function dynamicParamNames(routePath) {
+  return routePath
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => {
+      if (segment.startsWith(":")) return segment.slice(1);
+      if (segment === "*") return "slug";
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function routeIdFromPath(routePath) {
+  if (routePath === "/") return "index";
+  return routePath
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => segment.replace(/^:/, "").replace(/\*/g, "splat"))
+    .join("-");
+}
+
+function titleFromPath(routePath) {
+  if (routePath === "/") return "Home";
+  const lastSegment = routePath.split("/").filter(Boolean).at(-1) ?? "Page";
+  return titleCase(lastSegment.replace(/^:/, "").replace(/\*/g, "slug"));
+}
+
+function titleCase(value) {
+  return value
+    .split(/[-_/]/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function buildStaticPathsStub(params) {
+  if (params.length === 0) {
+    return "{}";
+  }
+
+  return `{ ${params.map((name) => `${name}: ${quote(`example-${name}`)}`).join(", ")} }`;
+}
+
+function escapeJsxText(value) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+}

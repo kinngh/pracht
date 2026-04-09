@@ -4,7 +4,7 @@ version: 1.0.0
 description: |
   Pracht deployment guide. Walks through adapter configuration, building, and
   deploying to Node.js, Cloudflare Workers, or Vercel. Handles wrangler config,
-  Docker, preview, and production checklist.
+  Docker and production checklist.
   Use when asked to "deploy", "set up deployment", "configure adapter",
   "deploy to cloudflare", "deploy to vercel", or "production build".
 allowed-tools:
@@ -68,12 +68,6 @@ node dist/server/server.js
 ```
 
 Port 3000 by default. For production: reverse proxy (nginx, Caddy), process manager (PM2, systemd), `NODE_ENV=production`.
-
-### Preview
-
-```bash
-pracht preview
-```
 
 ### Docker
 
@@ -164,14 +158,14 @@ Produces: `.vercel/output/config.json`, `.vercel/output/static/`, `.vercel/outpu
 2. **Environment variables**: Ensure secrets/config needed by loaders are available at runtime.
 3. **Static assets**: Verify `dist/client/` contains prerendered HTML for SSG/ISG routes.
 4. **ISG routes**: Confirm the ISG manifest exists if using incremental static generation.
-5. **API routes**: Test API endpoints work in the production build (`pracht preview`).
+5. **API routes**: Test API endpoints work in the production runtime. For Node.js, run `node dist/server/server.js`.
 6. **Middleware**: Verify auth/redirect middleware behaves correctly in production.
 
 ## Rules
 
 1. Read `vite.config.ts` and `package.json` before giving advice.
 2. Run `pracht build` to verify the build succeeds before deploying.
-3. Use `pracht preview` to smoke-test before pushing to production.
+3. Smoke-test the production runtime before pushing to production. For Node.js, run `node dist/server/server.js`.
 4. If the user needs an adapter that isn't installed, help them add it (`pnpm add @pracht/adapter-*`).
 5. Don't push to production without the user's explicit confirmation.
 

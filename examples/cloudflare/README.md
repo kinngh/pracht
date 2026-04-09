@@ -8,7 +8,6 @@ This example is wired to Pracht's Cloudflare build target.
 - `pnpm pracht build` creates:
   - `dist/client/` for static assets and prerendered HTML
   - `dist/server/server.js` as the Worker bundle
-- `pnpm pracht preview` previews the production build locally.
 
 ## Deploy
 

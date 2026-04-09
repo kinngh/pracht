@@ -58,15 +58,21 @@ Open `http://localhost:3000` to see your app. Edit `src/routes/home.tsx` and wat
 
 ---
 
-## Build & Preview
+## Build Output
 
 ```sh
 # Production build (client + server bundles, SSG prerendering)
 pnpm build
-
-# Preview the production build locally
-pnpm preview
 ```
+
+For Node.js targets, run the generated server with:
+
+```sh
+node dist/server/server.js
+```
+
+For Cloudflare and Vercel targets, deploy the generated output with the
+platform tooling.
 
 ---
 

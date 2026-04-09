@@ -21,7 +21,7 @@ describe("create-pracht", () => {
 
     await scaffoldProject({
       adapter: {
-        description: "Node.js server with pracht preview",
+        description: "Node.js server with a generated server entry",
         id: "node",
         label: "Node.js",
         packageName: "@pracht/adapter-node",
@@ -36,6 +36,7 @@ describe("create-pracht", () => {
 
     expect(packageJson).toMatch(/"@pracht\/cli": "\^\d+\.\d+\.\d+"/);
     expect(packageJson).toMatch(/"@pracht\/adapter-node": "\^\d+\.\d+\.\d+"/);
+    expect(packageJson).toContain('"start": "node dist/server/server.js"');
     expect(packageJson).not.toContain("wrangler");
     expect(routes).toContain('route("/", "./routes/home.tsx"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
@@ -146,7 +147,7 @@ describe("create-pracht", () => {
 
     await scaffoldProject({
       adapter: {
-        description: "Node.js server with pracht preview",
+        description: "Node.js server with a generated server entry",
         id: "node",
         label: "Node.js",
         packageName: "@pracht/adapter-node",

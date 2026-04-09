@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pracht dev",
-    "build": "pracht build",
-    "preview": "pracht preview"
+    "build": "pracht build"
   },
   "dependencies": {
     "@pracht/adapter-cloudflare": "workspace:*",

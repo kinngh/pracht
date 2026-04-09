@@ -29,7 +29,7 @@ The current repo scaffold and package boundaries are tracked in
                │                       │
 ┌──────────────▼────────┐ ┌────────────▼──────────────────┐
 │  packages/adapter-*   │ │   packages/cli                 │
-│  Node · CF · Vercel   │ │   dev · build · preview        │
+│  Node · CF · Vercel   │ │   dev · build · generate       │
 └───────────────────────┘ └────────────────────────────────┘
 ```
 
