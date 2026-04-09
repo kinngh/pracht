@@ -5,37 +5,20 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test } from "@playwright/test";
 
+const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
+const fixtureDir = resolve(repoRoot, "examples/basic");
+const cliEntry = resolve(repoRoot, "packages/cli/bin/pracht.js");
+
 test("pracht build emits a deployable Node server entry", async () => {
   test.setTimeout(120_000);
 
-  const repoRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
-  const fixtureDir = resolve(repoRoot, "examples/basic");
-  const tempRoot = resolve(repoRoot, ".tmp");
-  mkdirSync(tempRoot, { recursive: true });
-  const tempDir = mkdtempSync(resolve(tempRoot, "pracht-node-build-"));
-  const exampleDir = resolve(tempDir, "project");
+  const { exampleDir, tempDir } = createTempExampleDir("pracht-node-build-");
   const distDir = resolve(exampleDir, "dist");
   const serverEntryPath = resolve(exampleDir, "dist/server/server.js");
 
-  cpSync(fixtureDir, exampleDir, {
-    filter(source) {
-      return ![".vercel", "dist", "test-results"].some((entry) =>
-        source.includes(`/examples/basic/${entry}`),
-      );
-    },
-    recursive: true,
-  });
   rmSync(distDir, { force: true, recursive: true });
 
-  execFileSync(process.execPath, [resolve(repoRoot, "packages/cli/bin/pracht.js"), "build"], {
-    cwd: exampleDir,
-    env: {
-      ...process.env,
-      NODE_OPTIONS: "--experimental-strip-types",
-      PRACHT_ADAPTER: "node",
-    },
-    stdio: "pipe",
-  });
+  buildExample(exampleDir, { PRACHT_ADAPTER: "node" });
 
   expect(existsSync(serverEntryPath)).toBe(true);
 
@@ -77,12 +60,106 @@ test("pracht build emits a deployable Node server entry", async () => {
     const apiResponse = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(apiResponse.status).toBe(200);
     await expect(apiResponse.json()).resolves.toEqual({ status: "ok" });
+
+    const pricingResponse = await fetch(`http://127.0.0.1:${port}/pricing`);
+    expect(pricingResponse.status).toBe(200);
+    expect(pricingResponse.headers.get("vary")).toContain("x-pracht-route-state-request");
+
+    const routeStateResponse = await fetch(`http://127.0.0.1:${port}/pricing`, {
+      headers: { "x-pracht-route-state-request": "1" },
+    });
+    expect(routeStateResponse.status).toBe(200);
+    expect(routeStateResponse.headers.get("content-type")).toContain("application/json");
+    expect(routeStateResponse.headers.get("vary")).toContain("x-pracht-route-state-request");
+    expect(routeStateResponse.headers.get("cache-control")).toBe("no-store");
+    await expect(routeStateResponse.json()).resolves.toEqual({
+      data: {
+        plan: "MVP",
+        refreshedAt: "Build time",
+      },
+    });
   } finally {
     server.kill("SIGTERM");
     await waitForExit(server);
     rmSync(tempDir, { force: true, recursive: true });
   }
 });
+
+test("pracht preview keeps route-state requests on the framework path", async () => {
+  test.setTimeout(120_000);
+
+  const { exampleDir, tempDir } = createTempExampleDir("pracht-preview-build-");
+  const distDir = resolve(exampleDir, "dist");
+  rmSync(distDir, { force: true, recursive: true });
+
+  buildExample(exampleDir, { PRACHT_ADAPTER: "node" });
+
+  const port = 4318;
+  const preview = spawn(process.execPath, [cliEntry, "preview", String(port)], {
+    cwd: exampleDir,
+    env: {
+      ...process.env,
+      NODE_OPTIONS: "--experimental-strip-types",
+    },
+    stdio: "pipe",
+  });
+
+  try {
+    await waitForServer(`http://127.0.0.1:${port}/`);
+
+    const htmlResponse = await fetch(`http://127.0.0.1:${port}/pricing`);
+    expect(htmlResponse.status).toBe(200);
+    expect(htmlResponse.headers.get("vary")).toContain("x-pracht-route-state-request");
+
+    const routeStateResponse = await fetch(`http://127.0.0.1:${port}/pricing`, {
+      headers: { "x-pracht-route-state-request": "1" },
+    });
+    expect(routeStateResponse.status).toBe(200);
+    expect(routeStateResponse.headers.get("content-type")).toContain("application/json");
+    expect(routeStateResponse.headers.get("vary")).toContain("x-pracht-route-state-request");
+    expect(routeStateResponse.headers.get("cache-control")).toBe("no-store");
+    await expect(routeStateResponse.json()).resolves.toEqual({
+      data: {
+        plan: "MVP",
+        refreshedAt: "Build time",
+      },
+    });
+  } finally {
+    preview.kill("SIGTERM");
+    await waitForExit(preview);
+    rmSync(tempDir, { force: true, recursive: true });
+  }
+});
+
+function createTempExampleDir(prefix: string): { exampleDir: string; tempDir: string } {
+  const tempRoot = resolve(repoRoot, ".tmp");
+  mkdirSync(tempRoot, { recursive: true });
+  const tempDir = mkdtempSync(resolve(tempRoot, prefix));
+  const exampleDir = resolve(tempDir, "project");
+
+  cpSync(fixtureDir, exampleDir, {
+    filter(source) {
+      return ![".vercel", "dist", "test-results"].some((entry) =>
+        source.includes(`/examples/basic/${entry}`),
+      );
+    },
+    recursive: true,
+  });
+
+  return { exampleDir, tempDir };
+}
+
+function buildExample(exampleDir: string, env: Record<string, string>): void {
+  execFileSync(process.execPath, [cliEntry, "build"], {
+    cwd: exampleDir,
+    env: {
+      ...process.env,
+      NODE_OPTIONS: "--experimental-strip-types",
+      ...env,
+    },
+    stdio: "pipe",
+  });
+}
 
 async function waitForServer(url: string): Promise<void> {
   const deadline = Date.now() + 15_000;

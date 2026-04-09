@@ -39,6 +39,11 @@ test("pracht build emits a deployable Vercel Build Output setup", async () => {
   expect(config.version).toBe(3);
   expect(config.routes).toEqual(
     expect.arrayContaining([
+      expect.objectContaining({
+        src: "/(.*)",
+        has: [{ type: "header", key: "x-pracht-route-state-request", value: "1" }],
+        dest: "/render",
+      }),
       expect.objectContaining({ src: "^/$", dest: "/index.html" }),
       expect.objectContaining({ handle: "filesystem" }),
       expect.objectContaining({ src: "/(.*)", dest: "/render" }),

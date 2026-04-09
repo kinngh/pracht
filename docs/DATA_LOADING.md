@@ -50,6 +50,10 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
 Loaders **never** run in the browser. This keeps server secrets (DB connections,
 API keys) safe.
 
+Framework-generated route-state responses add `Vary: x-pracht-route-state-request`
+so caches keep HTML and JSON variants separate. Those JSON responses also default
+to `Cache-Control: no-store` unless your app sets a stricter policy explicitly.
+
 ### Error handling
 
 Throw `PrachtHttpError` for structured error responses:

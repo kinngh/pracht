@@ -21,6 +21,7 @@ const DEFAULT_SECURITY_HEADERS = {
   "x-content-type-options": "nosniff",
   "x-frame-options": "SAMEORIGIN",
 };
+const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
 
 const VERSION = "0.0.0";
 const command = process.argv[2];
@@ -234,11 +235,11 @@ async function preview() {
 
   const server = createHttpServer(async (req, res) => {
     const url = req.url ?? "/";
-
     const parsedUrl = new URL(url, "http://localhost");
+    const isRouteStateRequest = req.headers[ROUTE_STATE_REQUEST_HEADER] === "1";
 
     // ISG stale-while-revalidate check
-    if (req.method === "GET" && parsedUrl.pathname in isgManifest) {
+    if (req.method === "GET" && !isRouteStateRequest && parsedUrl.pathname in isgManifest) {
       const entry = isgManifest[parsedUrl.pathname];
       const htmlPath =
         parsedUrl.pathname === "/"
@@ -253,6 +254,7 @@ async function preview() {
         setDefaultSecurityHeaders(res, {
           "content-type": "text/html; charset=utf-8",
           "x-pracht-isg": isStale ? "stale" : "fresh",
+          vary: ROUTE_STATE_REQUEST_HEADER,
         });
         createReadStream(htmlPath).pipe(res);
 
@@ -403,7 +405,13 @@ function writeVercelBuildOutput({ functionName, regions, root, staticRoutes, isg
 
 function createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }) {
   const target = `/${functionName || "render"}`;
-  const routes = [];
+  const routes = [
+    {
+      src: "/(.*)",
+      has: [{ type: "header", key: ROUTE_STATE_REQUEST_HEADER, value: "1" }],
+      dest: target,
+    },
+  ];
 
   for (const route of sortStaticRoutes(staticRoutes)) {
     routes.push({

@@ -69,6 +69,8 @@ declare global {
 
 const SAFE_METHODS = new Set(["GET", "HEAD"]);
 const HYDRATION_STATE_ELEMENT_ID = "pracht-state";
+const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
+const ROUTE_STATE_CACHE_CONTROL = "no-store";
 
 interface PrachtRuntimeValue {
   data: unknown;
@@ -253,7 +255,7 @@ export type RouteStateResult =
 
 export async function fetchPrachtRouteState(url: string): Promise<RouteStateResult> {
   const response = await fetch(url, {
-    headers: { "x-pracht-route-state-request": "1", "Cache-Control": "no-cache" },
+    headers: { [ROUTE_STATE_REQUEST_HEADER]: "1", "Cache-Control": "no-cache" },
     redirect: "manual",
   });
 
@@ -360,14 +362,15 @@ export async function handlePrachtRequest<TContext>(
     );
   }
 
-  const isRouteStateRequest = options.request.headers.get("x-pracht-route-state-request") === "1";
+  const isRouteStateRequest = options.request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
 
   if (!SAFE_METHODS.has(options.request.method)) {
-    return withDefaultSecurityHeaders(
+    return withRouteResponseHeaders(
       new Response("Method not allowed", {
         status: 405,
         headers: { "content-type": "text/plain; charset=utf-8" },
       }),
+      { isRouteStateRequest },
     );
   }
 
@@ -382,7 +385,7 @@ export async function handlePrachtRequest<TContext>(
     url,
   });
   if (middlewareResult.response) {
-    return middlewareResult.response;
+    return withRouteResponseHeaders(middlewareResult.response, { isRouteStateRequest });
   }
   const context = middlewareResult.context;
 
@@ -412,14 +415,14 @@ export async function handlePrachtRequest<TContext>(
 
     // Allow loaders to return a Response directly (e.g. for redirects)
     if (loaderResult instanceof Response) {
-      return withDefaultSecurityHeaders(loaderResult);
+      return withRouteResponseHeaders(loaderResult, { isRouteStateRequest });
     }
 
     const data = loaderResult;
 
     // --- Route state request (client navigation): return JSON ---
     if (isRouteStateRequest) {
-      return withDefaultSecurityHeaders(Response.json({ data }));
+      return withRouteResponseHeaders(Response.json({ data }), { isRouteStateRequest: true });
     }
 
     // --- Load shell module ---
@@ -454,11 +457,12 @@ export async function handlePrachtRequest<TContext>(
 
     // --- SSR / SSG / ISG: render Preact tree to string ---
     if (!routeModule?.Component) {
-      return withDefaultSecurityHeaders(
+      return withRouteResponseHeaders(
         new Response("Route has no Component export", {
           status: 500,
           headers: { "content-type": "text/plain; charset=utf-8" },
         }),
+        { isRouteStateRequest },
       );
     }
 
@@ -681,11 +685,12 @@ async function renderRouteErrorResponse<TContext>(options: {
 
   if (!options.routeModule?.ErrorBoundary) {
     if (options.isRouteStateRequest) {
-      return withDefaultSecurityHeaders(
+      return withRouteResponseHeaders(
         new Response(JSON.stringify({ error: routeError }), {
           status: routeError.status,
           headers: { "content-type": "application/json; charset=utf-8" },
         }),
+        { isRouteStateRequest: true },
       );
     }
 
@@ -699,11 +704,12 @@ async function renderRouteErrorResponse<TContext>(options: {
   }
 
   if (options.isRouteStateRequest) {
-    return withDefaultSecurityHeaders(
+    return withRouteResponseHeaders(
       new Response(JSON.stringify({ error: routeError }), {
         status: routeError.status,
         headers: { "content-type": "application/json; charset=utf-8" },
       }),
+      { isRouteStateRequest: true },
     );
   }
 
@@ -940,11 +946,12 @@ function buildHtmlDocument(options: {
 }
 
 function htmlResponse(html: string, status = 200): Response {
-  return withDefaultSecurityHeaders(
+  return withRouteResponseHeaders(
     new Response(html, {
       status,
       headers: { "content-type": "text/html; charset=utf-8" },
     }),
+    { isRouteStateRequest: false },
   );
 }
 
@@ -978,6 +985,42 @@ function withDefaultSecurityHeaders(response: Response): Response {
     statusText: response.statusText,
     headers,
   });
+}
+
+function withRouteResponseHeaders(
+  response: Response,
+  options: { isRouteStateRequest: boolean },
+): Response {
+  const headers = applyDefaultSecurityHeaders(new Headers(response.headers));
+  appendVaryHeader(headers, ROUTE_STATE_REQUEST_HEADER);
+
+  if (options.isRouteStateRequest && !headers.has("cache-control")) {
+    headers.set("cache-control", ROUTE_STATE_CACHE_CONTROL);
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function appendVaryHeader(headers: Headers, value: string): void {
+  const current = headers.get("vary");
+  if (!current) {
+    headers.set("vary", value);
+    return;
+  }
+
+  const values = current
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  if (values.includes("*") || values.includes(value.toLowerCase())) {
+    return;
+  }
+
+  headers.set("vary", `${current}, ${value}`);
 }
 
 function escapeHtml(str: string): string {

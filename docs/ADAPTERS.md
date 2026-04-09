@@ -22,6 +22,11 @@ Platform Request (e.g. Node IncomingMessage, CF Worker fetch)
 Every adapter implements this same flow. The differences are in how static files
 are served and how ISG revalidation state is tracked.
 
+For page routes, adapters must preserve the distinction between document
+requests and route-state fetches (`x-pracht-route-state-request: 1`). Cached or
+prerendered HTML should never satisfy a route-state fetch, and HTML responses
+should vary on that header when both representations can exist for the same URL.
+
 ---
 
 ## Adapter Interface
@@ -78,7 +83,8 @@ The adapter factory calls the entry module generator internally to create a virt
   headers and cache-control for hashed assets.
 - **ISG revalidation**: checks `pracht-isg-manifest.json` for time revalidation
   metadata. Compares file mtime against revalidation window. Regenerates stale
-  pages and writes updated HTML to disk.
+  pages and writes updated HTML to disk. Route-state requests bypass the cached
+  HTML path so client navigation still reaches `handlePrachtRequest()`.
 - **Vite manifest**: reads `.vite/manifest.json` to inject correct `<script>` and
   `<link>` tags into server-rendered HTML.
 
@@ -215,6 +221,9 @@ export default {
 - **Clean URL routing**: prerendered SSG pages are copied into
   `.vercel/output/static` and exposed through `config.json` rewrites so `/about`
   resolves to `/about/index.html`.
+- **Route-state bypass**: Vercel build output adds a header-based rule so
+  `x-pracht-route-state-request: 1` requests go to the edge function before any
+  static SSG rewrite can serve cached HTML.
 - **Dynamic fallback**: SSR, API, and ISG routes are routed to the generated edge
   function. ISG paths currently bypass the static fallback so freshness stays
   correct even without native Vercel ISR integration yet.
