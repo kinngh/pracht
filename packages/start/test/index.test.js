@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { getPackageManager, scaffoldProject } from "../src/index.js";
+import { ValidationError, getPackageManager, parseArgs, scaffoldProject } from "../src/index.js";
 
 describe("create-pracht", () => {
   it("detects the package manager from the npm user agent", () => {
@@ -165,5 +165,44 @@ describe("create-pracht", () => {
     expect(existsSync(join(targetDir, "src/pages/_app.tsx"))).toBe(true);
     expect(existsSync(join(targetDir, "src/routes.ts"))).toBe(false);
     expect(readme).toContain("src/pages/");
+  });
+
+  it("parseArgs handles --yes flag", () => {
+    const opts = parseArgs(["my-app", "--yes", "--skip-install"]);
+    expect(opts.yes).toBe(true);
+    expect(opts.dir).toBe("my-app");
+    expect(opts.skipInstall).toBe(true);
+  });
+
+  it("parseArgs handles -y shorthand", () => {
+    const opts = parseArgs(["-y"]);
+    expect(opts.yes).toBe(true);
+  });
+
+  it("parseArgs handles --json flag", () => {
+    const opts = parseArgs(["my-app", "--json", "--yes"]);
+    expect(opts.json).toBe(true);
+  });
+
+  it("parseArgs handles --dry-run flag", () => {
+    const opts = parseArgs(["my-app", "--dry-run"]);
+    expect(opts.dryRun).toBe(true);
+  });
+
+  it("parseArgs throws ValidationError for invalid adapter", () => {
+    expect(() => parseArgs(["--adapter=invalid"])).toThrow(ValidationError);
+    expect(() => parseArgs(["--adapter=invalid"])).toThrow(/Invalid adapter/);
+  });
+
+  it("parseArgs throws ValidationError for invalid router", () => {
+    expect(() => parseArgs(["--router=invalid"])).toThrow(ValidationError);
+    expect(() => parseArgs(["--router=invalid"])).toThrow(/Invalid router/);
+  });
+
+  it("ValidationError has code 2", () => {
+    const err = new ValidationError("test");
+    expect(err.code).toBe(2);
+    expect(err.message).toBe("test");
+    expect(err).toBeInstanceOf(Error);
   });
 });

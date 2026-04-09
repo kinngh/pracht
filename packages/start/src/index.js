@@ -4,6 +4,13 @@ import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
+export class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.code = 2;
+  }
+}
+
 async function fetchLatestVersion(packageName) {
   const res = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
   if (!res.ok) {
@@ -42,47 +49,109 @@ const DEFAULT_DIRECTORY = "pracht-app";
 export async function run(argv = process.argv.slice(2)) {
   const options = parseArgs(argv);
   const packageManager = getPackageManager();
+  const log = options.json ? () => {} : console.log.bind(console);
 
-  console.log("create-pracht");
-  console.log(`Using ${packageManager} for this scaffold.`);
-  console.log("");
+  log("create-pracht");
+  log(`Using ${packageManager} for this scaffold.`);
+  log("");
 
-  const readline = createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
+  const dir = options.dir ?? (options.yes ? DEFAULT_DIRECTORY : null);
+  const adapterId = options.adapter ?? (options.yes ? "node" : null);
+  const router = options.router ?? (options.yes ? "manifest" : null);
 
-  try {
-    const dir = options.dir ?? (await promptForDirectory(readline));
-    const adapterId = options.adapter ?? (await promptForAdapter(readline));
-    const router = options.router ?? (await promptForRouter(readline));
-    const targetDir = resolve(process.cwd(), dir);
+  let resolvedDir = dir;
+  let resolvedAdapter = adapterId;
+  let resolvedRouter = router;
 
-    await ensureTargetDirectory(targetDir);
-
-    await scaffoldProject({
-      adapter: ADAPTERS[adapterId],
-      packageManager,
-      router,
-      targetDir,
+  if (resolvedDir == null || resolvedAdapter == null || resolvedRouter == null) {
+    const readline = createInterface({
+      input: process.stdin,
+      output: process.stdout,
     });
 
-    let installSucceeded = false;
-    if (!options.skipInstall) {
-      console.log("");
-      console.log(`Installing dependencies with ${packageManager}...`);
-      installSucceeded = await installDependencies(targetDir, packageManager);
+    try {
+      resolvedDir = resolvedDir ?? (await promptForDirectory(readline));
+      resolvedAdapter = resolvedAdapter ?? (await promptForAdapter(readline));
+      resolvedRouter = resolvedRouter ?? (await promptForRouter(readline));
+    } finally {
+      readline.close();
+    }
+  }
+
+  const targetDir = resolve(process.cwd(), resolvedDir);
+
+  await ensureTargetDirectory(targetDir);
+
+  if (options.dryRun) {
+    const files = await buildProjectFiles({
+      adapter: ADAPTERS[resolvedAdapter],
+      packageManager,
+      projectName: toPackageName(basename(targetDir)),
+      router: resolvedRouter,
+    });
+
+    const fileList = Object.keys(files).sort();
+
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          adapter: resolvedAdapter,
+          directory: resolvedDir,
+          dryRun: true,
+          files: fileList,
+          router: resolvedRouter,
+        }),
+      );
+    } else {
+      log("Dry run — the following files would be created:");
+      log("");
+      for (const file of fileList) {
+        log(`  ${file}`);
+      }
     }
 
+    return;
+  }
+
+  await scaffoldProject({
+    adapter: ADAPTERS[resolvedAdapter],
+    packageManager,
+    router: resolvedRouter,
+    targetDir,
+  });
+
+  let installSucceeded = false;
+  if (!options.skipInstall) {
+    log("");
+    log(`Installing dependencies with ${packageManager}...`);
+    installSucceeded = await installDependencies(targetDir, packageManager);
+  }
+
+  if (options.json) {
+    const files = await buildProjectFiles({
+      adapter: ADAPTERS[resolvedAdapter],
+      packageManager,
+      projectName: toPackageName(basename(targetDir)),
+      router: resolvedRouter,
+    });
+
+    console.log(
+      JSON.stringify({
+        adapter: resolvedAdapter,
+        directory: resolvedDir,
+        files: Object.keys(files).sort(),
+        installed: options.skipInstall ? false : installSucceeded,
+        router: resolvedRouter,
+      }),
+    );
+  } else {
     printNextSteps({
-      adapter: ADAPTERS[adapterId],
-      dir,
+      adapter: ADAPTERS[resolvedAdapter],
+      dir: resolvedDir,
       installSucceeded,
       packageManager,
       skipInstall: options.skipInstall,
     });
-  } finally {
-    readline.close();
   }
 }
 
@@ -115,8 +184,11 @@ export function parseArgs(argv) {
   const options = {
     adapter: undefined,
     dir: undefined,
+    dryRun: false,
+    json: false,
     router: undefined,
     skipInstall: false,
+    yes: false,
   };
 
   for (const arg of argv) {
@@ -125,13 +197,40 @@ export function parseArgs(argv) {
       continue;
     }
 
+    if (arg === "--yes" || arg === "-y") {
+      options.yes = true;
+      continue;
+    }
+
+    if (arg === "--json") {
+      options.json = true;
+      continue;
+    }
+
+    if (arg === "--dry-run") {
+      options.dryRun = true;
+      continue;
+    }
+
     if (arg.startsWith("--adapter=")) {
-      options.adapter = normalizeAdapter(arg.slice("--adapter=".length));
+      const value = normalizeAdapter(arg.slice("--adapter=".length));
+      if (!value) {
+        throw new ValidationError(
+          `Invalid adapter: ${arg.slice("--adapter=".length)}. Use node, cf, or vercel.`,
+        );
+      }
+      options.adapter = value;
       continue;
     }
 
     if (arg.startsWith("--router=")) {
-      options.router = normalizeRouter(arg.slice("--router=".length));
+      const value = normalizeRouter(arg.slice("--router=".length));
+      if (!value) {
+        throw new ValidationError(
+          `Invalid router: ${arg.slice("--router=".length)}. Use manifest or pages.`,
+        );
+      }
+      options.router = value;
       continue;
     }
 
@@ -205,7 +304,7 @@ async function ensureTargetDirectory(targetDir) {
   const error = await validateTargetDirectory(targetDir);
 
   if (error) {
-    throw new Error(error);
+    throw new ValidationError(error);
   }
 }
 
@@ -653,7 +752,16 @@ function printHelp() {
   console.log(`create-pracht
 
 Usage:
-  create-pracht [directory] [--adapter=node|cf|vercel] [--router=manifest|pages] [--skip-install]
+  create-pracht [directory] [options]
+
+Options:
+  --adapter=node|cf|vercel   Choose hosting adapter (default: node)
+  --router=manifest|pages    Choose routing system (default: manifest)
+  --skip-install             Skip dependency installation
+  --yes, -y                  Accept defaults, skip all prompts
+  --json                     Output JSON summary instead of prose
+  --dry-run                  Show which files would be created without writing
+  -h, --help                 Show this help message
 `);
 }
 
