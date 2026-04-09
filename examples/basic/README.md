@@ -9,4 +9,4 @@ before building to emit Vercel's `.vercel/output/` directory instead.
 - `pnpm pracht build` creates:
   - `dist/client/` for static assets and prerendered HTML
   - `dist/server/server.js` as the server bundle
-- `pnpm pracht preview` previews the production build locally.
+- `node dist/server/server.js` runs the built Node server locally.

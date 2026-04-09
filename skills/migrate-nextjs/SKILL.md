@@ -111,7 +111,7 @@ For pages router projects, you can **skip manual manifest wiring entirely** (Pha
 3. Update `package.json`:
    - Replace `react`, `react-dom` → `preact`
    - Replace `next` → `pracht`, `@pracht/vite-plugin`, `@pracht/adapter-node` (or target adapter)
-   - Update scripts: `dev` → `pracht dev`, `build` → `pracht build`, `start` → `pracht preview` or `node dist/server/server.js`
+   - Update scripts: `dev` → `pracht dev`, `build` → `pracht build`, `start` → `node dist/server/server.js` (Node.js) or a platform-specific deploy command
 4. Remove Next.js config files: `next.config.*`, `next-env.d.ts`, `.next/`
 5. If `tsconfig.json` has `"jsx": "preserve"`, change to `"jsx": "react-jsx"` and add `"jsxImportSource": "preact"`.
 

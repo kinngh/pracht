@@ -1,4 +1,4 @@
-import { cpSync, createReadStream, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { DEFAULT_SECURITY_HEADERS, VERSION } from "./constants.js";
@@ -34,10 +34,6 @@ export function writeVercelBuildOutput({ functionName, regions, root, staticRout
   );
 
   return ".vercel/output";
-}
-
-export function createReadStreamResponse(filePath, res) {
-  createReadStream(filePath).pipe(res);
 }
 
 function createVercelOutputConfig({ functionName, staticRoutes, isgRoutes }) {

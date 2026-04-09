@@ -1,6 +1,6 @@
 # @pracht/cli
 
-Command-line tool for developing, validating, and scaffolding pracht apps.
+Command-line tool for developing, building, validating, and scaffolding pracht apps.
 
 ## Install
 
@@ -18,9 +18,11 @@ Start the local development server with SSR and HMR.
 
 Create a production build with client/server output and SSG/ISG prerendering.
 
-### `pracht preview`
+For Node.js targets, run the built server with:
 
-Run a production smoke test against the built output.
+```bash
+node dist/server/server.js
+```
 
 ### `pracht generate route`
 

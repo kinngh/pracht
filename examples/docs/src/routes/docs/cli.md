@@ -1,6 +1,6 @@
 ---
 title: CLI
-lead: The <code>@pracht/cli</code> package provides development, build, preview, scaffolding, and doctor commands for your app.
+lead: The <code>@pracht/cli</code> package provides development, build, scaffolding, and doctor commands for your app.
 breadcrumb: CLI
 prev:
   href: /docs/shells
@@ -41,16 +41,14 @@ Output:
 
 ---
 
-## pracht preview
-
-Runs the production server entry locally. Useful for smoke-testing the build before deploying.
+After `pracht build`, Node.js targets can run the generated server with:
 
 ```sh
-pracht preview
-
-# Custom port
-PORT=4000 pracht preview
+node dist/server/server.js
 ```
+
+Cloudflare and Vercel targets should use their platform tooling against the
+generated build output.
 
 ---
 
@@ -104,7 +102,6 @@ Then add scripts to your `package.json`:
   "scripts": {
     "dev": "pracht dev",
     "build": "pracht build",
-    "preview": "pracht preview",
     "doctor": "pracht doctor"
   }
 }

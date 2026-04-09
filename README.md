@@ -31,7 +31,6 @@ The starter gives you:
 
 - `pracht dev` for local SSR + HMR
 - `pracht build` for client/server output plus SSG/ISG prerendering
-- `pracht preview` for a production smoke test
 - `pracht generate route|shell|middleware|api` for framework-native scaffolding
 - `pracht doctor` for app wiring checks with optional JSON output
 - `dist/server/server.js` as the generated Node server entry when targeting Node

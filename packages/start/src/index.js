@@ -15,7 +15,7 @@ async function fetchLatestVersion(packageName) {
 
 const ADAPTERS = {
   node: {
-    description: "Node.js server with pracht preview",
+    description: "Node.js server with a generated server entry",
     id: "node",
     label: "Node.js",
     packageName: "@pracht/adapter-node",
@@ -314,8 +314,11 @@ function createPackageJson({ adapter, projectName, versions }) {
   const scripts = {
     build: "pracht build",
     dev: "pracht dev",
-    preview: "pracht preview",
   };
+
+  if (adapter.id === "node") {
+    scripts.start = "node dist/server/server.js";
+  }
 
   const devDependencies = {
     "@pracht/cli": versions["@pracht/cli"],
@@ -560,7 +563,7 @@ function createCloudflareEnvDeclaration() {
 function createReadme({ adapter, packageManager, projectName, router }) {
   const installCommand = packageManager === "npm" ? "npm install" : `${packageManager} install`;
   const devCommand = packageManager === "npm" ? "npm run dev" : `${packageManager} dev`;
-  const previewCommand = packageManager === "npm" ? "npm run preview" : `${packageManager} preview`;
+  const startCommand = packageManager === "npm" ? "npm run start" : `${packageManager} start`;
   const deployCommand = packageManager === "npm" ? "npm run deploy" : `${packageManager} deploy`;
 
   const lines = [
@@ -572,8 +575,11 @@ function createReadme({ adapter, packageManager, projectName, router }) {
     "",
     `- \`${installCommand}\``,
     `- \`${devCommand}\``,
-    `- \`${previewCommand}\``,
   ];
+
+  if (adapter.id === "node") {
+    lines.push(`- \`${startCommand}\``);
+  }
 
   if (adapter.id === "cloudflare") {
     lines.push(`- \`${deployCommand}\``);

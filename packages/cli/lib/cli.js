@@ -6,7 +6,6 @@ export function printHelp() {
 Usage:
   pracht dev [port]                 Start development server with HMR
   pracht build                      Production build (client + server)
-  pracht preview [port]             Preview the production build
   pracht generate <kind> [flags]    Scaffold framework files
   pracht doctor [--json]            Validate app wiring
 
