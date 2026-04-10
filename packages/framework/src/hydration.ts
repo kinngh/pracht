@@ -11,27 +11,6 @@ const MODE_HYDRATE = 1 << 5;
 let _hydrating = false;
 let _suspensionCount = 0;
 let _hydrated = false;
-const _listeners: Array<() => void> = [];
-
-function notifyHydrated() {
-  if (_hydrated) return;
-  _hydrated = true;
-  _hydrating = false;
-  for (const fn of _listeners) fn();
-  _listeners.length = 0;
-}
-
-function subscribe(fn: () => void): () => void {
-  if (_hydrated) {
-    fn();
-    return () => {};
-  }
-  _listeners.push(fn);
-  return () => {
-    const idx = _listeners.indexOf(fn);
-    if (idx >= 0) _listeners.splice(idx, 1);
-  };
-}
 
 // ---------------------------------------------------------------------------
 // options.__b (_diff) — detect when we're diffing hydration vnodes
@@ -62,7 +41,8 @@ const oldCatchError = (options as any).__e;
       _suspensionCount--;
       if (_suspensionCount <= 0) {
         _suspensionCount = 0;
-        notifyHydrated();
+        _hydrated = true;
+        _hydrating = false;
       }
     };
     err.then(onSettled, onSettled);
@@ -77,7 +57,8 @@ const oldCatchError = (options as any).__e;
 const oldDiffed = (options as any).diffed;
 (options as any).diffed = (vnode: any) => {
   if (_hydrating && !_hydrated && _suspensionCount <= 0) {
-    notifyHydrated();
+    _hydrated = true;
+    _hydrating = false;
   }
   if (oldDiffed) oldDiffed(vnode);
 };
@@ -107,15 +88,9 @@ export function markHydrating(): void {
  */
 export function useIsHydrated(): boolean {
   const [hydrated, setHydrated] = useState(_hydrated);
-
   useEffect(() => {
-    if (_hydrated) {
-      setHydrated(true);
-      return;
-    }
-    return subscribe(() => setHydrated(true));
+    setHydrated(true);
   }, []);
-
   return hydrated;
 }
 
@@ -124,5 +99,4 @@ export function _resetForTesting(): void {
   _hydrating = false;
   _suspensionCount = 0;
   _hydrated = false;
-  _listeners.length = 0;
 }

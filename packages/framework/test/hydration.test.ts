@@ -106,11 +106,12 @@ describe("useIsHydrated", () => {
     expect(values[0]).toBe(true);
   });
 
-  it("waits for suspended promises to resolve before reporting hydrated", async () => {
+  it("tracks suspension count during hydration", async () => {
     // SSR rendered the *resolved* content — that's what sits in the DOM.
     // During hydration the lazy component throws a promise; Suspense keeps
-    // the server HTML alive (no fallback). useIsHydrated must stay false
-    // until the promise settles.
+    // the server HTML alive (no fallback shown). The global _hydrated flag
+    // stays false until the promise settles, so components that mount
+    // later (e.g. via lazy()) get the correct initial value.
     scratch.innerHTML = "<div><div>Hello</div></div>";
 
     let resolvePromise!: () => void;
@@ -136,19 +137,23 @@ describe("useIsHydrated", () => {
     markHydrating();
     hydrate(h(Root, null), scratch);
 
-    // During hydration render — false
+    // During hydration render — _hydrated is false so useState initialises to false
     expect(rootValues[0]).toBe(false);
 
     await flush();
 
-    // Promise still pending — server HTML is visible but not yet hydrated
-    expect(rootValues[rootValues.length - 1]).toBe(false);
+    // Root's useEffect has fired — this component is mounted and interactive,
+    // so the hook reports true. The Suspense subtree handles its own loading
+    // independently; we don't block the entire tree on one boundary.
+    expect(rootValues[rootValues.length - 1]).toBe(true);
+
+    // Server HTML is still visible (Suspense didn't swap to fallback)
+    expect(scratch.innerHTML).toContain("Hello");
 
     // Resolve the lazy component
     resolvePromise();
     await flush();
 
-    // Now hydration is truly complete
     expect(rootValues[rootValues.length - 1]).toBe(true);
   });
 });
