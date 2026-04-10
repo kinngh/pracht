@@ -150,10 +150,13 @@ describe("useIsHydrated", () => {
     // Server HTML is still visible (Suspense didn't swap to fallback)
     expect(scratch.innerHTML).toContain("Hello");
 
-    // Resolve the lazy component
+    // Resolve the lazy component — this triggers a re-render where the
+    // resumed component initially sees _hydrated as false before diffed
+    // flips it to true.
     resolvePromise();
     await flush();
 
+    expect(rootValues[rootValues.length - 2]).toBe(false);
     expect(rootValues[rootValues.length - 1]).toBe(true);
   });
 });
