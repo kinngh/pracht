@@ -25,7 +25,8 @@ npm install @pracht/core preact preact-render-to-string
 messages do not leak into SSR HTML or route-state JSON. Explicit
 `PrachtHttpError` 4xx messages are preserved. Pass `debugErrors: true` to expose
 raw details intentionally during debugging; `@pracht/core` does not infer this
-from environment variables.
+from environment variables. Debug responses also attach `error.diagnostics`
+metadata for the failure phase and matched framework files when available.
 
 ### Client
 

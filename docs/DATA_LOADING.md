@@ -78,7 +78,10 @@ Unexpected 5xx errors are sanitized by default in both SSR HTML and
 Throw `PrachtHttpError` for expected client-facing failures; 4xx messages stay
 intact. If you need raw server error details while debugging, pass
 `debugErrors: true` to `handlePrachtRequest()`. `@pracht/core` does not infer
-this from `NODE_ENV` or other environment variables.
+this from `NODE_ENV` or other environment variables. When debug errors are
+enabled, serialized route and API failures also include `error.diagnostics`
+with framework metadata such as `phase`, `routeId`, `routePath`, `routeFile`,
+`loaderFile`, `shellFile`, `middlewareFiles`, and `status`.
 
 ---
 
