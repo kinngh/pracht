@@ -24,6 +24,18 @@ For Node.js targets, run the built server with:
 node dist/server/server.js
 ```
 
+### `pracht verify`
+
+Run fast framework-aware verification checks without paying for a full build or
+test loop. Use `--changed` to focus on changed manifest-managed files and
+`--json` for machine-readable output.
+
+```bash
+pracht verify
+pracht verify --changed
+pracht verify --json
+```
+
 ### `pracht generate route`
 
 Create a new route module. In manifest apps this also updates `src/routes.ts`.
@@ -58,7 +70,8 @@ pracht generate api --path /health --methods GET,POST
 
 ### `pracht doctor`
 
-Validate the local app wiring. Use `--json` for machine-readable output.
+Validate the local app wiring across the whole project. Use `--json` for
+machine-readable output.
 
 ```bash
 pracht doctor
