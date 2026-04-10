@@ -120,11 +120,13 @@ describe("useIsHydrated", () => {
     });
 
     let threw = false;
+    const lazyValues: boolean[] = [];
     function LazyChild() {
       if (!threw) {
         threw = true;
         throw promise;
       }
+      lazyValues.push(useIsHydrated());
       return h("div", null, "Hello");
     }
 
@@ -139,24 +141,24 @@ describe("useIsHydrated", () => {
 
     // During hydration render — _hydrated is false so useState initialises to false
     expect(rootValues[0]).toBe(false);
+    // LazyChild threw, so it never called the hook yet
+    expect(lazyValues).toHaveLength(0);
 
     await flush();
 
-    // Root's useEffect has fired — this component is mounted and interactive,
-    // so the hook reports true. The Suspense subtree handles its own loading
-    // independently; we don't block the entire tree on one boundary.
+    // Root's useEffect has fired
     expect(rootValues[rootValues.length - 1]).toBe(true);
 
     // Server HTML is still visible (Suspense didn't swap to fallback)
     expect(scratch.innerHTML).toContain("Hello");
 
-    // Resolve the lazy component — this triggers a re-render where the
-    // resumed component initially sees _hydrated as false before diffed
-    // flips it to true.
+    // Resolve the lazy component — LazyChild renders for the first time,
+    // _hydrated is still false at that point so useState initialises to false.
     resolvePromise();
     await flush();
 
-    expect(rootValues[rootValues.length - 2]).toBe(false);
-    expect(rootValues[rootValues.length - 1]).toBe(true);
+    // LazyChild's first render saw _hydrated=false, then useEffect flipped it
+    expect(lazyValues[0]).toBe(false);
+    expect(lazyValues[lazyValues.length - 1]).toBe(true);
   });
 });
