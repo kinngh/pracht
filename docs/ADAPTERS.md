@@ -69,13 +69,42 @@ The adapter factory calls the entry module generator internally to create a virt
 
 ### `createNodeRequestHandler(options)`
 
-| Option          | Type                 | Description                         |
-| --------------- | -------------------- | ----------------------------------- |
-| `app`           | `PrachtApp`          | The resolved app from `defineApp()` |
-| `registry`      | `ModuleRegistry`     | Lazy module importers               |
-| `staticDir`     | `string`             | Path to `dist/client/`              |
-| `viteManifest`  | `ViteManifest`       | Client asset manifest for injection |
-| `createContext` | `(args) => TContext` | App-level context factory           |
+| Option          | Type                 | Description                                                     |
+| --------------- | -------------------- | --------------------------------------------------------------- |
+| `app`           | `PrachtApp`          | The resolved app from `defineApp()`                             |
+| `registry`      | `ModuleRegistry`     | Lazy module importers                                           |
+| `staticDir`     | `string`             | Path to `dist/client/`                                          |
+| `viteManifest`  | `ViteManifest`       | Client asset manifest for injection                             |
+| `createContext` | `(args) => TContext` | App-level context factory                                       |
+| `trustProxy`    | `boolean`            | Honor forwarded headers for URL construction (default: `false`) |
+
+### Trusted proxy configuration
+
+By default the Node adapter derives the request URL from the socket: protocol
+is inferred from TLS state, and host from the `Host` header. Forwarded headers
+(`Forwarded`, `X-Forwarded-Proto`, `X-Forwarded-Host`) are **ignored**.
+
+Set `trustProxy: true` when the Node server sits behind a trusted reverse proxy
+(nginx, Cloudflare, a load balancer, etc.) that sets forwarded headers:
+
+```typescript
+createNodeRequestHandler({
+  app: resolvedApp,
+  registry,
+  staticDir,
+  trustProxy: true,
+});
+```
+
+When enabled, header precedence is:
+
+1. **RFC 7239 `Forwarded`** header (`proto=` and `host=` directives)
+2. **`X-Forwarded-Proto`** / **`X-Forwarded-Host`**
+3. Socket-derived values (fallback)
+
+> **Security note:** enabling `trustProxy` without a proxy that overwrites
+> these headers exposes the app to host-header poisoning — any client can set
+> arbitrary forwarded values. Only enable this when you control the proxy layer.
 
 ### Features
 
