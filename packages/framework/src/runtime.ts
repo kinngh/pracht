@@ -398,6 +398,7 @@ export async function handlePrachtRequest<TContext>(
             : undefined,
           name: "Error",
         }),
+        { isRouteStateRequest: true },
       );
     }
 
@@ -424,6 +425,7 @@ export async function handlePrachtRequest<TContext>(
             : undefined,
           name: "Error",
         }),
+        { isRouteStateRequest: true },
       );
     }
 
