@@ -1,5 +1,41 @@
 # @pracht/core
 
+## 0.1.0
+
+### Minor Changes
+
+- [#65](https://github.com/JoviDeCroock/pracht/pull/65) [`b34695f`](https://github.com/JoviDeCroock/pracht/commit/b34695f8e6cfaf2e00b77c451395351565ff3b7c) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Export `forwardRef` utility so users can forward refs through wrapper components without depending on `preact/compat`.
+
+- [#12](https://github.com/JoviDeCroock/pracht/pull/12) [`bb9480e`](https://github.com/JoviDeCroock/pracht/commit/bb9480ee6a22b3bbb744f174e9132fd8dda446b4) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Support `() => import("./path")` syntax in route manifests for IDE click-to-navigate
+
+- [#52](https://github.com/JoviDeCroock/pracht/pull/52) [`4c885be`](https://github.com/JoviDeCroock/pracht/commit/4c885be049049fe2f1b0bbcfe3a39aa63f7364c0) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Parallelize route-state fetch and module imports during client-side navigation. Route and shell chunks now start loading at the same time as the data fetch instead of waiting for it to complete. Prefetching also warms module imports alongside route-state data. Shell modules are cached to avoid re-importing on repeated navigations.
+
+- [#55](https://github.com/JoviDeCroock/pracht/pull/55) [`9fc392f`](https://github.com/JoviDeCroock/pracht/commit/9fc392f132b5d34ee9da72f389c6ac15fe2f1161) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Improve SPA first paint by rendering the matched shell during the initial HTML response and supporting an optional shell `Loading` export for immediate placeholder UI while route-state data loads on the client.
+
+### Patch Changes
+
+- [#63](https://github.com/JoviDeCroock/pracht/pull/63) [`cf71d67`](https://github.com/JoviDeCroock/pracht/commit/cf71d6781012cc5f79bf5e557658c9fb9112832e) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Separate HTML and route-state cache variants across framework responses and build outputs.
+
+  Page responses now vary on `x-pracht-route-state-request`, framework-generated
+  route-state responses default to `Cache-Control: no-store`, and Node/preview
+  cached HTML paths no longer intercept route-state fetches. Vercel build output
+  now routes route-state requests to the edge function before static rewrites.
+
+- [#49](https://github.com/JoviDeCroock/pracht/pull/49) [`8b71a9f`](https://github.com/JoviDeCroock/pracht/commit/8b71a9f3a7d6fd8d43bea6767d59bfa2d5b28abb) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Handle malformed percent-encoding in route matching by catching `decodeURIComponent` failures and treating them as non-matches instead of throwing uncaught `URIError` exceptions.
+
+- [#59](https://github.com/JoviDeCroock/pracht/pull/59) [`4e9b705`](https://github.com/JoviDeCroock/pracht/commit/4e9b7053b5bedadedd39e6343e7a887864e094dd) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Sanitize unexpected 5xx route errors by default in SSR HTML, route-state JSON,
+  and hydration payloads while preserving explicit `PrachtHttpError` 4xx
+  messages. Add an explicitly opt-in `debugErrors` escape hatch for local
+  debugging and ensure the Vite dev server keeps verbose errors enabled only
+  through that option.
+
+- [#71](https://github.com/JoviDeCroock/pracht/pull/71) [`12829ec`](https://github.com/JoviDeCroock/pracht/commit/12829ec075d269e2511387543c4ad592ae5d8c2a) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add structured runtime diagnostics to debug route-state, SSR, and API failures.
+
+  `handlePrachtRequest()` now catches middleware and API exceptions earlier in the
+  pipeline and, when `debugErrors: true` is enabled, serializes framework
+  diagnostics such as the failure phase, matched route metadata, and relevant
+  module files alongside the normalized error payload.
+
 ## 0.0.1
 
 ### Patch Changes

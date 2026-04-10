@@ -1,5 +1,17 @@
 # create-pracht
 
+## 0.2.0
+
+### Minor Changes
+
+- [#68](https://github.com/JoviDeCroock/pracht/pull/68) [`359af55`](https://github.com/JoviDeCroock/pracht/commit/359af5506dd6b3baf76d4020471275d95b445302) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Generate AGENTS.md and CLAUDE.md symlink in scaffolded projects describing project structure, commands, and scaffolding CLI usage
+
+- [#66](https://github.com/JoviDeCroock/pracht/pull/66) [`c27ab9a`](https://github.com/JoviDeCroock/pracht/commit/c27ab9a3cfaa8706c9fb6f43de45511a12a7e524) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add non-interactive machine mode to create-pracht. New flags: `--yes`/`-y` (accept defaults, skip prompts), `--json` (JSON summary output), `--dry-run` (list files without writing). Invalid adapter or router values now exit with code 2.
+
+### Patch Changes
+
+- [#48](https://github.com/JoviDeCroock/pracht/pull/48) [`4520c16`](https://github.com/JoviDeCroock/pracht/commit/4520c168286e1c2716b49a4d744cc60fa9b25195) Thanks [@barelyhuman](https://github.com/barelyhuman)! - adds a tsconfig.json in the adapter starters
+
 ## 0.1.0
 
 ### Minor Changes
