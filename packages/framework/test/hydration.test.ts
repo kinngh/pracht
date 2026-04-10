@@ -58,7 +58,7 @@ describe("useIsHydrated", () => {
     expect(values[0]).toBe(false);
   });
 
-  it("returns true after hydration completes", async () => {
+  it("returns true after hydration completes (no suspensions)", async () => {
     scratch.innerHTML = "<div>hello</div>";
 
     const values: boolean[] = [];
@@ -88,7 +88,6 @@ describe("useIsHydrated", () => {
   it("starts true for components mounting after hydration finished", async () => {
     scratch.innerHTML = "<div>hello</div>";
 
-    // Complete hydration first
     function First() {
       return h("div", null, "hello");
     }
@@ -96,7 +95,7 @@ describe("useIsHydrated", () => {
     hydrate(h(First, null), scratch);
     await flush();
 
-    // Now mount a new component — it should start hydrated
+    // Mount a new component after hydration — should start with true
     const values: boolean[] = [];
     function Second() {
       values.push(useIsHydrated());
@@ -107,11 +106,12 @@ describe("useIsHydrated", () => {
     expect(values[0]).toBe(true);
   });
 
-  it("root reports hydrated while a Suspense subtree is still suspended", async () => {
-    // Simulate: <Root> uses useIsHydrated, wraps a <Suspense> with a lazy child.
-    // The root should report hydrated after mount (via useEffect) even though
-    // the lazy child inside the Suspense boundary hasn't resolved yet.
-    scratch.innerHTML = "<div><div>fallback</div></div>";
+  it("waits for suspended promises to resolve before reporting hydrated", async () => {
+    // SSR rendered the *resolved* content — that's what sits in the DOM.
+    // During hydration the lazy component throws a promise; Suspense keeps
+    // the server HTML alive (no fallback). useIsHydrated must stay false
+    // until the promise settles.
+    scratch.innerHTML = "<div><div>Hello</div></div>";
 
     let resolvePromise!: () => void;
     const promise = new Promise<void>((r) => {
@@ -124,32 +124,31 @@ describe("useIsHydrated", () => {
         threw = true;
         throw promise;
       }
-      return h("div", null, "loaded");
+      return h("div", null, "Hello");
     }
 
     const rootValues: boolean[] = [];
     function Root() {
       rootValues.push(useIsHydrated());
-      return h(Suspense as any, { fallback: h("div", null, "fallback") }, h(LazyChild, null));
+      return h(Suspense as any, { fallback: h("div", null, "Loading...") }, h(LazyChild, null));
     }
 
     markHydrating();
     hydrate(h(Root, null), scratch);
 
-    // During hydration render, hook returns false
+    // During hydration render — false
     expect(rootValues[0]).toBe(false);
 
     await flush();
 
-    // Root's useEffect has fired — it reports hydrated even though
-    // the Suspense subtree is still waiting for its promise.
-    expect(rootValues[rootValues.length - 1]).toBe(true);
+    // Promise still pending — server HTML is visible but not yet hydrated
+    expect(rootValues[rootValues.length - 1]).toBe(false);
 
-    // Resolve the lazy child
+    // Resolve the lazy component
     resolvePromise();
     await flush();
 
-    // Root stays hydrated
+    // Now hydration is truly complete
     expect(rootValues[rootValues.length - 1]).toBe(true);
   });
 });

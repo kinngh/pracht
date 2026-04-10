@@ -11,6 +11,27 @@ const MODE_HYDRATE = 1 << 5;
 let _hydrating = false;
 let _suspensionCount = 0;
 let _hydrated = false;
+const _listeners: Array<() => void> = [];
+
+function notifyHydrated() {
+  if (_hydrated) return;
+  _hydrated = true;
+  _hydrating = false;
+  for (const fn of _listeners) fn();
+  _listeners.length = 0;
+}
+
+function subscribe(fn: () => void): () => void {
+  if (_hydrated) {
+    fn();
+    return () => {};
+  }
+  _listeners.push(fn);
+  return () => {
+    const idx = _listeners.indexOf(fn);
+    if (idx >= 0) _listeners.splice(idx, 1);
+  };
+}
 
 // ---------------------------------------------------------------------------
 // options.__b (_diff) — detect when we're diffing hydration vnodes
@@ -41,8 +62,7 @@ const oldCatchError = (options as any).__e;
       _suspensionCount--;
       if (_suspensionCount <= 0) {
         _suspensionCount = 0;
-        _hydrated = true;
-        _hydrating = false;
+        notifyHydrated();
       }
     };
     err.then(onSettled, onSettled);
@@ -57,8 +77,7 @@ const oldCatchError = (options as any).__e;
 const oldDiffed = (options as any).diffed;
 (options as any).diffed = (vnode: any) => {
   if (_hydrating && !_hydrated && _suspensionCount <= 0) {
-    _hydrated = true;
-    _hydrating = false;
+    notifyHydrated();
   }
   if (oldDiffed) oldDiffed(vnode);
 };
@@ -78,23 +97,25 @@ export function markHydrating(): void {
 }
 
 /**
- * Returns `true` once the initial hydration has completed. During SSR
- * and the first hydration render this returns `false`.
+ * Returns `true` once the initial hydration (including all Suspense
+ * boundaries) has fully resolved. During SSR and hydration this returns
+ * `false`.
  *
- * This replaces the common boilerplate:
- * ```ts
- * const [hydrated, setHydrated] = useState(false);
- * useEffect(() => setHydrated(true), []);
- * ```
- *
- * The `useState` is initialised to `_hydrated` so components that mount
- * after hydration has already finished start with `true` immediately.
+ * During hydration, server-rendered content stays visible in the DOM
+ * while lazy components load. This hook waits for every suspended promise
+ * to settle before flipping to `true`, so the page is truly interactive.
  */
 export function useIsHydrated(): boolean {
   const [hydrated, setHydrated] = useState(_hydrated);
+
   useEffect(() => {
-    setHydrated(true);
+    if (_hydrated) {
+      setHydrated(true);
+      return;
+    }
+    return subscribe(() => setHydrated(true));
   }, []);
+
   return hydrated;
 }
 
@@ -103,4 +124,5 @@ export function _resetForTesting(): void {
   _hydrating = false;
   _suspensionCount = 0;
   _hydrated = false;
+  _listeners.length = 0;
 }
