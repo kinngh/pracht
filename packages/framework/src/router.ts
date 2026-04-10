@@ -4,6 +4,7 @@ import { useContext } from "preact/hooks";
 import type { VNode } from "preact";
 
 import { matchAppRoute } from "./app.ts";
+import { markHydrating } from "./hydration.ts";
 import { getCachedRouteState, setupPrefetching } from "./prefetch.ts";
 import type { ModuleWarmFn } from "./prefetch.ts";
 import type { ResolvedPrachtApp, RouteMatch } from "./types.ts";
@@ -285,6 +286,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       if (initialMatch.route.render === "spa") {
         render(tree, root);
       } else {
+        markHydrating();
         hydrate(tree, root);
       }
     }

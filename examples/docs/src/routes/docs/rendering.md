@@ -164,3 +164,52 @@ After the initial page load — regardless of render mode — the client router 
 4. Pushes to browser history
 
 This means even SSG routes get fresh loader data during client navigation. The static HTML is only for the initial load and crawlers.
+
+---
+
+## Hydration & `useIsHydrated`
+
+When pracht server-renders a page (SSR, SSG, ISG), the browser receives fully rendered HTML. The client then **hydrates** — it attaches event listeners and Preact's component tree to the existing DOM without re-rendering it.
+
+During hydration, `Suspense` boundaries behave differently than on the client: lazy components throw promises, but Suspense keeps the server-rendered HTML alive instead of swapping to the fallback. The resolved content stays visible while the component code loads.
+
+### Detecting hydration state
+
+`useIsHydrated()` returns `false` during server rendering and the initial hydration pass, then `true` once the component has mounted on the client:
+
+```tsx
+import { useIsHydrated } from "@pracht/core";
+
+export function Component({ data }) {
+  const hydrated = useIsHydrated();
+
+  return (
+    <div>
+      <h1>{data.title}</h1>
+      {hydrated && <InteractiveWidget />}
+    </div>
+  );
+}
+```
+
+### How it works
+
+The framework tracks in-flight Suspense boundaries during hydration. Each thrown promise increments a counter; each settled promise decrements it. After a render cycle completes with zero pending suspensions, hydration is marked as finished.
+
+The hook itself is simple:
+
+```ts
+const [hydrated, setHydrated] = useState(_hydrated);
+useEffect(() => {
+  setHydrated(true);
+}, []);
+return hydrated;
+```
+
+`useState(_hydrated)` captures the global flag at render time. If the component renders while suspensions are still pending, it starts with `false`. Components that mount after hydration has finished (e.g. a lazy-loaded route component that just resolved) start with `true` immediately.
+
+### Common use cases
+
+- **Client-only widgets**: Render a placeholder during SSR, swap in the real widget after hydration
+- **Avoiding hydration mismatches**: Gate browser-only APIs (`window.innerWidth`, `localStorage`) behind the hydrated check
+- **Progressive enhancement**: Show a static version first, enhance with interactivity after hydration

@@ -10,6 +10,7 @@ export {
   timeRevalidate,
 } from "./app.ts";
 export { forwardRef } from "./forwardRef.ts";
+export { useIsHydrated } from "./hydration.ts";
 export { Suspense, lazy } from "preact-suspense";
 export {
   applyDefaultSecurityHeaders,

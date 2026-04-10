@@ -429,3 +429,42 @@ The client runtime reads this state to:
 3. Skip the initial loader fetch (data already present)
 
 After hydration, the client router handles all subsequent navigation.
+
+### Hydration & Suspense tracking
+
+During SSR, Suspense boundaries render their resolved content (not the fallback).
+When the client hydrates, lazy components throw promises but Suspense keeps the
+server HTML alive in the DOM — no fallback is shown. The framework tracks these
+in-flight suspensions so it knows when hydration is truly complete.
+
+**How it works** (`packages/framework/src/hydration.ts`):
+
+- `markHydrating()` is called by the router before `hydrate()` to set a global
+  `_hydrating` flag.
+- `options.__e` (\_catchError) intercepts thrown promises during hydration. Each
+  promise increments `_suspensionCount`; settling decrements it.
+- `options.diffed` runs after every render cycle. When `_hydrating` is true and
+  `_suspensionCount` hits zero, it flips `_hydrated = true`.
+
+**`useIsHydrated()` hook**:
+
+```typescript
+export function useIsHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(_hydrated);
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+  return hydrated;
+}
+```
+
+`useState(_hydrated)` captures the correct initial value — if suspensions are
+still pending `_hydrated` is `false`, so the component starts with `false`. The
+`useEffect` fires after mount and flips to `true`. Components that mount after
+hydration has already finished (e.g. via client navigation) start with
+`useState(true)` immediately.
+
+This means a lazy component inside a Suspense boundary that resolves during
+hydration will see `false` on its first render (because `_hydrated` hasn't
+been flipped yet) and `true` after its effect runs — the same false-to-true
+transition as the rest of the tree.
