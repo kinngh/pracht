@@ -8,6 +8,7 @@ Usage:
   pracht build                      Production build (client + server)
   pracht generate <kind> [flags]    Scaffold framework files
   pracht verify [--changed] [--json] Fast framework-aware verification
+  pracht inspect [target] [--json]  Inspect resolved app graph
   pracht doctor [--json]            Validate app wiring
 
 Generate kinds:
@@ -15,6 +16,13 @@ Generate kinds:
   shell       --name app
   middleware  --name auth
   api         --path /health [--methods GET,POST]
+`);
+}
+
+export function printInspectHelp() {
+  console.log(`Usage:
+  pracht inspect [routes|api|build] [--json]
+  pracht inspect --json
 `);
 }
 

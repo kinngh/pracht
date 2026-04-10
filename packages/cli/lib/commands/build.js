@@ -1,16 +1,9 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { build as viteBuild } from "vite";
 
+import { readClientBuildAssets } from "../build-metadata.js";
 import { writeVercelBuildOutput } from "../build-shared.js";
 
 export async function buildCommand() {
@@ -57,43 +50,11 @@ export async function buildCommand() {
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
     const { prerenderApp } = serverMod;
-    const manifestPath = resolve(clientDir, ".vite/manifest.json");
-    const viteManifest = existsSync(manifestPath)
-      ? JSON.parse(readFileSync(manifestPath, "utf-8"))
-      : {};
-
-    const clientEntry = viteManifest["virtual:pracht/client"];
-    const clientEntryUrl = clientEntry ? `/${clientEntry.file}` : undefined;
-
-    function collectTransitiveCss(key) {
-      const css = new Set();
-      const visited = new Set();
-
-      function collect(currentKey) {
-        if (visited.has(currentKey)) return;
-        visited.add(currentKey);
-        const entry = viteManifest[currentKey];
-        if (!entry) return;
-        for (const cssFile of entry.css ?? []) css.add(cssFile);
-        for (const importedKey of entry.imports ?? []) collect(importedKey);
-      }
-
-      collect(key);
-      return [...css];
-    }
-
-    const cssManifest = {};
-    for (const [key, entry] of Object.entries(viteManifest)) {
-      if (!entry.src) continue;
-      const css = collectTransitiveCss(key);
-      if (css.length > 0) {
-        cssManifest[key] = css.map((file) => `/${file}`);
-      }
-    }
+    const { clientEntryUrl, cssManifest } = readClientBuildAssets(root);
 
     const { pages, isgManifest } = await prerenderApp({
       app: serverMod.resolvedApp,
-      clientEntryUrl,
+      clientEntryUrl: clientEntryUrl ?? undefined,
       cssManifest,
       registry: serverMod.registry,
       withISGManifest: true,

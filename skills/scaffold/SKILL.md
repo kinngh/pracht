@@ -34,6 +34,7 @@ pracht generate api --path /health --methods GET,POST
 ```
 
 - Add `--json` when another agent/tool needs machine-readable output.
+- Use `pracht inspect routes --json` or `pracht inspect api --json` to confirm current wiring before manual edits when the existing graph matters.
 - If the CLI can express the request, do not reimplement the scaffold by hand.
 - Only edit files manually when the CLI cannot cover the requested shape.
 

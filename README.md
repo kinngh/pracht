@@ -31,6 +31,7 @@ The starter gives you:
 
 - `pracht dev` for local SSR + HMR
 - `pracht build` for client/server output plus SSG/ISG prerendering
+- `pracht inspect [routes|api|build] --json` for resolved app graph metadata
 - `pracht generate route|shell|middleware|api` for framework-native scaffolding
 - `pracht verify` for fast framework-aware checks with `--changed` and `--json`
 - `pracht doctor` for app wiring checks with optional JSON output

@@ -5,6 +5,7 @@ import { buildCommand } from "../lib/commands/build.js";
 import { devCommand } from "../lib/commands/dev.js";
 import { generateCommand } from "../lib/commands/generate.js";
 import { verifyCommand } from "../lib/commands/verify.js";
+import { inspectCommand } from "../lib/commands/inspect.js";
 import { handleCliError, printHelp } from "../lib/cli.js";
 import { VERSION } from "../lib/constants.js";
 
@@ -28,6 +29,7 @@ const handlers = {
   doctor: doctorCommand,
   generate: generateCommand,
   verify: verifyCommand,
+  inspect: inspectCommand,
 };
 
 if (!(command in handlers)) {

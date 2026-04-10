@@ -68,6 +68,17 @@ Create an API route under `src/api/`.
 pracht generate api --path /health --methods GET,POST
 ```
 
+### `pracht inspect`
+
+Inspect the resolved app graph. Use `--json` for agent/tool consumption.
+
+```bash
+pracht inspect --json
+pracht inspect routes --json
+pracht inspect api --json
+pracht inspect build --json
+```
+
 ### `pracht doctor`
 
 Validate the local app wiring across the whole project. Use `--json` for
