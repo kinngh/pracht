@@ -26,6 +26,7 @@ Framework-aware debugging for pracht applications — a full-stack Preact framew
 The user will describe a symptom (error, unexpected behavior, blank page, etc.). Investigate systematically using the checklist below, stopping when you find the root cause.
 
 Before deep manual inspection, prefer running `pracht verify` for a fast agent loop or `pracht doctor` when the problem could be caused by broader broken app wiring or missing files.
+When another agent/tool needs the framework's resolved graph, prefer `pracht inspect routes --json`, `pracht inspect api --json`, or `pracht inspect build --json` over reconstructing it from source files.
 
 ## Iron Law
 
@@ -39,6 +40,7 @@ Work through these in order, stopping when you find the root cause:
 
 - Run `pracht verify` first if you want a cheap changed-file confidence check.
 - Run `pracht doctor` if the route might be missing, miswired, or pointing at a missing module across the project.
+- For machine-readable route wiring, run `pracht inspect routes --json`.
 - Read `src/routes.ts` — is the route defined? Is the path correct?
 - Check for typos in file paths (the manifest uses relative paths like `"./routes/home.tsx"`).
 - For dynamic segments, verify bracket syntax: `route("/users/:id", ...)` in manifest, `[id].ts` in filenames.
@@ -76,6 +78,7 @@ Work through these in order, stopping when you find the root cause:
 ### 5. API route issues
 
 - API routes live in `src/api/` and are auto-discovered (no manifest entry needed).
+- For machine-readable API inventory, run `pracht inspect api --json`.
 - File path maps to URL: `src/api/health.ts` → `/api/health`, `src/api/users/[id].ts` → `/api/users/:id`.
 - Each file exports named HTTP method handlers (`GET`, `POST`, etc.).
 - Missing method handler → 405 response.
@@ -91,6 +94,7 @@ Work through these in order, stopping when you find the root cause:
 ### 7. Build / deployment issues
 
 - `pracht build` runs client + server builds, then prerenders SSG/ISG routes.
+- `pracht inspect build --json` reports the resolved adapter target plus client/CSS/JS manifests from the latest build output.
 - Check `dist/client/` for client assets and `dist/server/` for server bundle.
 - ISG manifest: `dist/client/pracht-isg-manifest.json`.
 - Adapter mismatch: ensure `pracht({ adapter: nodeAdapter() })` or `cloudflareAdapter()` matches deployment target.

@@ -2,11 +2,16 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 const cliPath = fileURLToPath(new URL("../bin/pracht.js", import.meta.url));
+const repoRoot = resolve(dirname(cliPath), "../../..");
+const repoTempRoot = resolve(dirname(cliPath), "../test/.tmp");
+const coreImportPath = resolve(repoRoot, "packages/framework/src/index.ts");
+const nodeAdapterImportPath = resolve(repoRoot, "packages/adapter-node/src/index.ts");
+const vitePluginImportPath = resolve(repoRoot, "packages/vite-plugin/src/index.ts");
 const tempDirs = [];
 
 afterEach(() => {
@@ -266,6 +271,69 @@ export const app = defineApp({
     ).toBe(true);
   });
 
+  it("inspects resolved routes, api handlers, and build metadata as JSON", () => {
+    const appDir = createRepoTempDir("pracht-cli-inspect-");
+    writeInspectableManifestApp(appDir);
+
+    const routes = JSON.parse(runCli(["inspect", "routes", "--json"], { cwd: appDir }).stdout);
+    const api = JSON.parse(runCli(["inspect", "api", "--json"], { cwd: appDir }).stdout);
+    const build = JSON.parse(runCli(["inspect", "build", "--json"], { cwd: appDir }).stdout);
+    const all = JSON.parse(runCli(["inspect", "--json"], { cwd: appDir }).stdout);
+
+    expect(routes).toEqual({
+      mode: "manifest",
+      routes: [
+        {
+          file: "./routes/dashboard.tsx",
+          id: "dashboard",
+          loaderFile: "./server/dashboard-loader.ts",
+          middleware: ["auth"],
+          path: "/dashboard",
+          render: "isg",
+          revalidate: {
+            kind: "time",
+            seconds: 60,
+          },
+          shell: "app",
+          shellFile: "./shells/app.tsx",
+        },
+      ],
+    });
+
+    expect(api).toEqual({
+      api: [
+        {
+          file: "/src/api/health.ts",
+          methods: ["GET", "POST"],
+          path: "/api/health",
+        },
+      ],
+      mode: "manifest",
+    });
+
+    expect(build).toEqual({
+      build: {
+        adapterTarget: "node",
+        clientEntryUrl: "/assets/client.js",
+        cssManifest: {
+          "src/routes/dashboard.tsx": ["/assets/dashboard.css"],
+          "src/shells/app.tsx": ["/assets/app.css"],
+        },
+        jsManifest: {
+          "src/routes/dashboard.tsx": ["/assets/dashboard.js", "/assets/vendor.js"],
+          "src/shells/app.tsx": ["/assets/app.js", "/assets/vendor.js"],
+        },
+      },
+      mode: "manifest",
+    });
+
+    expect(all).toEqual({
+      ...routes,
+      ...api,
+      ...build,
+    });
+  });
+
   it("scaffolds pages-router routes without touching a manifest", () => {
     const appDir = createTempDir("pracht-cli-pages-");
     writePagesApp(appDir);
@@ -286,6 +354,13 @@ export const app = defineApp({
 
 function createTempDir(prefix) {
   const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+
+function createRepoTempDir(prefix) {
+  mkdirSync(repoTempRoot, { recursive: true });
+  const dir = mkdtempSync(join(repoTempRoot, prefix));
   tempDirs.push(dir);
   return dir;
 }
@@ -375,6 +450,149 @@ export const app = defineApp({
   routes: [],
 });
 `,
+  );
+}
+
+function writeInspectableManifestApp(appDir) {
+  const vitePluginImport = pathToFileURL(vitePluginImportPath).href;
+
+  writeProjectFile(
+    appDir,
+    "package.json",
+    JSON.stringify(
+      {
+        name: "fixture-inspect-app",
+        private: true,
+        type: "module",
+      },
+      null,
+      2,
+    ),
+  );
+  writeProjectFile(
+    appDir,
+    "vite.config.ts",
+    `import { defineConfig } from "vite";
+import { pracht } from ${JSON.stringify(vitePluginImport)};
+
+export default defineConfig(async () => ({
+  plugins: [await pracht()],
+  resolve: {
+    alias: {
+      "@pracht/adapter-node": ${JSON.stringify(nodeAdapterImportPath)},
+      "@pracht/core": ${JSON.stringify(coreImportPath)},
+    },
+  },
+}));
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/routes.ts",
+    `import { defineApp, group, route, timeRevalidate } from "@pracht/core";
+
+export const app = defineApp({
+  shells: {
+    app: () => import("./shells/app.tsx"),
+  },
+  middleware: {
+    auth: () => import("./middleware/auth.ts"),
+  },
+  routes: [
+    group({ shell: "app", middleware: ["auth"] }, [
+      route("/dashboard", {
+        component: () => import("./routes/dashboard.tsx"),
+        loader: () => import("./server/dashboard-loader.ts"),
+        render: "isg",
+        revalidate: timeRevalidate(60),
+      }),
+    ]),
+  ],
+});
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/routes/dashboard.tsx",
+    `import type { RouteComponentProps } from "@pracht/core";
+
+export function Component({ data }: RouteComponentProps) {
+  return <main>{JSON.stringify(data)}</main>;
+}
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/server/dashboard-loader.ts",
+    `import type { LoaderArgs } from "@pracht/core";
+
+export async function loader(_args: LoaderArgs) {
+  return { ok: true };
+}
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/shells/app.tsx",
+    `import type { ShellProps } from "@pracht/core";
+
+export function Shell({ children }: ShellProps) {
+  return <div>{children}</div>;
+}
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/middleware/auth.ts",
+    `import type { MiddlewareFn } from "@pracht/core";
+
+export const middleware: MiddlewareFn = async () => {
+  return;
+};
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "src/api/health.ts",
+    `import type { BaseRouteArgs } from "@pracht/core";
+
+export function GET(_args: BaseRouteArgs) {
+  return Response.json({ ok: true });
+}
+
+export async function POST(_args: BaseRouteArgs) {
+  return Response.json({ created: true }, { status: 201 });
+}
+`,
+  );
+  writeProjectFile(
+    appDir,
+    "dist/client/.vite/manifest.json",
+    JSON.stringify(
+      {
+        "virtual:pracht/client": {
+          file: "assets/client.js",
+          imports: ["assets/vendor.js"],
+        },
+        "src/routes/dashboard.tsx": {
+          css: ["assets/dashboard.css"],
+          file: "assets/dashboard.js",
+          imports: ["assets/vendor.js"],
+          src: "src/routes/dashboard.tsx",
+        },
+        "src/shells/app.tsx": {
+          css: ["assets/app.css"],
+          file: "assets/app.js",
+          imports: ["assets/vendor.js"],
+          src: "src/shells/app.tsx",
+        },
+        "assets/vendor.js": {
+          file: "assets/vendor.js",
+        },
+      },
+      null,
+      2,
+    ),
   );
 }
 

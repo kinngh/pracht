@@ -62,9 +62,10 @@ described in `VISION_MVP.md`.
   ISG manifest output, executable Node server output in `dist/server/server.js`,
   and Vercel `.vercel/output/` generation when the app targets those adapters),
   `pracht verify` runs fast framework-aware checks with optional `--changed`
-  and `--json` output, `pracht generate route|shell|middleware|api` scaffolds
-  framework-native files, and `pracht doctor` validates app wiring across the
-  whole project.
+  and `--json` output, `pracht inspect [routes|api|build] --json` emits the
+  resolved route graph, API handlers, and build metadata for agents/tools,
+  `pracht generate route|shell|middleware|api` scaffolds framework-native
+  files, and `pracht doctor` validates app wiring across the whole project.
 - **Package builds** — `tsdown` compiles `pracht`, `@pracht/vite-plugin`,
   `@pracht/adapter-node`, `@pracht/adapter-cloudflare`, and
   `@pracht/adapter-vercel` from TypeScript to ESM (`dist/index.mjs` +
