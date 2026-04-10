@@ -526,10 +526,10 @@ function createDevSSRMiddleware(
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 
 async function nodeToWebRequest(req: IncomingMessage): Promise<Request> {
-  const protocol =
-    (Array.isArray(req.headers["x-forwarded-proto"])
-      ? req.headers["x-forwarded-proto"][0]
-      : req.headers["x-forwarded-proto"]) ?? "http";
+  // Dev server is always a direct connection — never trust forwarded headers.
+  // Protocol is always plain HTTP (Vite's dev server does not use TLS), and
+  // host comes from the standard Host header which is safe for direct clients.
+  const protocol = "http";
   const host = req.headers.host ?? "localhost";
   const url = new URL(req.url ?? "/", `${protocol}://${host}`);
   const method = req.method ?? "GET";

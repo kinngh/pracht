@@ -69,6 +69,23 @@ export interface NodeAdapterOptions<TContext = unknown> {
   cssManifest?: Record<string, string[]>;
   jsManifest?: Record<string, string[]>;
   createContext?: (args: NodeAdapterContextArgs) => TContext | Promise<TContext>;
+  /**
+   * Whether to trust proxy headers (`Forwarded`, `X-Forwarded-Proto`,
+   * `X-Forwarded-Host`) when constructing the request URL.
+   *
+   * When **false** (the default), the request URL is derived from the socket:
+   * protocol is inferred from TLS state, and host from the `Host` header.
+   * Forwarded headers are ignored, preventing host-header poisoning.
+   *
+   * When **true**, forwarded headers are honored with the following precedence:
+   *   1. RFC 7239 `Forwarded` header (`proto=` and `host=` directives)
+   *   2. `X-Forwarded-Proto` / `X-Forwarded-Host`
+   *   3. Socket-derived values (fallback)
+   *
+   * Enable this only when the Node server sits behind a trusted reverse proxy
+   * (e.g. nginx, Cloudflare, a load balancer) that sets these headers.
+   */
+  trustProxy?: boolean;
 }
 
 export interface NodeServerEntryModuleOptions {
@@ -80,11 +97,12 @@ export function createNodeRequestHandler<TContext = unknown>(
 ) {
   const isgManifest = options.isgManifest ?? {};
   const staticDir = options.staticDir;
+  const trustProxy = options.trustProxy ?? false;
 
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     let request: Request;
     try {
-      request = await createWebRequest(req);
+      request = await createWebRequest(req, trustProxy);
     } catch (err) {
       if (err instanceof Error && err.message === "Request body too large") {
         res.statusCode = 413;
@@ -263,9 +281,8 @@ export function createNodeServerEntryModule(options: NodeServerEntryModuleOption
   ].join("\n");
 }
 
-async function createWebRequest(req: IncomingMessage): Promise<Request> {
-  const protocol = getFirstHeaderValue(req.headers["x-forwarded-proto"]) ?? "http";
-  const host = getFirstHeaderValue(req.headers.host) ?? "localhost";
+async function createWebRequest(req: IncomingMessage, trustProxy: boolean): Promise<Request> {
+  const { protocol, host } = resolveOrigin(req, trustProxy);
   const url = new URL(req.url ?? "/", `${protocol}://${host}`);
   const method = req.method ?? "GET";
   const headers = createHeaders(req.headers);
@@ -284,6 +301,76 @@ async function createWebRequest(req: IncomingMessage): Promise<Request> {
   }
 
   return new Request(url, init);
+}
+
+/**
+ * Derive the request protocol and host from the incoming message.
+ *
+ * When `trustProxy` is false (default), the protocol is inferred from the
+ * socket's TLS state and the host from the HTTP `Host` header.  Forwarded
+ * headers are ignored entirely.
+ *
+ * When `trustProxy` is true, the following precedence applies:
+ *   1. RFC 7239 `Forwarded` header (`proto=` / `host=` directives)
+ *   2. `X-Forwarded-Proto` / `X-Forwarded-Host`
+ *   3. Socket-derived values (fallback)
+ */
+function resolveOrigin(
+  req: IncomingMessage,
+  trustProxy: boolean,
+): { protocol: string; host: string } {
+  // Socket-derived defaults — always safe regardless of proxy trust.
+  const socketProtocol =
+    "encrypted" in req.socket && (req.socket as { encrypted?: boolean }).encrypted
+      ? "https"
+      : "http";
+  const socketHost = getFirstHeaderValue(req.headers.host) ?? "localhost";
+
+  if (!trustProxy) {
+    return { protocol: socketProtocol, host: socketHost };
+  }
+
+  // --- Trusted proxy path ---
+
+  // 1. RFC 7239 `Forwarded` header (highest precedence)
+  const forwarded = getFirstHeaderValue(req.headers.forwarded);
+  if (forwarded) {
+    const parsed = parseForwardedHeader(forwarded);
+    return {
+      protocol:
+        parsed.proto ?? getFirstHeaderValue(req.headers["x-forwarded-proto"]) ?? socketProtocol,
+      host: parsed.host ?? getFirstHeaderValue(req.headers["x-forwarded-host"]) ?? socketHost,
+    };
+  }
+
+  // 2. De-facto X-Forwarded-* headers
+  const proto = getFirstHeaderValue(req.headers["x-forwarded-proto"]) ?? socketProtocol;
+  const host = getFirstHeaderValue(req.headers["x-forwarded-host"]) ?? socketHost;
+  return { protocol: proto, host };
+}
+
+/**
+ * Parse the first element of an RFC 7239 `Forwarded` header, extracting
+ * `proto` and `host` directives.  Returns `undefined` for directives that
+ * are not present.
+ */
+function parseForwardedHeader(value: string): { proto?: string; host?: string } {
+  // The header may contain multiple comma-separated elements; use the first
+  // (the one closest to the client).
+  const first = value.split(",")[0];
+  const result: { proto?: string; host?: string } = {};
+
+  for (const part of first.split(";")) {
+    const [key, val] = part.trim().split("=");
+    if (!key || !val) continue;
+    const k = key.toLowerCase();
+    // Strip surrounding quotes if present
+    const v = val.replace(/^"|"$/g, "");
+    if (k === "proto") result.proto = v;
+    else if (k === "host") result.host = v;
+  }
+
+  return result;
 }
 
 function createHeaders(headers: IncomingMessage["headers"]): Headers {
