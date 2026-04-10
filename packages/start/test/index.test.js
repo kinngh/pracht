@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, readlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -40,6 +40,15 @@ describe("create-pracht", () => {
     expect(packageJson).not.toContain("wrangler");
     expect(routes).toContain('route("/", "./routes/home.tsx"');
     expect(existsSync(join(targetDir, "wrangler.jsonc"))).toBe(false);
+
+    const agents = await readFile(join(targetDir, "AGENTS.md"), "utf-8");
+    expect(agents).toContain("manifest routing");
+    expect(agents).toContain("src/routes.ts");
+    expect(agents).toContain("pracht generate route");
+    expect(agents).toContain("pnpm dev");
+
+    const claudeLink = await readlink(join(targetDir, "CLAUDE.md"));
+    expect(claudeLink).toBe("AGENTS.md");
 
     const tsconfig = await readFile(join(targetDir, "tsconfig.json"), "utf-8");
     expect(tsconfig).toMatchInlineSnapshot(`
@@ -98,6 +107,10 @@ describe("create-pracht", () => {
     const envDts = await readFile(join(targetDir, "src/env.d.ts"), "utf-8");
     expect(envDts).toContain("interface Register");
     expect(envDts).toContain("env: Env");
+
+    const agents = await readFile(join(targetDir, "AGENTS.md"), "utf-8");
+    expect(agents).toContain("wrangler.jsonc");
+    expect(agents).toContain("Cloudflare Workers adapter");
   });
 
   it("scaffolds a vercel starter", async () => {
@@ -166,6 +179,10 @@ describe("create-pracht", () => {
     expect(existsSync(join(targetDir, "src/pages/_app.tsx"))).toBe(true);
     expect(existsSync(join(targetDir, "src/routes.ts"))).toBe(false);
     expect(readme).toContain("src/pages/");
+
+    const agents = await readFile(join(targetDir, "AGENTS.md"), "utf-8");
+    expect(agents).toContain("pages routing");
+    expect(agents).toContain("src/pages/");
   });
 
   it("parseArgs handles --yes flag", () => {

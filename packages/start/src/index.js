@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, symlink, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
@@ -171,6 +171,8 @@ export async function scaffoldProject({ adapter, packageManager, router = "manif
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf-8");
   }
+
+  await symlink("AGENTS.md", resolve(targetDir, "CLAUDE.md"));
 }
 
 export function getPackageManager(userAgent = process.env.npm_config_user_agent ?? "") {
@@ -390,6 +392,7 @@ async function buildProjectFiles({ adapter, packageManager, projectName, router 
     "src/api/health.ts": createHealthRoute(adapter),
     "vite.config.ts": createViteConfig(adapter, router),
     "tsconfig.json": createBaseTSConfig(adapter),
+    "AGENTS.md": createAgentInstructions({ adapter, packageManager, router }),
   };
 
   if (router === "pages") {
@@ -657,6 +660,67 @@ function createCloudflareEnvDeclaration() {
     "}",
     "",
   ].join("\n");
+}
+
+function createAgentInstructions({ adapter, packageManager, router }) {
+  const runCmd = packageManager === "npm" ? "npm run" : packageManager;
+
+  const lines = [
+    "# Pracht App",
+    "",
+    "## Commands",
+    "",
+    `- \`${runCmd} dev\` — start the dev server`,
+    `- \`${runCmd} build\` — production build`,
+  ];
+
+  if (adapter.id === "node") {
+    lines.push(`- \`${runCmd} start\` — run the built server`);
+  }
+
+  if (adapter.id === "cloudflare" || adapter.id === "vercel") {
+    lines.push(`- \`${runCmd} deploy\` — build and deploy`);
+  }
+
+  lines.push("");
+  lines.push("## Scaffolding");
+  lines.push("");
+  lines.push("Use the CLI to generate new files:");
+  lines.push("");
+  lines.push("- `pracht generate route <name>` — add a route");
+  lines.push("- `pracht generate shell <name>` — add a shell");
+  lines.push("- `pracht generate middleware <name>` — add middleware");
+  lines.push("- `pracht generate api <name>` — add an API route");
+  lines.push("- `pracht doctor` — check project health");
+
+  lines.push("");
+  lines.push("## Project structure");
+  lines.push("");
+
+  if (router === "pages") {
+    lines.push("This app uses **pages routing** (file-system based).");
+    lines.push("");
+    lines.push("- `src/pages/` — file-system routes (each file becomes a route)");
+    lines.push("- `src/pages/_app.tsx` — app shell (layout and head)");
+  } else {
+    lines.push("This app uses **manifest routing**.");
+    lines.push("");
+    lines.push("- `src/routes.ts` — route manifest (defines all routes and shells)");
+    lines.push("- `src/routes/` — route components and loaders");
+    lines.push("- `src/shells/` — shell components (layouts)");
+  }
+
+  lines.push("- `src/api/` — API route handlers");
+  lines.push(`- \`vite.config.ts\` — Vite config with the ${adapter.label} adapter`);
+
+  if (adapter.id === "cloudflare") {
+    lines.push("- `wrangler.jsonc` — Cloudflare Workers configuration");
+    lines.push("- `src/env.d.ts` — TypeScript types for Cloudflare bindings");
+  }
+
+  lines.push("");
+
+  return lines.join("\n");
 }
 
 function createReadme({ adapter, packageManager, projectName, router }) {
