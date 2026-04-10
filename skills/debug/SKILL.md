@@ -1,6 +1,6 @@
 ---
 name: debug
-version: 1.0.0
+version: 1.1.0
 description: |
   Pracht framework-aware debugging. Systematically investigates route matching,
   loader/action errors, rendering issues, middleware, API routes, HMR, and build
@@ -25,7 +25,7 @@ Framework-aware debugging for pracht applications — a full-stack Preact framew
 
 The user will describe a symptom (error, unexpected behavior, blank page, etc.). Investigate systematically using the checklist below, stopping when you find the root cause.
 
-Before deep manual inspection, prefer running `pracht doctor` when the problem could be caused by broken app wiring or missing files.
+Before deep manual inspection, prefer running `pracht verify` for a fast agent loop or `pracht doctor` when the problem could be caused by broader broken app wiring or missing files.
 
 ## Iron Law
 
@@ -37,7 +37,8 @@ Work through these in order, stopping when you find the root cause:
 
 ### 1. Route matching
 
-- Run `pracht doctor` first if the route might be missing, miswired, or pointing at a missing module.
+- Run `pracht verify` first if you want a cheap changed-file confidence check.
+- Run `pracht doctor` if the route might be missing, miswired, or pointing at a missing module across the project.
 - Read `src/routes.ts` — is the route defined? Is the path correct?
 - Check for typos in file paths (the manifest uses relative paths like `"./routes/home.tsx"`).
 - For dynamic segments, verify bracket syntax: `route("/users/:id", ...)` in manifest, `[id].ts` in filenames.
@@ -117,7 +118,7 @@ Work through these in order, stopping when you find the root cause:
 1. Always read the relevant source files before diagnosing.
 2. Start with the most likely cause based on the symptom, not a full audit.
 3. When you find the root cause, explain _why_ it breaks and fix it.
-4. If wiring looks suspicious, run `pracht doctor`. If running the dev server or tests would help, do so (`pracht dev`, `pnpm test`, `pnpm e2e`).
+4. If wiring looks suspicious, run `pracht verify` first, then `pracht doctor` if you need the full-project view. If running the dev server or tests would help, do so (`pracht dev`, `pnpm test`, `pnpm e2e`).
 5. After fixing, verify the fix works (run relevant test or check dev server output).
 6. Never say "this should fix it." Verify and prove it.
 

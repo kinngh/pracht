@@ -150,6 +150,122 @@ export const app = defineApp({
     expect(report.checks.some((check) => check.message.includes("missing files"))).toBe(true);
   });
 
+  it("reports a healthy manifest app in verify json output", () => {
+    const appDir = createTempDir("pracht-cli-verify-ok-");
+    writeManifestApp(appDir, {
+      routesSource: `import { defineApp, route } from "@pracht/core";
+
+export const app = defineApp({
+  routes: [route("/dashboard", "./routes/dashboard.tsx", { id: "dashboard", render: "ssr" })],
+});
+`,
+    });
+
+    writeProjectFile(
+      appDir,
+      "src/routes/dashboard.tsx",
+      `export function Component() {
+  return <h1>Dashboard</h1>;
+}
+`,
+    );
+    writeProjectFile(
+      appDir,
+      "src/api/health.ts",
+      `export function GET() {
+  return new Response("ok");
+}
+`,
+    );
+
+    const result = runCli(["verify", "--json"], { cwd: appDir });
+    const report = JSON.parse(result.stdout);
+
+    expect(report.ok).toBe(true);
+    expect(report.scope).toBe("full");
+    expect(report.checks.some((check) => check.message.includes("manifest module path"))).toBe(
+      true,
+    );
+    expect(report.checks.some((check) => check.message.includes("API route discovery"))).toBe(true);
+  });
+
+  it("reports duplicate API discovery failures in verify json output", () => {
+    const appDir = createTempDir("pracht-cli-verify-api-dupe-");
+    writeManifestApp(appDir);
+
+    writeProjectFile(
+      appDir,
+      "src/api/users.ts",
+      `export function GET() {
+  return new Response("users");
+}
+`,
+    );
+    writeProjectFile(
+      appDir,
+      "src/api/users/index.ts",
+      `export function GET() {
+  return new Response("users-index");
+}
+`,
+    );
+
+    const result = runCliStatus(["verify", "--json"], { cwd: appDir });
+    expect(result.status).toBe(1);
+
+    const report = JSON.parse(result.stdout);
+    expect(report.ok).toBe(false);
+    expect(report.checks.some((check) => check.message.includes("duplicate paths"))).toBe(true);
+  });
+
+  it("limits verify --changed to changed framework files", () => {
+    const appDir = createTempDir("pracht-cli-verify-changed-");
+    writeManifestApp(appDir, {
+      routesSource: `import { defineApp, route } from "@pracht/core";
+
+export const app = defineApp({
+  routes: [route("/dashboard", "./routes/dashboard.tsx", { id: "dashboard", render: "ssr" })],
+});
+`,
+    });
+
+    writeProjectFile(
+      appDir,
+      "src/routes/dashboard.tsx",
+      `export function Component() {
+  return <h1>Dashboard</h1>;
+}
+`,
+    );
+
+    initializeGitRepo(appDir);
+
+    writeProjectFile(
+      appDir,
+      "src/routes/dashboard.tsx",
+      `export function Component() {
+  return <h1>Updated dashboard</h1>;
+}
+`,
+    );
+    writeProjectFile(appDir, "notes.txt", "ignored");
+
+    const result = runCli(["verify", "--changed", "--json"], { cwd: appDir });
+    const report = JSON.parse(result.stdout);
+
+    expect(report.ok).toBe(true);
+    expect(report.scope).toBe("changed");
+    expect(report.frameworkFiles).toContain("src/routes/dashboard.tsx");
+    expect(report.frameworkFiles).not.toContain("notes.txt");
+    expect(
+      report.checks.some(
+        (check) =>
+          check.message.includes("Changed route module") &&
+          check.message.includes("src/routes/dashboard.tsx"),
+      ),
+    ).toBe(true);
+  });
+
   it("scaffolds pages-router routes without touching a manifest", () => {
     const appDir = createTempDir("pracht-cli-pages-");
     writePagesApp(appDir);
@@ -190,6 +306,34 @@ function runCliStatus(args, { cwd }) {
     cwd,
     encoding: "utf-8",
     env: process.env,
+  });
+}
+
+function initializeGitRepo(appDir) {
+  execFileSync("git", ["init"], {
+    cwd: appDir,
+    env: process.env,
+    stdio: "ignore",
+  });
+  execFileSync("git", ["config", "user.email", "test@example.com"], {
+    cwd: appDir,
+    env: process.env,
+    stdio: "ignore",
+  });
+  execFileSync("git", ["config", "user.name", "Pracht Tests"], {
+    cwd: appDir,
+    env: process.env,
+    stdio: "ignore",
+  });
+  execFileSync("git", ["add", "."], {
+    cwd: appDir,
+    env: process.env,
+    stdio: "ignore",
+  });
+  execFileSync("git", ["commit", "-m", "initial"], {
+    cwd: appDir,
+    env: process.env,
+    stdio: "ignore",
   });
 }
 

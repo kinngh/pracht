@@ -54,10 +54,11 @@ export function extractRegistryEntries(source, key) {
   if (!block) return [];
   const inner = source.slice(block.openIndex + 1, block.closeIndex);
   const entries = [];
-  const pattern = /([A-Za-z0-9_-]+)\s*:\s*["'`]([^"'`]+)["'`]/g;
+  const pattern =
+    /([A-Za-z0-9_-]+)\s*:\s*(?:(["'`])([^"'`]+)\2|\(\)\s*=>\s*import\(\s*(["'`])([^"'`]+)\4\s*\))/g;
 
   for (const match of inner.matchAll(pattern)) {
-    entries.push({ name: match[1], path: match[2] });
+    entries.push({ name: match[1], path: match[3] ?? match[5] });
   }
 
   return entries;

@@ -7,6 +7,7 @@ Usage:
   pracht dev [port]                 Start development server with HMR
   pracht build                      Production build (client + server)
   pracht generate <kind> [flags]    Scaffold framework files
+  pracht verify [--changed] [--json] Fast framework-aware verification
   pracht doctor [--json]            Validate app wiring
 
 Generate kinds:
