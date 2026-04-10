@@ -1,5 +1,34 @@
 # @pracht/adapter-node
 
+## 0.1.0
+
+### Minor Changes
+
+- [#62](https://github.com/JoviDeCroock/pracht/pull/62) [`4017a4a`](https://github.com/JoviDeCroock/pracht/commit/4017a4a59ef702de14a3eb835b0d7bf0967509f8) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Serve static assets directly from the Node adapter with proper Cache-Control headers. Hashed assets under /assets/ get immutable caching; HTML gets must-revalidate. Preview server now mirrors production caching behavior.
+
+- [#67](https://github.com/JoviDeCroock/pracht/pull/67) [`b052965`](https://github.com/JoviDeCroock/pracht/commit/b052965d5f87dd60fc037e3929511cb3fc589f3e) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add trusted proxy aware request URL construction
+
+  The Node adapter now defaults to deriving the request URL from the socket
+  (TLS state for protocol, Host header for host) instead of blindly trusting
+  X-Forwarded-Proto. A new `trustProxy` option opts into honoring forwarded
+  headers (Forwarded RFC 7239, X-Forwarded-Proto, X-Forwarded-Host) when
+  the server sits behind a trusted reverse proxy.
+
+  The dev SSR middleware no longer reads X-Forwarded-Proto at all, preventing
+  host-header poisoning during development.
+
+### Patch Changes
+
+- [#63](https://github.com/JoviDeCroock/pracht/pull/63) [`cf71d67`](https://github.com/JoviDeCroock/pracht/commit/cf71d6781012cc5f79bf5e557658c9fb9112832e) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Separate HTML and route-state cache variants across framework responses and build outputs.
+
+  Page responses now vary on `x-pracht-route-state-request`, framework-generated
+  route-state responses default to `Cache-Control: no-store`, and Node/preview
+  cached HTML paths no longer intercept route-state fetches. Vercel build output
+  now routes route-state requests to the edge function before static rewrites.
+
+- Updated dependencies [[`b34695f`](https://github.com/JoviDeCroock/pracht/commit/b34695f8e6cfaf2e00b77c451395351565ff3b7c), [`bb9480e`](https://github.com/JoviDeCroock/pracht/commit/bb9480ee6a22b3bbb744f174e9132fd8dda446b4), [`4c885be`](https://github.com/JoviDeCroock/pracht/commit/4c885be049049fe2f1b0bbcfe3a39aa63f7364c0), [`cf71d67`](https://github.com/JoviDeCroock/pracht/commit/cf71d6781012cc5f79bf5e557658c9fb9112832e), [`8b71a9f`](https://github.com/JoviDeCroock/pracht/commit/8b71a9f3a7d6fd8d43bea6767d59bfa2d5b28abb), [`4e9b705`](https://github.com/JoviDeCroock/pracht/commit/4e9b7053b5bedadedd39e6343e7a887864e094dd), [`9fc392f`](https://github.com/JoviDeCroock/pracht/commit/9fc392f132b5d34ee9da72f389c6ac15fe2f1161), [`12829ec`](https://github.com/JoviDeCroock/pracht/commit/12829ec075d269e2511387543c4ad592ae5d8c2a)]:
+  - @pracht/core@0.1.0
+
 ## 0.0.1
 
 ### Patch Changes

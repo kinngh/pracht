@@ -1,5 +1,35 @@
 # @pracht/vite-plugin
 
+## 0.1.0
+
+### Minor Changes
+
+- [#12](https://github.com/JoviDeCroock/pracht/pull/12) [`bb9480e`](https://github.com/JoviDeCroock/pracht/commit/bb9480ee6a22b3bbb744f174e9132fd8dda446b4) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Support `() => import("./path")` syntax in route manifests for IDE click-to-navigate
+
+### Patch Changes
+
+- [#59](https://github.com/JoviDeCroock/pracht/pull/59) [`4e9b705`](https://github.com/JoviDeCroock/pracht/commit/4e9b7053b5bedadedd39e6343e7a887864e094dd) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Sanitize unexpected 5xx route errors by default in SSR HTML, route-state JSON,
+  and hydration payloads while preserving explicit `PrachtHttpError` 4xx
+  messages. Add an explicitly opt-in `debugErrors` escape hatch for local
+  debugging and ensure the Vite dev server keeps verbose errors enabled only
+  through that option.
+
+- [#67](https://github.com/JoviDeCroock/pracht/pull/67) [`b052965`](https://github.com/JoviDeCroock/pracht/commit/b052965d5f87dd60fc037e3929511cb3fc589f3e) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add trusted proxy aware request URL construction
+
+  The Node adapter now defaults to deriving the request URL from the socket
+  (TLS state for protocol, Host header for host) instead of blindly trusting
+  X-Forwarded-Proto. A new `trustProxy` option opts into honoring forwarded
+  headers (Forwarded RFC 7239, X-Forwarded-Proto, X-Forwarded-Host) when
+  the server sits behind a trusted reverse proxy.
+
+  The dev SSR middleware no longer reads X-Forwarded-Proto at all, preventing
+  host-header poisoning during development.
+
+- Updated dependencies [[`b34695f`](https://github.com/JoviDeCroock/pracht/commit/b34695f8e6cfaf2e00b77c451395351565ff3b7c), [`bb9480e`](https://github.com/JoviDeCroock/pracht/commit/bb9480ee6a22b3bbb744f174e9132fd8dda446b4), [`4c885be`](https://github.com/JoviDeCroock/pracht/commit/4c885be049049fe2f1b0bbcfe3a39aa63f7364c0), [`cf71d67`](https://github.com/JoviDeCroock/pracht/commit/cf71d6781012cc5f79bf5e557658c9fb9112832e), [`8b71a9f`](https://github.com/JoviDeCroock/pracht/commit/8b71a9f3a7d6fd8d43bea6767d59bfa2d5b28abb), [`4e9b705`](https://github.com/JoviDeCroock/pracht/commit/4e9b7053b5bedadedd39e6343e7a887864e094dd), [`9fc392f`](https://github.com/JoviDeCroock/pracht/commit/9fc392f132b5d34ee9da72f389c6ac15fe2f1161), [`db5f6d0`](https://github.com/JoviDeCroock/pracht/commit/db5f6d0a6770cd36fbcdaea708d2f161d2be23d3), [`12829ec`](https://github.com/JoviDeCroock/pracht/commit/12829ec075d269e2511387543c4ad592ae5d8c2a)]:
+  - @pracht/core@0.1.0
+  - @pracht/adapter-cloudflare@0.0.2
+  - @pracht/adapter-vercel@0.0.2
+
 ## 0.0.1
 
 ### Patch Changes
@@ -11,6 +41,7 @@
 - [`c95bb72`](https://github.com/JoviDeCroock/pracht/commit/c95bb72c53a2d9012fde847139c276808ba5a9c3) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix SSG prerendered pages missing client JS script tag and framework context
 
   Two issues caused prerendered (SSG) pages to ship without working hydration:
+
   1. **Vite 8 environment nesting**: The `@cloudflare/vite-plugin` outputs client assets
      to `<outDir>/client/`, so `outDir: "dist/client"` produced `dist/client/client/`.
      The CLI then couldn't find the Vite manifest, resulting in no `<script>` tag in
