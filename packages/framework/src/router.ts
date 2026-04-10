@@ -254,7 +254,6 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
 
       const pendingTree = await buildSpaPendingTree(initialMatch, initialShellPromise);
       if (pendingTree) {
-        markHydrating();
         hydrate(pendingTree, root);
       }
 
