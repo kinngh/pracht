@@ -410,6 +410,11 @@ function appendHydrationWarning(message: string): void {
 function deserializeRouteError(error: SerializedRouteError): Error {
   const result = new Error(error.message);
   result.name = error.name;
-  (result as Error & { status?: number }).status = error.status;
+  (
+    result as Error & { diagnostics?: SerializedRouteError["diagnostics"]; status?: number }
+  ).status = error.status;
+  (
+    result as Error & { diagnostics?: SerializedRouteError["diagnostics"]; status?: number }
+  ).diagnostics = error.diagnostics;
   return result;
 }

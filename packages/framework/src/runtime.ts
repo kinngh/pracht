@@ -21,6 +21,25 @@ import type {
   PrachtApp,
 } from "./types.ts";
 
+export type PrachtRuntimeDiagnosticPhase =
+  | "match"
+  | "middleware"
+  | "loader"
+  | "action"
+  | "render"
+  | "api";
+
+export interface PrachtRuntimeDiagnostics {
+  phase: PrachtRuntimeDiagnosticPhase;
+  routeId?: string;
+  routePath?: string;
+  routeFile?: string;
+  loaderFile?: string;
+  shellFile?: string;
+  middlewareFiles?: string[];
+  status: number;
+}
+
 export interface PrachtHydrationState<TData = unknown> {
   url: string;
   routeId: string;
@@ -33,6 +52,7 @@ export interface SerializedRouteError {
   message: string;
   name: string;
   status: number;
+  diagnostics?: PrachtRuntimeDiagnostics;
 }
 
 export interface StartAppOptions<TData = unknown> {
@@ -72,6 +92,8 @@ const SAFE_METHODS = new Set(["GET", "HEAD"]);
 const HYDRATION_STATE_ELEMENT_ID = "pracht-state";
 const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
 const ROUTE_STATE_CACHE_CONTROL = "no-store";
+
+type DiagnosticRoute = ResolvedRoute | ResolvedApiRoute;
 
 interface PrachtRuntimeValue {
   data: unknown;
@@ -291,6 +313,8 @@ export async function handlePrachtRequest<TContext>(
 ): Promise<Response> {
   const url = new URL(options.request.url);
   const registry = options.registry ?? {};
+  const isRouteStateRequest = options.request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
+  const exposeDiagnostics = shouldExposeServerErrors(options);
 
   // --- API route dispatch (before page routes) ---
   if (options.apiRoutes?.length) {
@@ -300,61 +324,83 @@ export async function handlePrachtRequest<TContext>(
         const middlewareFile = options.app.middleware[name];
         return middlewareFile ? [middlewareFile] : [];
       });
-      const middlewareResult = await runMiddlewareChain({
-        context: (options.context ?? {}) as TContext,
-        middlewareFiles: apiMiddlewareFiles,
-        params: apiMatch.params,
-        registry,
-        request: options.request,
-        route: apiMatch.route,
-        url,
-      });
-      if (middlewareResult.response) {
-        return middlewareResult.response;
-      }
+      let currentPhase: PrachtRuntimeDiagnosticPhase = "middleware";
 
-      const apiModule = await resolveRegistryModule<ApiRouteModule>(
-        registry.apiModules,
-        apiMatch.route.file,
-      );
-
-      if (!apiModule) {
-        return withDefaultSecurityHeaders(
-          new Response("API route module not found", {
-            status: 500,
-            headers: { "content-type": "text/plain; charset=utf-8" },
-          }),
-        );
-      }
-
-      const method = options.request.method.toUpperCase() as HttpMethod;
-      const handler = apiModule[method];
-
-      if (!handler) {
-        return withDefaultSecurityHeaders(
-          new Response("Method not allowed", {
-            status: 405,
-            headers: { "content-type": "text/plain; charset=utf-8" },
-          }),
-        );
-      }
-
-      return withDefaultSecurityHeaders(
-        await handler({
-          request: options.request,
+      try {
+        const middlewareResult = await runMiddlewareChain({
+          context: (options.context ?? {}) as TContext,
+          middlewareFiles: apiMiddlewareFiles,
           params: apiMatch.params,
-          context: middlewareResult.context,
-          signal: AbortSignal.timeout(30_000),
+          registry,
+          request: options.request,
+          route: apiMatch.route,
           url,
-          route: apiMatch.route as any,
-        }),
-      );
+        });
+        if (middlewareResult.response) {
+          return middlewareResult.response;
+        }
+
+        currentPhase = "api";
+        const apiModule = await resolveRegistryModule<ApiRouteModule>(
+          registry.apiModules,
+          apiMatch.route.file,
+        );
+
+        if (!apiModule) {
+          throw new Error("API route module not found");
+        }
+
+        const method = options.request.method.toUpperCase() as HttpMethod;
+        const handler = apiModule[method];
+
+        if (!handler) {
+          return withDefaultSecurityHeaders(
+            new Response("Method not allowed", {
+              status: 405,
+              headers: { "content-type": "text/plain; charset=utf-8" },
+            }),
+          );
+        }
+
+        return withDefaultSecurityHeaders(
+          await handler({
+            request: options.request,
+            params: apiMatch.params,
+            context: middlewareResult.context,
+            signal: AbortSignal.timeout(30_000),
+            url,
+            route: apiMatch.route as any,
+          }),
+        );
+      } catch (error: unknown) {
+        return renderApiErrorResponse({
+          error,
+          middlewareFiles: apiMiddlewareFiles,
+          options,
+          phase: currentPhase,
+          route: apiMatch.route,
+        });
+      }
     }
   }
 
   const match = matchAppRoute(options.app, url.pathname);
 
   if (!match) {
+    if (isRouteStateRequest) {
+      return jsonErrorResponse(
+        createSerializedRouteError("Not found", 404, {
+          diagnostics: exposeDiagnostics
+            ? buildRuntimeDiagnostics({
+                phase: "match",
+                status: 404,
+              })
+            : undefined,
+          name: "Error",
+        }),
+      );
+    }
+
     return withDefaultSecurityHeaders(
       new Response("Not found", {
         status: 404,
@@ -363,9 +409,24 @@ export async function handlePrachtRequest<TContext>(
     );
   }
 
-  const isRouteStateRequest = options.request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
-
   if (!SAFE_METHODS.has(options.request.method)) {
+    if (isRouteStateRequest) {
+      return jsonErrorResponse(
+        createSerializedRouteError("Method not allowed", 405, {
+          diagnostics: exposeDiagnostics
+            ? buildRuntimeDiagnostics({
+                middlewareFiles: match.route.middlewareFiles,
+                phase: "action",
+                route: match.route,
+                shellFile: match.route.shellFile,
+                status: 405,
+              })
+            : undefined,
+          name: "Error",
+        }),
+      );
+    }
+
     return withRouteResponseHeaders(
       new Response("Method not allowed", {
         status: 405,
@@ -375,42 +436,55 @@ export async function handlePrachtRequest<TContext>(
     );
   }
 
-  // --- Middleware chain ---
-  const middlewareResult = await runMiddlewareChain({
+  let routeArgs: BaseRouteArgs<TContext> = {
+    request: options.request,
+    params: match.params,
     context: (options.context ?? {}) as TContext,
-    middlewareFiles: match.route.middlewareFiles,
-    params: match.params,
-    registry,
-    request: options.request,
-    route: match.route,
-    url,
-  });
-  if (middlewareResult.response) {
-    return withRouteResponseHeaders(middlewareResult.response, { isRouteStateRequest });
-  }
-  const context = middlewareResult.context;
-
-  // --- Load route module ---
-  const routeModule = await resolveRegistryModule<RouteModule>(
-    registry.routeModules,
-    match.route.file,
-  );
-
-  const routeArgs: BaseRouteArgs<TContext> = {
-    request: options.request,
-    params: match.params,
-    context,
     signal: AbortSignal.timeout(30_000),
     url,
     route: match.route,
   };
-
-  // --- Resolve loader from separate data module or route module ---
-  const { loader } = await resolveDataFunctions(match.route, routeModule, registry);
-
+  let routeModule: RouteModule | undefined;
   let shellModule: ShellModule | undefined;
+  let loaderFile: string | undefined;
+  let currentPhase: PrachtRuntimeDiagnosticPhase = "middleware";
 
   try {
+    // --- Middleware chain ---
+    const middlewareResult = await runMiddlewareChain({
+      context: routeArgs.context,
+      middlewareFiles: match.route.middlewareFiles,
+      params: match.params,
+      registry,
+      request: options.request,
+      route: match.route,
+      url,
+    });
+    if (middlewareResult.response) {
+      return withRouteResponseHeaders(middlewareResult.response, { isRouteStateRequest });
+    }
+
+    routeArgs = {
+      ...routeArgs,
+      context: middlewareResult.context,
+    };
+
+    // --- Load route module ---
+    currentPhase = "render";
+    routeModule = await resolveRegistryModule<RouteModule>(registry.routeModules, match.route.file);
+    if (!routeModule) {
+      throw new Error("Route module not found");
+    }
+
+    // --- Resolve loader from separate data module or route module ---
+    currentPhase = "loader";
+    const { loader, loaderFile: resolvedLoaderFile } = await resolveDataFunctions(
+      match.route,
+      routeModule,
+      registry,
+    );
+    loaderFile = resolvedLoaderFile;
+
     // --- Execute loader ---
     const loaderResult = loader ? await loader(routeArgs) : undefined;
 
@@ -427,6 +501,7 @@ export async function handlePrachtRequest<TContext>(
     }
 
     // --- Load shell module ---
+    currentPhase = "render";
     shellModule = match.route.shellFile
       ? await resolveRegistryModule<ShellModule>(registry.shellModules, match.route.shellFile)
       : undefined;
@@ -476,14 +551,8 @@ export async function handlePrachtRequest<TContext>(
     }
 
     // --- SSR / SSG / ISG: render Preact tree to string ---
-    if (!routeModule?.Component) {
-      return withRouteResponseHeaders(
-        new Response("Route has no Component export", {
-          status: 500,
-          headers: { "content-type": "text/plain; charset=utf-8" },
-        }),
-        { isRouteStateRequest },
-      );
+    if (!routeModule.Component) {
+      throw new Error("Route has no Component export");
     }
 
     const { renderToStringAsync } = await import("preact-render-to-string");
@@ -527,7 +596,9 @@ export async function handlePrachtRequest<TContext>(
     return renderRouteErrorResponse({
       error,
       isRouteStateRequest,
+      loaderFile,
       options,
+      phase: currentPhase,
       routeArgs,
       routeId: match.route.id ?? "",
       routeModule,
@@ -621,6 +692,45 @@ function shouldExposeServerErrors(options: HandlePrachtRequestOptions<unknown>):
   return options.debugErrors === true;
 }
 
+function createSerializedRouteError(
+  message: string,
+  status: number,
+  options: {
+    diagnostics?: PrachtRuntimeDiagnostics;
+    name?: string;
+  } = {},
+): SerializedRouteError {
+  return {
+    message,
+    name: options.name ?? "Error",
+    status,
+    ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
+  };
+}
+
+function buildRuntimeDiagnostics(options: {
+  middlewareFiles?: string[];
+  phase: PrachtRuntimeDiagnosticPhase;
+  route?: DiagnosticRoute;
+  loaderFile?: string;
+  shellFile?: string;
+  status: number;
+}): PrachtRuntimeDiagnostics {
+  const route = options.route;
+  const routeId = route && "id" in route ? route.id : undefined;
+
+  return {
+    phase: options.phase,
+    routeId,
+    routePath: route?.path,
+    routeFile: route?.file,
+    loaderFile: options.loaderFile,
+    shellFile: options.shellFile,
+    middlewareFiles: options.middlewareFiles ? [...options.middlewareFiles] : [],
+    status: options.status,
+  };
+}
+
 function normalizeRouteError(
   error: unknown,
   options: { exposeDetails: boolean },
@@ -684,14 +794,72 @@ function normalizeRouteError(
 function deserializeRouteError(error: SerializedRouteError): Error {
   const result = new Error(error.message);
   result.name = error.name;
-  (result as Error & { status?: number }).status = error.status;
+  (result as Error & { diagnostics?: PrachtRuntimeDiagnostics; status?: number }).status =
+    error.status;
+  (result as Error & { diagnostics?: PrachtRuntimeDiagnostics; status?: number }).diagnostics =
+    error.diagnostics;
   return result;
+}
+
+function jsonErrorResponse(
+  routeError: SerializedRouteError,
+  options: { isRouteStateRequest: boolean },
+): Response {
+  const response = new Response(JSON.stringify({ error: routeError }), {
+    status: routeError.status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+
+  return options.isRouteStateRequest
+    ? withRouteResponseHeaders(response, { isRouteStateRequest: true })
+    : withDefaultSecurityHeaders(response);
+}
+
+function renderApiErrorResponse<TContext>(options: {
+  error: unknown;
+  middlewareFiles: string[];
+  options: HandlePrachtRequestOptions<TContext>;
+  phase: PrachtRuntimeDiagnosticPhase;
+  route: ResolvedApiRoute;
+}): Response {
+  const exposeDetails = shouldExposeServerErrors(options.options);
+  const routeError = normalizeRouteError(options.error, {
+    exposeDetails,
+  });
+  const routeErrorWithDiagnostics = exposeDetails
+    ? {
+        ...routeError,
+        diagnostics: buildRuntimeDiagnostics({
+          middlewareFiles: options.middlewareFiles,
+          phase: options.phase,
+          route: options.route,
+          status: routeError.status,
+        }),
+      }
+    : routeError;
+
+  if (exposeDetails) {
+    return jsonErrorResponse(routeErrorWithDiagnostics, { isRouteStateRequest: false });
+  }
+
+  const message =
+    routeErrorWithDiagnostics.status >= 500
+      ? "Internal Server Error"
+      : routeErrorWithDiagnostics.message;
+  return withDefaultSecurityHeaders(
+    new Response(message, {
+      status: routeErrorWithDiagnostics.status,
+      headers: { "content-type": "text/plain; charset=utf-8" },
+    }),
+  );
 }
 
 async function renderRouteErrorResponse<TContext>(options: {
   error: unknown;
   isRouteStateRequest: boolean;
+  loaderFile: string | undefined;
   options: HandlePrachtRequestOptions<TContext>;
+  phase: PrachtRuntimeDiagnosticPhase;
   routeArgs: BaseRouteArgs<TContext>;
   routeId: string;
   routeModule: RouteModule | undefined;
@@ -699,38 +867,43 @@ async function renderRouteErrorResponse<TContext>(options: {
   shellModule: ShellModule | undefined;
   urlPathname: string;
 }): Promise<Response> {
+  const exposeDetails = shouldExposeServerErrors(options.options);
   const routeError = normalizeRouteError(options.error, {
-    exposeDetails: shouldExposeServerErrors(options.options),
+    exposeDetails,
   });
+  const routeErrorWithDiagnostics = exposeDetails
+    ? {
+        ...routeError,
+        diagnostics: buildRuntimeDiagnostics({
+          loaderFile: options.loaderFile,
+          middlewareFiles: options.routeArgs.route.middlewareFiles,
+          phase: options.phase,
+          route: options.routeArgs.route,
+          shellFile: options.shellFile,
+          status: routeError.status,
+        }),
+      }
+    : routeError;
 
   if (!options.routeModule?.ErrorBoundary) {
     if (options.isRouteStateRequest) {
-      return withRouteResponseHeaders(
-        new Response(JSON.stringify({ error: routeError }), {
-          status: routeError.status,
-          headers: { "content-type": "application/json; charset=utf-8" },
-        }),
-        { isRouteStateRequest: true },
-      );
+      return jsonErrorResponse(routeErrorWithDiagnostics, { isRouteStateRequest: true });
     }
 
-    const message = routeError.status >= 500 ? "Internal Server Error" : routeError.message;
+    const message =
+      routeErrorWithDiagnostics.status >= 500
+        ? "Internal Server Error"
+        : routeErrorWithDiagnostics.message;
     return withDefaultSecurityHeaders(
       new Response(message, {
-        status: routeError.status,
+        status: routeErrorWithDiagnostics.status,
         headers: { "content-type": "text/plain; charset=utf-8" },
       }),
     );
   }
 
   if (options.isRouteStateRequest) {
-    return withRouteResponseHeaders(
-      new Response(JSON.stringify({ error: routeError }), {
-        status: routeError.status,
-        headers: { "content-type": "application/json; charset=utf-8" },
-      }),
-      { isRouteStateRequest: true },
-    );
+    return jsonErrorResponse(routeErrorWithDiagnostics, { isRouteStateRequest: true });
   }
 
   const shellModule =
@@ -756,7 +929,7 @@ async function renderRouteErrorResponse<TContext>(options: {
 
   const ErrorBoundary = options.routeModule.ErrorBoundary as any;
   const Shell = shellModule?.Shell;
-  const errorValue = deserializeRouteError(routeError);
+  const errorValue = deserializeRouteError(routeErrorWithDiagnostics);
   const componentTree = Shell
     ? h(Shell, null, h(ErrorBoundary, { error: errorValue }))
     : h(ErrorBoundary, { error: errorValue });
@@ -779,13 +952,13 @@ async function renderRouteErrorResponse<TContext>(options: {
         url: options.urlPathname,
         routeId: options.routeId,
         data: null,
-        error: routeError,
+        error: routeErrorWithDiagnostics,
       },
       clientEntryUrl: options.options.clientEntryUrl,
       cssUrls,
       modulePreloadUrls,
     }),
-    routeError.status,
+    routeErrorWithDiagnostics.status,
   );
 }
 
@@ -844,18 +1017,22 @@ async function resolveDataFunctions(
   route: ResolvedRoute,
   routeModule: RouteModule | undefined,
   registry: ModuleRegistry,
-): Promise<{ loader: RouteModule["loader"] }> {
+): Promise<{ loader: RouteModule["loader"]; loaderFile?: string }> {
   let loader = routeModule?.loader;
+  let loaderFile = routeModule?.loader ? route.file : undefined;
 
   if (route.loaderFile) {
     const dataModule = await resolveRegistryModule<DataModule>(
       registry.dataModules,
       route.loaderFile,
     );
-    if (dataModule?.loader) loader = dataModule.loader;
+    if (dataModule?.loader) {
+      loader = dataModule.loader;
+      loaderFile = route.loaderFile;
+    }
   }
 
-  return { loader };
+  return { loader, loaderFile };
 }
 
 async function resolveRegistryModule<T>(

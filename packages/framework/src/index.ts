@@ -76,9 +76,13 @@ export type {
   HandlePrachtRequestOptions,
   ISGManifestEntry,
   Location,
+  PrachtRuntimeDiagnosticPhase,
+  PrachtRuntimeDiagnostics,
   PrerenderAppOptions,
   PrerenderAppResult,
   PrerenderResult,
+  RouteStateResult,
+  SerializedRouteError,
   StartAppOptions,
   PrachtHydrationState,
 } from "./runtime.ts";

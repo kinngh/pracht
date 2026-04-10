@@ -10,6 +10,24 @@ import {
   useParams,
 } from "../src/index.ts";
 
+function parseHydrationState(html: string) {
+  const match = html.match(
+    /<script id="pracht-state" type="application\/json">([\s\S]*?)<\/script>/,
+  );
+  if (!match) {
+    throw new Error("Hydration state script not found");
+  }
+
+  return JSON.parse(match[1]) as {
+    error?: {
+      diagnostics?: Record<string, unknown>;
+      message: string;
+      name: string;
+      status: number;
+    } | null;
+  };
+}
+
 describe("handlePrachtRequest rejects non-GET on page routes", () => {
   it("returns 405 for POST to a page route", async () => {
     const app = defineApp({
@@ -68,6 +86,46 @@ describe("handlePrachtRequest API middleware", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ allowed: true });
+  });
+});
+
+describe("handlePrachtRequest API errors", () => {
+  it("returns structured api diagnostics when debugErrors is enabled", async () => {
+    const app = defineApp({
+      routes: [route("/", "./routes/home.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      apiRoutes: resolveApiRoutes(["/src/api/health.ts"]),
+      app,
+      debugErrors: true,
+      registry: {
+        apiModules: {
+          "/src/api/health.ts": async () => ({
+            GET: async () => {
+              throw new Error("api exploded");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/api/health"),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        diagnostics: {
+          middlewareFiles: [],
+          phase: "api",
+          routeFile: "/src/api/health.ts",
+          routePath: "/api/health",
+          status: 500,
+        },
+        message: "api exploded",
+        name: "Error",
+        status: 500,
+      },
+    });
   });
 });
 
@@ -400,6 +458,126 @@ describe("handlePrachtRequest ErrorBoundary", () => {
     });
   });
 
+  it("includes structured loader diagnostics in debug route-state responses", async () => {
+    const app = defineApp({
+      middleware: {
+        auth: "./middleware/auth.ts",
+      },
+      shells: {
+        blog: "./shells/blog.tsx",
+      },
+      routes: [
+        route("/posts/:slug", {
+          component: "./routes/post.tsx",
+          id: "post-show",
+          loader: "./server/post-loader.ts",
+          middleware: ["auth"],
+          render: "ssr",
+          shell: "blog",
+        }),
+      ],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      debugErrors: true,
+      registry: {
+        dataModules: {
+          "./server/post-loader.ts": async () => ({
+            loader: async () => {
+              throw new Error("loader exploded");
+            },
+          }),
+        },
+        middlewareModules: {
+          "./middleware/auth.ts": async () => ({
+            middleware: async () => ({ context: { user: "jovi" } }),
+          }),
+        },
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        diagnostics: {
+          loaderFile: "./server/post-loader.ts",
+          middlewareFiles: ["./middleware/auth.ts"],
+          phase: "loader",
+          routeFile: "./routes/post.tsx",
+          routeId: "post-show",
+          routePath: "/posts/:slug",
+          shellFile: "./shells/blog.tsx",
+          status: 500,
+        },
+        message: "loader exploded",
+        name: "Error",
+        status: 500,
+      },
+    });
+  });
+
+  it("catches middleware failures and serializes middleware diagnostics", async () => {
+    const app = defineApp({
+      middleware: {
+        auth: "./middleware/auth.ts",
+      },
+      routes: [
+        route("/posts/:slug", "./routes/post.tsx", {
+          id: "post-show",
+          middleware: ["auth"],
+          render: "ssr",
+        }),
+      ],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      debugErrors: true,
+      registry: {
+        middlewareModules: {
+          "./middleware/auth.ts": async () => ({
+            middleware: async () => {
+              throw new Error("auth missing");
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing", {
+        headers: {
+          "x-pracht-route-state-request": "1",
+        },
+      }),
+    });
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        diagnostics: {
+          middlewareFiles: ["./middleware/auth.ts"],
+          phase: "middleware",
+          routeFile: "./routes/post.tsx",
+          routeId: "post-show",
+          routePath: "/posts/:slug",
+          status: 500,
+        },
+        message: "auth missing",
+        name: "Error",
+        status: 500,
+      },
+    });
+  });
+
   it("sanitizes unexpected 5xx loader failures in route-state responses", async () => {
     const app = defineApp({
       routes: [route("/posts/:slug", "./routes/post.tsx")],
@@ -499,6 +677,15 @@ describe("handlePrachtRequest ErrorBoundary", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({
       error: {
+        diagnostics: {
+          loaderFile: "./routes/post.tsx",
+          middlewareFiles: [],
+          phase: "loader",
+          routeFile: "./routes/post.tsx",
+          routeId: "posts-slug",
+          routePath: "/posts/:slug",
+          status: 500,
+        },
         message: "debug details",
         name: "Error",
         status: 500,
@@ -550,5 +737,62 @@ describe("handlePrachtRequest ErrorBoundary", () => {
         process.env.NODE_ENV = previousNodeEnv;
       }
     }
+  });
+
+  it("stores render diagnostics in SSR hydration state when debugErrors is enabled", async () => {
+    const app = defineApp({
+      shells: {
+        blog: "./shells/blog.tsx",
+      },
+      routes: [
+        route("/posts/:slug", "./routes/post.tsx", {
+          id: "post-show",
+          render: "ssr",
+          shell: "blog",
+        }),
+      ],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      debugErrors: true,
+      registry: {
+        routeModules: {
+          "./routes/post.tsx": async () => ({
+            Component: () => h("main", null, "post"),
+            ErrorBoundary: ({ error }) => h("p", null, `Error: ${error.message}`),
+            head: async () => {
+              throw new Error("head exploded");
+            },
+          }),
+        },
+        shellModules: {
+          "./shells/blog.tsx": async () => ({
+            Shell: ({ children }) => h("section", null, children),
+          }),
+        },
+      },
+      request: new Request("http://localhost/posts/missing"),
+    });
+
+    expect(response.status).toBe(500);
+    const html = await response.text();
+    expect(html).toContain("Error: head exploded");
+    expect(parseHydrationState(html)).toMatchObject({
+      error: {
+        diagnostics: {
+          middlewareFiles: [],
+          phase: "render",
+          routeFile: "./routes/post.tsx",
+          routeId: "post-show",
+          routePath: "/posts/:slug",
+          shellFile: "./shells/blog.tsx",
+          status: 500,
+        },
+        message: "head exploded",
+        name: "Error",
+        status: 500,
+      },
+    });
   });
 });
