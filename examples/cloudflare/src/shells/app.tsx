@@ -15,6 +15,14 @@ export function Shell({ children }: ShellProps) {
   );
 }
 
+export function Loading() {
+  return (
+    <section aria-busy="true">
+      <p>Loading page...</p>
+    </section>
+  );
+}
+
 export function head() {
   return {
     title: "Pracht App",

@@ -33,8 +33,10 @@ described in `VISION_MVP.md`.
   `renderToString` → HTML document assembly with hydration state
   (`window.__PRACHT_STATE__`), head metadata merging, and client entry injection.
 - **Render modes** — SSR, SSG, and ISG routes render server-side; SPA routes
-  return a minimal shell with no SSR content; route-state JSON responses are
-  returned when the `x-pracht-route-state-request` header is present.
+  keep the route component client-only but now render their matched shell
+  immediately, optionally with a shell `Loading` fallback. Route-state JSON
+  responses are returned when the `x-pracht-route-state-request` header is
+  present.
 - **ISG revalidation** — At build time, ISG routes are prerendered alongside SSG
   routes and an `isg-manifest.json` is generated mapping paths to revalidation
   config. At runtime, the Node adapter implements stale-while-revalidate:

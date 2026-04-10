@@ -110,6 +110,40 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
     );
   }
 
+  async function buildSpaPendingTree(
+    match: RouteMatch,
+    shellModPromise?: Promise<any> | null,
+  ): Promise<VNode<any> | null> {
+    const resolvedShell = await (shellModPromise ?? startShellImport(match));
+    if (!resolvedShell) return null;
+
+    const Shell = resolvedShell.Shell as any;
+    const Loading = resolvedShell.Loading as any;
+    const componentTree =
+      Shell != null
+        ? h(Shell, null, Loading ? h(Loading, null) : null)
+        : Loading
+          ? h(Loading, null)
+          : null;
+
+    if (!componentTree) return null;
+
+    return h(
+      NavigateContext.Provider as any,
+      { value: navigate },
+      h(
+        PrachtRuntimeProvider as any,
+        {
+          data: undefined,
+          params: match.params,
+          routeId: match.route.id ?? "",
+          url: match.pathname,
+        },
+        componentTree,
+      ),
+    );
+  }
+
   // ------------------------------------------------------------------
   // Navigate to a new pathname
   // ------------------------------------------------------------------
@@ -204,14 +238,26 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
 
   const initialMatch = matchAppRoute(app, options.initialState.url);
   if (initialMatch) {
+    const initialShellPromise =
+      initialMatch.route.render === "spa" && options.initialState.pending
+        ? startShellImport(initialMatch)
+        : null;
     let state = {
       data: options.initialState.data,
       error: options.initialState.error ?? null,
     };
 
-    if (initialMatch.route.render === "spa" && state.data == null && !state.error) {
+    if (initialMatch.route.render === "spa" && options.initialState.pending) {
+      // Kick off the data fetch in parallel with shell hydration
+      const dataPromise = fetchPrachtRouteState(options.initialState.url);
+
+      const pendingTree = await buildSpaPendingTree(initialMatch, initialShellPromise);
+      if (pendingTree) {
+        hydrate(pendingTree, root);
+      }
+
       try {
-        const result = await fetchPrachtRouteState(options.initialState.url);
+        const result = await dataPromise;
         if (result.type === "redirect") {
           window.location.href = result.location;
           return;
@@ -234,7 +280,7 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       }
     }
 
-    const tree = await buildRouteTree(initialMatch, state);
+    const tree = await buildRouteTree(initialMatch, state, undefined, initialShellPromise);
     if (tree) {
       if (initialMatch.route.render === "spa") {
         render(tree, root);

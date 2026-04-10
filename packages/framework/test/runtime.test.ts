@@ -217,6 +217,43 @@ describe("handlePrachtRequest cache variance", () => {
   });
 });
 
+describe("handlePrachtRequest SPA shell fallback", () => {
+  it("renders shell chrome and loading UI for SPA routes without serializing loader data", async () => {
+    const app = defineApp({
+      shells: {
+        app: "./shells/app.tsx",
+      },
+      routes: [route("/settings", "./routes/settings.tsx", { render: "spa", shell: "app" })],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/settings.tsx": async () => ({
+            Component: ({ data }) => h("main", null, `Hello ${(data as any).user}`),
+            loader: async () => ({ user: "secret-user" }),
+          }),
+        },
+        shellModules: {
+          "./shells/app.tsx": async () => ({
+            Shell: ({ children }) => h("div", { class: "app-shell" }, children),
+            Loading: () => h("p", null, "Loading settings..."),
+          }),
+        },
+      },
+      request: new Request("http://localhost/settings"),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain("app-shell");
+    expect(html).toContain("Loading settings...");
+    expect(html).toContain('"pending":true');
+    expect(html).not.toContain("secret-user");
+  });
+});
+
 describe("useParams", () => {
   it("provides route params to nested components during SSR", async () => {
     const app = defineApp({

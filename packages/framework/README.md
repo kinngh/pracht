@@ -48,4 +48,4 @@ Each route can specify its rendering mode:
 - `ssr` — server-rendered on every request
 - `ssg` — pre-rendered at build time
 - `isg` — pre-rendered with time-based revalidation
-- `spa` — client-only rendering
+- `spa` — client-only route rendering with optional shell/loading HTML on first paint

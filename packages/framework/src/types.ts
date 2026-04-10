@@ -224,6 +224,7 @@ export interface RouteModule<TContext = any, TLoader extends LoaderLike = undefi
 
 export interface ShellModule<TContext = any> {
   Shell: FunctionComponent<ShellProps>;
+  Loading?: FunctionComponent;
   head?: (args: BaseRouteArgs<TContext>) => MaybePromise<HeadMetadata>;
 }
 
