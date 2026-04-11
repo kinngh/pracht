@@ -55,8 +55,7 @@ Two styles, both fully supported — pick whichever fits your mental model:
 
 - **Loaders**: `export function loader(args)` — runs at build (SSG), request (SSR),
   or client navigation time. Returns typed, serializable data.
-- **Actions**: `export function action(args)` — handles POST/PUT/PATCH/DELETE.
-  Returns data, redirects, or revalidation hints.
+- **Form**: A component that allows poting to one of our API-Routes
 
 **Separate files (manifest-wired):**
 
