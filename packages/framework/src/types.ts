@@ -39,11 +39,14 @@ export type RouteRevalidate = TimeRevalidatePolicy;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS";
 
+export type ApiRouteArgs<TContext = RegisteredContext> = BaseRouteArgs<TContext>;
+
 export type ApiRouteHandler<TContext = RegisteredContext> = (
-  args: BaseRouteArgs<TContext>,
+  args: ApiRouteArgs<TContext>,
 ) => MaybePromise<Response>;
 
 export interface ApiRouteModule<TContext = any> {
+  default?: ApiRouteHandler<TContext>;
   GET?: ApiRouteHandler<TContext>;
   POST?: ApiRouteHandler<TContext>;
   PUT?: ApiRouteHandler<TContext>;

@@ -47,7 +47,7 @@ The user will describe what they want to create. Parse their request and generat
 | Route      | `src/routes/`     | `loader`, `head`, `Component`, `ErrorBoundary`, `getStaticPaths`     | `src/routes/blog.tsx`          |
 | Shell      | `src/shells/`     | `Shell`, `head`                                                      | `src/shells/marketing.tsx`     |
 | Middleware | `src/middleware/` | `middleware`                                                         | `src/middleware/rate-limit.ts` |
-| API route  | `src/api/`        | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) | `src/api/users/[id].ts`        |
+| API route  | `src/api/`        | Named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) or one default method dispatcher           | `src/api/users/[id].ts`        |
 
 ## Templates
 
@@ -118,6 +118,7 @@ export function GET({ params, url }: BaseRouteArgs) {
 ```
 
 - Only include the HTTP methods the user needs.
+- Use a default export only when the user wants to branch on `request.method` manually.
 - Use `request.json()`, `request.formData()`, etc. for body parsing.
 - Always return `Response` objects (typically `Response.json()`).
 - Dynamic segments use bracket syntax in filenames: `[id].ts`, `[...slug].ts`.

@@ -168,4 +168,4 @@ export async function DELETE({ params, context }: ApiRouteArgs) {
 }
 ```
 
-API routes export named HTTP method handlers, return `Response` objects directly, share the same context system as page routes, and are excluded from client bundles entirely.
+API routes export named HTTP method handlers or one default handler that branches on `request.method`, return `Response` objects directly, share the same context system as page routes, and are excluded from client bundles entirely.

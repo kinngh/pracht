@@ -24,9 +24,10 @@ described in `VISION_MVP.md`.
 - **API routes** — File-based auto-discovery from `src/api/`. Files are globbed
   by the Vite plugin and resolved to URL paths (e.g. `src/api/health.ts` →
   `/api/health`, `src/api/users/[id].ts` → `/api/users/:id`). Modules export
-  named HTTP method handlers (`GET`, `POST`, etc.) that return `Response`
-  objects directly. API routes are dispatched before page routes in
-  `handlePrachtRequest()`. Missing method handlers return 405. Shared API policy
+  named HTTP method handlers (`GET`, `POST`, etc.) or one default handler that
+  branches on `request.method` and returns `Response` objects directly. API
+  routes are dispatched before page routes in `handlePrachtRequest()`. Missing
+  method handlers return 405 when no default handler exists. Shared API policy
   can be applied explicitly with `defineApp({ api: { middleware: [...] } })`.
 - **Server rendering** — `handlePrachtRequest()` executes the full request
   lifecycle: API route check → middleware chain → loader → Preact

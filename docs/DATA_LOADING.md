@@ -186,10 +186,34 @@ export async function DELETE({ params, context }: ApiRouteArgs) {
 }
 ```
 
+If you want to own method dispatch, export one default handler and branch on
+`request.method`:
+
+```typescript
+// src/api/users/[id].ts
+import type { ApiRouteArgs } from "@pracht/core";
+
+export default async function handler({ params, request, context }: ApiRouteArgs) {
+  if (request.method === "GET") {
+    const user = await context.db.users.find(params.id);
+    if (!user) return new Response("Not found", { status: 404 });
+    return Response.json(user);
+  }
+
+  if (request.method === "DELETE") {
+    await context.db.users.delete(params.id);
+    return new Response(null, { status: 204 });
+  }
+
+  return new Response("Method not allowed", { status: 405 });
+}
+```
+
 API routes:
 
 - Live in `src/api/` with file-based path mapping
 - Export named HTTP method handlers (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
+  or one default handler that branches on `args.request.method`
 - Return `Response` objects directly
 - Share the same request context shape as page routes
 - Can opt into app-level API middleware via `defineApp({ api: { middleware } })`

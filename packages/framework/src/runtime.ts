@@ -4,6 +4,7 @@ import { useContext, useEffect, useMemo, useState } from "preact/hooks";
 
 import { matchApiRoute, matchAppRoute } from "./app.ts";
 import type {
+  ApiRouteArgs,
   ApiRouteModule,
   BaseRouteArgs,
   DataModule,
@@ -351,7 +352,7 @@ export async function handlePrachtRequest<TContext>(
         }
 
         const method = options.request.method.toUpperCase() as HttpMethod;
-        const handler = apiModule[method];
+        const handler = apiModule[method] ?? apiModule.default;
 
         if (!handler) {
           return withDefaultSecurityHeaders(
@@ -362,16 +363,16 @@ export async function handlePrachtRequest<TContext>(
           );
         }
 
-        return withDefaultSecurityHeaders(
-          await handler({
-            request: options.request,
-            params: apiMatch.params,
-            context: middlewareResult.context,
-            signal: AbortSignal.timeout(30_000),
-            url,
-            route: apiMatch.route as any,
-          }),
-        );
+        const apiRouteArgs: ApiRouteArgs<TContext> = {
+          request: options.request,
+          params: apiMatch.params,
+          context: middlewareResult.context,
+          signal: AbortSignal.timeout(30_000),
+          url,
+          route: apiMatch.route as any,
+        };
+
+        return withDefaultSecurityHeaders(await handler(apiRouteArgs));
       } catch (error: unknown) {
         return renderApiErrorResponse({
           error,
