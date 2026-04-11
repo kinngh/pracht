@@ -1,5 +1,13 @@
 # @pracht/example-pages-router
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`0d33c3d`](https://github.com/JoviDeCroock/pracht/commit/0d33c3dee00bf3940dc56bef3a171249a3d73e21), [`ba1eaea`](https://github.com/JoviDeCroock/pracht/commit/ba1eaeaf68ab63b47b08411fbdafae2fd98e5f09)]:
+  - @pracht/core@0.2.0
+  - @pracht/adapter-node@0.1.1
+
 ## 0.0.2
 
 ### Patch Changes
