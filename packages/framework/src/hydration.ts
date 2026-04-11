@@ -22,8 +22,7 @@ const oldCatchError = (options as any).__e;
 (options as any).__e = (err: any, newVNode: any, oldVNode: any, errorInfo?: any) => {
   if (_hydrating && !_hydrated && err && err.then) {
     const isHydratingVNode =
-      !!(newVNode && newVNode.__u && newVNode.__u & MODE_HYDRATE) ||
-      !!(newVNode && newVNode.__h);
+      !!(newVNode && newVNode.__u && newVNode.__u & MODE_HYDRATE) || !!(newVNode && newVNode.__h);
     if (isHydratingVNode) {
       _suspensionCount++;
       let settled = false;

@@ -259,10 +259,7 @@ describe("useIsHydrated", () => {
     }
 
     markHydrating();
-    hydrate(
-      h(Suspense as any, { fallback: null }, h(HydrateLazy, null)),
-      scratch,
-    );
+    hydrate(h(Suspense as any, { fallback: null }, h(HydrateLazy, null)), scratch);
     // After this, _hydrating=true, _hydrated=false, _suspensionCount=1
     // (from HydrateLazy's legitimate hydration throw).
 
@@ -283,10 +280,7 @@ describe("useIsHydrated", () => {
       }
       return h("div", null, "other");
     }
-    render(
-      h(Suspense as any, { fallback: null }, h(OtherLazy, null)),
-      otherScratch,
-    );
+    render(h(Suspense as any, { fallback: null }, h(OtherLazy, null)), otherScratch);
 
     // Resolve the real hydration suspension. With the guard working,
     // count goes 1 → 0 → next commit flips _hydrated=true.
