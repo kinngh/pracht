@@ -109,7 +109,7 @@ export function head({ data }: HeadArgs<typeof loader>) {
 }
 
 // Client + SSR: the page component
-export function Component({ data }: RouteComponentProps<typeof loader>) {
+export default function Dashboard({ data }: RouteComponentProps<typeof loader>) {
   const liveData = useRouteData<typeof loader>();
   return <main>{liveData.user.name}</main>;
 }
@@ -139,10 +139,15 @@ export async function loader({ request }: LoaderArgs) {
 
 ```typescript
 // src/routes/dashboard.tsx — pure component, no server code
-export function Component({ data }: RouteComponentProps) {
+export default function Dashboard({ data }: RouteComponentProps) {
   return <main>{data.user.name}</main>;
 }
 ```
+
+A named `Component` export is also supported for compatibility. Function-valued
+default exports are treated as the page component; named exports such as
+`loader`, `head`, `ErrorBoundary`, and `getStaticPaths` keep their framework
+roles.
 
 Wired in the manifest via the `RouteConfig` object form:
 
@@ -400,7 +405,7 @@ export async function loader({ params }: LoaderArgs) {
 }
 
 // LoaderData<typeof loader> = { title: string; count: number }
-export function Component({ data }: RouteComponentProps<typeof loader>) {
+export default function Page({ data }: RouteComponentProps<typeof loader>) {
   // data.title is string, data.count is number — no manual typing
 }
 ```

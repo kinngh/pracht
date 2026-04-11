@@ -553,13 +553,15 @@ export async function handlePrachtRequest<TContext>(
     }
 
     // --- SSR / SSG / ISG: render Preact tree to string ---
-    if (!routeModule.Component) {
-      throw new Error("Route has no Component export");
+    const DefaultComponent =
+      typeof routeModule.default === "function" ? routeModule.default : undefined;
+    const Component = (routeModule.Component ?? DefaultComponent) as any;
+    if (!Component) {
+      throw new Error("Route has no Component or default export");
     }
 
     const { renderToStringAsync } = await import("preact-render-to-string");
 
-    const Component = routeModule.Component as any;
     const Shell = shellModule?.Shell;
     const componentProps = { data, params: match.params };
 

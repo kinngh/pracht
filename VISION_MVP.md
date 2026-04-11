@@ -128,7 +128,7 @@ SSR and SSG, deployed to Node. Thoroughly tested with Playwright E2E tests.
 
 1. **`packages/framework`** — core exports
    - `defineApp()`, `route()`, `group()` — route manifest API
-   - `RouteModule` type — loader, action, head, Component, errorBoundary
+   - `RouteModule` type — loader, action, head, default/Component, errorBoundary
    - `ShellModule` type — layout wrapper with head contribution
    - `MiddlewareModule` type — server-side request interceptor
    - Router: `matchAppRoute()` segment-based matching

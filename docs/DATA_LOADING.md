@@ -20,11 +20,15 @@ export async function loader({ request, params, context, signal }: LoaderArgs) {
   return { user, projects };
 }
 
-export function Component({ data }: RouteComponentProps<typeof loader>) {
+export default function Dashboard({ data }: RouteComponentProps<typeof loader>) {
   // data is typed as { user: User; projects: Project[] }
   return <h1>Welcome, {data.user.name}</h1>;
 }
 ```
+
+The route component can be a function default export or a named `Component`
+export. Named route exports such as `loader`, `head`, `ErrorBoundary`, and
+`getStaticPaths` remain separate special exports.
 
 ### LoaderArgs
 

@@ -192,7 +192,7 @@ export function head({ data }: { data: Awaited<ReturnType<typeof loader>> }) {
   return { title: data.title };
 }
 
-export function Component({ data }: RouteComponentProps<typeof loader>) {
+export default function Page({ data }: RouteComponentProps<typeof loader>) {
   return <div class="page">{data.title}</div>;
 }
 ```
@@ -201,7 +201,7 @@ Key transforms:
 
 - Server-side data fetching → `loader()` export
 - `generateMetadata` → `head()` export
-- `export default function Page` → `export function Component`
+- Keep `export default function Page` as the page component
 - `className` → `class`
 - No `async` components — data comes via props from loader
 
