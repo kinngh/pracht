@@ -106,6 +106,74 @@ describe("useIsHydrated", () => {
     expect(values[0]).toBe(true);
   });
 
+  it("keeps sibling components consistent during the initial hydration render", () => {
+    // Regression: a per-vnode `options.diffed` flip would fire _hydrated=true
+    // after the first sibling's subtree finished diffing, causing the second
+    // sibling to read `true` from `useState(_hydrated)` during its very first
+    // render — mid-tree inconsistency between siblings in the same hydrate
+    // call. Using `options.__c` (commit root) defers the flip to after the
+    // whole tree commits, so both siblings must observe `false` on render 1.
+    scratch.innerHTML = "<div><div>A</div><div>B</div></div>";
+
+    const valuesA: boolean[] = [];
+    const valuesB: boolean[] = [];
+    function A() {
+      valuesA.push(useIsHydrated());
+      return h("div", null, "A");
+    }
+    function B() {
+      valuesB.push(useIsHydrated());
+      return h("div", null, "B");
+    }
+    function Root() {
+      return h("div", null, h(A, null), h(B, null));
+    }
+
+    markHydrating();
+    hydrate(h(Root, null), scratch);
+
+    expect(valuesA[0]).toBe(false);
+    expect(valuesB[0]).toBe(false);
+  });
+
+  it("flips _hydrated exactly once for the whole initial commit", async () => {
+    // Sanity check that deeper nesting doesn't re-trigger the flip. All
+    // descendants in a single hydrate call should see `false` on render 1 and
+    // `true` on render 2 (after useEffect), and a component mounted afterwards
+    // via a subsequent render() should see `true` immediately.
+    scratch.innerHTML = "<div><div><div>leaf</div></div></div>";
+
+    const leafValues: boolean[] = [];
+    function Leaf() {
+      leafValues.push(useIsHydrated());
+      return h("div", null, "leaf");
+    }
+    function Middle() {
+      return h("div", null, h(Leaf, null));
+    }
+    function Root() {
+      return h("div", null, h(Middle, null));
+    }
+
+    markHydrating();
+    hydrate(h(Root, null), scratch);
+
+    expect(leafValues[0]).toBe(false);
+
+    await flush();
+
+    expect(leafValues[leafValues.length - 1]).toBe(true);
+
+    // Subsequent mount picks up the finished state synchronously.
+    const laterValues: boolean[] = [];
+    function Later() {
+      laterValues.push(useIsHydrated());
+      return h("div", null, "later");
+    }
+    render(h(Later, null), scratch);
+    expect(laterValues[0]).toBe(true);
+  });
+
   it("tracks suspension count during hydration", async () => {
     // SSR rendered the *resolved* content — that's what sits in the DOM.
     // During hydration the lazy component throws a promise; Suspense keeps
@@ -160,5 +228,80 @@ describe("useIsHydrated", () => {
     // LazyChild's first render saw _hydrated=false, then useEffect flipped it
     expect(lazyValues[0]).toBe(false);
     expect(lazyValues[lazyValues.length - 1]).toBe(true);
+  });
+
+  it("does not count suspensions thrown from non-hydrating render() trees", async () => {
+    // Regression: while a hydrate is still waiting on a legitimate
+    // hydration-suspension, other parts of the app can mount unrelated
+    // trees via render() — e.g. a portal, a modal root, a parallel
+    // island. If one of those throws a promise, its vnode does NOT carry
+    // MODE_HYDRATE (only hydrate() sets that flag), so it's a regular
+    // render-cycle suspension, not a hydration-suspension. Our __e must
+    // ignore it, otherwise the global `_hydrated` flag would stay
+    // pinned at false even after the real hydration finishes.
+    //
+    // We probe the GLOBAL `_hydrated` flag (not a component's local
+    // useState) by mounting a fresh component after the scenario — its
+    // initial `useState(_hydrated)` reads the global directly.
+    scratch.innerHTML = "<div>hello</div>";
+
+    let hydrateThrew = false;
+    let resolveHydrate!: () => void;
+    const hydratePromise = new Promise<void>((r) => {
+      resolveHydrate = r;
+    });
+    function HydrateLazy() {
+      if (!hydrateThrew) {
+        hydrateThrew = true;
+        throw hydratePromise;
+      }
+      return h("div", null, "hello");
+    }
+
+    markHydrating();
+    hydrate(h(Suspense as any, { fallback: null }, h(HydrateLazy, null)), scratch);
+    // After this, _hydrating=true, _hydrated=false, _suspensionCount=1
+    // (from HydrateLazy's legitimate hydration throw).
+
+    // Mount an UNRELATED tree via render() that also throws. Its vnodes
+    // have no MODE_HYDRATE flag — if the guard in __e is missing, this
+    // would push _suspensionCount to 2 and `resolveHydrate()` below
+    // would decrement it back to 1 (not 0), so `_hydrated` would never
+    // flip.
+    const otherScratch = document.createElement("div");
+    document.body.appendChild(otherScratch);
+    let otherThrew = false;
+    // Intentionally never resolves — stays pending for the whole test.
+    const otherPromise = new Promise<void>(() => {});
+    function OtherLazy() {
+      if (!otherThrew) {
+        otherThrew = true;
+        throw otherPromise;
+      }
+      return h("div", null, "other");
+    }
+    render(h(Suspense as any, { fallback: null }, h(OtherLazy, null)), otherScratch);
+
+    // Resolve the real hydration suspension. With the guard working,
+    // count goes 1 → 0 → next commit flips _hydrated=true.
+    resolveHydrate();
+    await flush();
+
+    // Probe the global flag with a third, brand-new mount.
+    const probeScratch = document.createElement("div");
+    document.body.appendChild(probeScratch);
+    try {
+      const probeValues: boolean[] = [];
+      function Probe() {
+        probeValues.push(useIsHydrated());
+        return h("div", null, "probe");
+      }
+      render(h(Probe, null), probeScratch);
+      expect(probeValues[0]).toBe(true);
+    } finally {
+      render(null, otherScratch);
+      otherScratch.remove();
+      probeScratch.remove();
+    }
   });
 });
