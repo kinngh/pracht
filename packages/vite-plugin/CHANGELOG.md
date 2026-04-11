@@ -1,5 +1,14 @@
 # @pracht/vite-plugin
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`0d33c3d`](https://github.com/JoviDeCroock/pracht/commit/0d33c3dee00bf3940dc56bef3a171249a3d73e21), [`ba1eaea`](https://github.com/JoviDeCroock/pracht/commit/ba1eaeaf68ab63b47b08411fbdafae2fd98e5f09)]:
+  - @pracht/core@0.2.0
+  - @pracht/adapter-cloudflare@0.0.3
+  - @pracht/adapter-vercel@0.0.3
+
 ## 0.1.0
 
 ### Minor Changes
@@ -41,6 +50,7 @@
 - [`c95bb72`](https://github.com/JoviDeCroock/pracht/commit/c95bb72c53a2d9012fde847139c276808ba5a9c3) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix SSG prerendered pages missing client JS script tag and framework context
 
   Two issues caused prerendered (SSG) pages to ship without working hydration:
+
   1. **Vite 8 environment nesting**: The `@cloudflare/vite-plugin` outputs client assets
      to `<outDir>/client/`, so `outDir: "dist/client"` produced `dist/client/client/`.
      The CLI then couldn't find the Vite manifest, resulting in no `<script>` tag in

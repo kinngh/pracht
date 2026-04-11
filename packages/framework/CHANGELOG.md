@@ -1,5 +1,15 @@
 # @pracht/core
 
+## 0.2.0
+
+### Minor Changes
+
+- [#73](https://github.com/JoviDeCroock/pracht/pull/73) [`ba1eaea`](https://github.com/JoviDeCroock/pracht/commit/ba1eaeaf68ab63b47b08411fbdafae2fd98e5f09) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add `useIsHydrated` hook that tracks in-flight Suspense boundaries during hydration and returns `true` only after the initial hydration (including all suspended promises) has fully resolved.
+
+### Patch Changes
+
+- [#75](https://github.com/JoviDeCroock/pracht/pull/75) [`0d33c3d`](https://github.com/JoviDeCroock/pracht/commit/0d33c3dee00bf3940dc56bef3a171249a3d73e21) Thanks [@kinngh](https://github.com/kinngh)! - Allow route modules to use a function default export as the page component while preserving named route exports.
+
 ## 0.1.0
 
 ### Minor Changes

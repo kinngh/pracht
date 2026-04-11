@@ -1,5 +1,23 @@
 # @pracht/cli
 
+## 1.1.0
+
+### Minor Changes
+
+- [#70](https://github.com/JoviDeCroock/pracht/pull/70) [`ddd50a1`](https://github.com/JoviDeCroock/pracht/commit/ddd50a1edf82a6884881a91ce7172d87ec571cde) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Add `pracht inspect` as a machine-readable app graph command.
+
+  The CLI can now emit resolved routes, API handlers, and build metadata via:
+
+  - `pracht inspect routes --json`
+  - `pracht inspect api --json`
+  - `pracht inspect build --json`
+  - `pracht inspect --json`
+
+### Patch Changes
+
+- Updated dependencies [[`0d33c3d`](https://github.com/JoviDeCroock/pracht/commit/0d33c3dee00bf3940dc56bef3a171249a3d73e21), [`ba1eaea`](https://github.com/JoviDeCroock/pracht/commit/ba1eaeaf68ab63b47b08411fbdafae2fd98e5f09)]:
+  - @pracht/core@0.2.0
+
 ## 1.0.0
 
 ### Major Changes
@@ -38,6 +56,7 @@
 - [`c95bb72`](https://github.com/JoviDeCroock/pracht/commit/c95bb72c53a2d9012fde847139c276808ba5a9c3) Thanks [@JoviDeCroock](https://github.com/JoviDeCroock)! - Fix SSG prerendered pages missing client JS script tag and framework context
 
   Two issues caused prerendered (SSG) pages to ship without working hydration:
+
   1. **Vite 8 environment nesting**: The `@cloudflare/vite-plugin` outputs client assets
      to `<outDir>/client/`, so `outDir: "dist/client"` produced `dist/client/client/`.
      The CLI then couldn't find the Vite manifest, resulting in no `<script>` tag in
