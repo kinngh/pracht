@@ -217,7 +217,8 @@ export type LoaderFn<TContext = any, TData = unknown> = (
 export interface RouteModule<TContext = any, TLoader extends LoaderLike = undefined> {
   loader?: LoaderFn<TContext>;
   head?: (args: HeadArgs<TLoader, TContext>) => MaybePromise<HeadMetadata>;
-  Component: FunctionComponent<RouteComponentProps<TLoader>>;
+  Component?: FunctionComponent<RouteComponentProps<TLoader>>;
+  default?: FunctionComponent<RouteComponentProps<TLoader>>;
   ErrorBoundary?: FunctionComponent<ErrorBoundaryProps>;
   getStaticPaths?: () => MaybePromise<RouteParams[]>;
 }

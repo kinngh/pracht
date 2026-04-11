@@ -16,6 +16,10 @@ npm install @pracht/core preact preact-render-to-string
 - `route()` — declare a route with path, component, loader, and rendering mode
 - `group()` — group routes under a shared shell or middleware
 
+Route modules may export the page as a function default export or as a named
+`Component` export. Named exports such as `loader`, `head`, `ErrorBoundary`, and
+`getStaticPaths` keep their special route-module behavior.
+
 ### Server
 
 - `handlePrachtRequest()` — server renderer that produces full HTML with hydration markers

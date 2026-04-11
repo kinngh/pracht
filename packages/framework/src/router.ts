@@ -87,7 +87,10 @@ export async function initClientRouter(options: InitClientRouterOptions): Promis
       Shell = resolvedShell.Shell;
     }
 
-    const Component = (state.error ? routeMod.ErrorBoundary : routeMod.Component) as any;
+    const DefaultComponent = typeof routeMod.default === "function" ? routeMod.default : undefined;
+    const Component = (
+      state.error ? routeMod.ErrorBoundary : (routeMod.Component ?? DefaultComponent)
+    ) as any;
     if (!Component) return null;
 
     const props: Record<string, unknown> = state.error

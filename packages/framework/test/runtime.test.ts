@@ -221,6 +221,31 @@ describe("handlePrachtRequest with separate data modules", () => {
   });
 });
 
+describe("handlePrachtRequest route component exports", () => {
+  it("renders a function default export while preserving named loader exports", async () => {
+    const app = defineApp({
+      routes: [route("/home", "./routes/home.tsx", { render: "ssr" })],
+    });
+
+    const response = await handlePrachtRequest({
+      app,
+      registry: {
+        routeModules: {
+          "./routes/home.tsx": async () => ({
+            default: ({ data }) => h("main", null, `Hello ${(data as any).name}`),
+            loader: async () => ({ name: "default export" }),
+          }),
+        },
+      },
+      request: new Request("http://localhost/home"),
+    });
+
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain("Hello default export");
+  });
+});
+
 describe("handlePrachtRequest cache variance", () => {
   it("adds a route-state vary header to HTML responses", async () => {
     const app = defineApp({

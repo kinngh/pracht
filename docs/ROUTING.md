@@ -282,7 +282,7 @@ Page files can export a `RENDER_MODE` constant to set the rendering strategy:
 // src/pages/about.tsx
 export const RENDER_MODE = "ssg";
 
-export function Component() {
+export default function About() {
   return <div>About us</div>;
 }
 ```
