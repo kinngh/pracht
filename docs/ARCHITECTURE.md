@@ -446,10 +446,22 @@ in-flight suspensions so it knows when hydration is truly complete.
 
 - `markHydrating()` is called by the router before `hydrate()` to set a global
   `_hydrating` flag.
-- `options.__e` (\_catchError) intercepts thrown promises during hydration. Each
-  promise increments `_suspensionCount`; settling decrements it.
-- `options.diffed` runs after every render cycle. When `_hydrating` is true and
-  `_suspensionCount` hits zero, it flips `_hydrated = true`.
+- `options.__e` (\_catchError) intercepts thrown promises during hydration and,
+  when the suspending vnode carries the `MODE_HYDRATE` flag, increments
+  `_suspensionCount`; settling decrements it. The `MODE_HYDRATE` check is
+  important: without it, an unrelated `render()` tree (portal, island, modal)
+  that suspends while a hydrate is still in-flight would be mis-counted as a
+  hydration suspension and pin `_hydrated` to `false`. This mirrors the same
+  check preact-suspense uses internally to decide whether to preserve server
+  DOM.
+- `options.__c` (\_commit / commitRoot) runs once per commit root after the whole
+  subtree has finished diffing. When `_hydrating` is true and `_suspensionCount`
+  is zero, it flips `_hydrated = true`. Commit-root granularity (rather than
+  per-vnode `diffed`) is important: otherwise the flag could flip between two
+  sibling components in the same hydrate call, and the later sibling would
+  observe `true` on its first render. It also handles Suspense resolution
+  transparently — when a lazy boundary settles, its re-render runs a normal
+  diff→commit cycle and `__c` catches it at the end.
 
 **`useIsHydrated()` hook**:
 
