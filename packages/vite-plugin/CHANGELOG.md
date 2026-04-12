@@ -1,5 +1,14 @@
 # @pracht/vite-plugin
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [[`aa3fab6`](https://github.com/JoviDeCroock/pracht/commit/aa3fab65258710272c51003f93f7968d9ca1632a)]:
+  - @pracht/core@0.2.2
+  - @pracht/adapter-cloudflare@0.0.5
+  - @pracht/adapter-vercel@0.0.5
+
 ## 0.1.2
 
 ### Patch Changes
