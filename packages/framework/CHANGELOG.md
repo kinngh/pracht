@@ -1,5 +1,11 @@
 # @pracht/core
 
+## 0.2.2
+
+### Patch Changes
+
+- [#79](https://github.com/JoviDeCroock/pracht/pull/79) [`aa3fab6`](https://github.com/JoviDeCroock/pracht/commit/aa3fab65258710272c51003f93f7968d9ca1632a) Thanks [@kinngh](https://github.com/kinngh)! - Allow API route modules to export a default handler that branches on `request.method`.
+
 ## 0.2.1
 
 ### Patch Changes
