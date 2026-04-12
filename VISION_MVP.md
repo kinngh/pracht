@@ -11,7 +11,7 @@ Pracht is a full-stack Preact framework built on Vite. It draws routing and rend
 3. **Explicit over magic** — hybrid routing (file modules + manifest config) so
    developers always know what runs where.
 4. **Deploy anywhere** — platform adapters isolate runtime differences; one codebase
-   targets Cloudflare Workers, Vercel, Node, Deno, etc.
+   targets Cloudflare Workers, Vercel, Node, etc.
 5. **AI-assisted** — Claude Code skills for scaffolding, debugging, and operating
    the framework.
 6. **Proven by tests** — thorough E2E testing (Playwright) to prove SSR, SSG, ISG,
@@ -100,7 +100,6 @@ Platform adapters export a request handler shaped for their runtime:
 | `adapter-node`       | Node.js `http`    | Static file serving, ISG mtime check |
 | `adapter-cloudflare` | Workers `fetch`   | `env.ASSETS`, KV, execution context  |
 | `adapter-vercel`     | Serverless / Edge | Build Output API v3 + edge handler   |
-| `adapter-deno`       | Deno.serve        | (planned)                            |
 
 Each adapter:
 
@@ -163,14 +162,13 @@ SSR and SSG, deployed to Node. Thoroughly tested with Playwright E2E tests.
    - SSG generates static files at build time
    - Client-side navigation works without full page reload
    - Loaders return correct data
-   - Actions handle form submissions
    - Shells wrap routes correctly
    - Hydration completes without errors
 
 ### Phase 1 Non-Goals
 
 - API routes (Phase 2)
-- Cloudflare / Vercel / Deno adapters (Phase 2)
+- Cloudflare / Vercel adapters (Phase 2)
 - Claude Code skills (Phase 2)
 - ISG webhook revalidation (Phase 2)
 
