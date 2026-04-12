@@ -42,9 +42,11 @@ test("pracht build emits a deployable Node server entry", async () => {
 
     const homeResponse = await fetch(`http://127.0.0.1:${port}/`);
     expect(homeResponse.status).toBe(200);
-    await expect(homeResponse.text()).resolves.toContain(
-      "Pracht starts with an explicit app manifest.",
-    );
+    const homeHtml = await homeResponse.text();
+    expect(homeHtml).toContain("Pracht starts with an explicit app manifest.");
+    expect(homeHtml).not.toContain("/@pracht/client.js");
+    expect(homeHtml).toMatch(/<script type="module" src="\/assets\/client-[^"]+\.js"><\/script>/);
+    expect(homeHtml).toContain('rel="modulepreload"');
 
     // Dynamic SSG routes should be prerendered as static HTML files
     for (const id of ["1", "2", "3"]) {
@@ -60,6 +62,18 @@ test("pracht build emits a deployable Node server entry", async () => {
     const apiResponse = await fetch(`http://127.0.0.1:${port}/api/health`);
     expect(apiResponse.status).toBe(200);
     await expect(apiResponse.json()).resolves.toEqual({ status: "ok" });
+
+    const dashboardResponse = await fetch(`http://127.0.0.1:${port}/dashboard`, {
+      headers: { cookie: "session=1" },
+    });
+    expect(dashboardResponse.status).toBe(200);
+    const dashboardHtml = await dashboardResponse.text();
+    expect(dashboardHtml).toContain("Ada Lovelace");
+    expect(dashboardHtml).not.toContain("/@pracht/client.js");
+    expect(dashboardHtml).toMatch(
+      /<script type="module" src="\/assets\/client-[^"]+\.js"><\/script>/,
+    );
+    expect(dashboardHtml).toContain('rel="modulepreload"');
 
     const pricingResponse = await fetch(`http://127.0.0.1:${port}/pricing`);
     expect(pricingResponse.status).toBe(200);
@@ -80,7 +94,6 @@ test("pracht build emits a deployable Node server entry", async () => {
     });
 
     // Hashed assets should have immutable cache headers
-    const homeHtml = await (await fetch(`http://127.0.0.1:${port}/`)).text();
     const assetMatch = homeHtml.match(/"(\/assets\/[^"]+)"/);
     expect(assetMatch).toBeTruthy();
 

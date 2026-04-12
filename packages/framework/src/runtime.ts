@@ -94,6 +94,16 @@ const HYDRATION_STATE_ELEMENT_ID = "pracht-state";
 const ROUTE_STATE_REQUEST_HEADER = "x-pracht-route-state-request";
 const ROUTE_STATE_CACHE_CONTROL = "no-store";
 
+// Cached dynamic import — keeps preact-render-to-string out of the client bundle
+// while avoiding repeated async resolution on each SSR request.
+let _renderToStringAsync: typeof import("preact-render-to-string").renderToStringAsync | undefined;
+async function getRenderToStringAsync() {
+  if (_renderToStringAsync) return _renderToStringAsync;
+  const mod = await import("preact-render-to-string");
+  _renderToStringAsync = mod.renderToStringAsync;
+  return _renderToStringAsync;
+}
+
 type DiagnosticRoute = ResolvedRoute | ResolvedApiRoute;
 
 interface PrachtRuntimeValue {
@@ -520,7 +530,6 @@ export async function handlePrachtRequest<TContext>(
       let body = "";
 
       if (shellModule?.Shell || shellModule?.Loading) {
-        const { renderToStringAsync } = await import("preact-render-to-string");
         const Shell = shellModule?.Shell as any;
         const Loading = shellModule?.Loading as any;
         const loadingTree =
@@ -531,7 +540,8 @@ export async function handlePrachtRequest<TContext>(
               : null;
 
         if (loadingTree) {
-          body = await renderToStringAsync(loadingTree);
+          const renderFn = await getRenderToStringAsync();
+          body = await renderFn(loadingTree);
         }
       }
 
@@ -561,8 +571,6 @@ export async function handlePrachtRequest<TContext>(
       throw new Error("Route has no Component or default export");
     }
 
-    const { renderToStringAsync } = await import("preact-render-to-string");
-
     const Shell = shellModule?.Shell;
     const componentProps = { data, params: match.params };
 
@@ -580,7 +588,8 @@ export async function handlePrachtRequest<TContext>(
       },
       componentTree,
     );
-    const ssrContent = await renderToStringAsync(tree);
+    const renderToString = await getRenderToStringAsync();
+    const ssrContent = await renderToString(tree);
 
     return htmlResponse(
       buildHtmlDocument({
@@ -618,6 +627,59 @@ export async function handlePrachtRequest<TContext>(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+function buildManifestSuffixIndex(manifest: Record<string, string[]>): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const key of Object.keys(manifest)) {
+    indexPathSuffixes(index, key);
+  }
+  return index;
+}
+
+function indexPathSuffixes(index: Map<string, string>, key: string): void {
+  const variants = new Set<string>([key]);
+  const stripped = key.replace(/^\.\//, "");
+  variants.add(stripped);
+  variants.add(stripped.replace(/^\//, ""));
+
+  for (const variant of variants) {
+    if (!variant) continue;
+    if (!index.has(variant)) {
+      index.set(variant, key);
+    }
+
+    for (let slashIndex = variant.indexOf("/"); slashIndex !== -1; ) {
+      const suffix = variant.slice(slashIndex + 1);
+      if (suffix && !index.has(suffix)) {
+        index.set(suffix, key);
+      }
+      slashIndex = variant.indexOf("/", slashIndex + 1);
+    }
+  }
+}
+
+const manifestSuffixIndexes = new WeakMap<Record<string, string[]>, Map<string, string>>();
+
+function getManifestSuffixIndex(manifest: Record<string, string[]>): Map<string, string> {
+  let index = manifestSuffixIndexes.get(manifest);
+  if (index) return index;
+  index = buildManifestSuffixIndex(manifest);
+  manifestSuffixIndexes.set(manifest, index);
+  return index;
+}
+
+function resolveManifestEntries(
+  manifest: Record<string, string[]>,
+  file: string,
+): string[] | undefined {
+  if (file in manifest) return manifest[file];
+
+  const index = getManifestSuffixIndex(manifest);
+  const suffix = file.replace(/^\.\//, "");
+  const resolved = index.get(suffix) ?? index.get(file);
+  if (resolved) return manifest[resolved];
+  return undefined;
+}
+
 function resolvePageCssUrls(
   options: HandlePrachtRequestOptions<unknown>,
   shellFile: string | undefined,
@@ -628,12 +690,9 @@ function resolvePageCssUrls(
   const css = new Set<string>();
 
   function addFromManifest(file: string): void {
-    const suffix = file.replace(/^\.\//, "");
-    for (const [key, cssFiles] of Object.entries(options.cssManifest!)) {
-      if (key === file || key.endsWith(`/${suffix}`) || key.endsWith(suffix)) {
-        for (const c of cssFiles) css.add(c);
-        break;
-      }
+    const entries = resolveManifestEntries(options.cssManifest!, file);
+    if (entries) {
+      for (const c of entries) css.add(c);
     }
   }
 
@@ -652,12 +711,9 @@ function resolvePageJsUrls(
   const js = new Set<string>();
 
   function addFromManifest(file: string): void {
-    const suffix = file.replace(/^\.\//, "");
-    for (const [key, jsFiles] of Object.entries(options.jsManifest!)) {
-      if (key === file || key.endsWith(`/${suffix}`) || key.endsWith(suffix)) {
-        for (const j of jsFiles) js.add(j);
-        break;
-      }
+    const entries = resolveManifestEntries(options.jsManifest!, file);
+    if (entries) {
+      for (const j of entries) js.add(j);
     }
   }
 
@@ -810,14 +866,14 @@ function jsonErrorResponse(
   routeError: SerializedRouteError,
   options: { isRouteStateRequest: boolean },
 ): Response {
-  const response = new Response(JSON.stringify({ error: routeError }), {
+  const headers = applySecurityAndRouteHeaders(
+    new Headers({ "content-type": "application/json; charset=utf-8" }),
+    options.isRouteStateRequest ? { isRouteStateRequest: true } : undefined,
+  );
+  return new Response(JSON.stringify({ error: routeError }), {
     status: routeError.status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers,
   });
-
-  return options.isRouteStateRequest
-    ? withRouteResponseHeaders(response, { isRouteStateRequest: true })
-    : withDefaultSecurityHeaders(response);
 }
 
 function renderApiErrorResponse<TContext>(options: {
@@ -930,7 +986,7 @@ async function renderRouteErrorResponse<TContext>(options: {
     options.shellFile,
     options.routeArgs.route.file,
   );
-  const { renderToStringAsync } = await import("preact-render-to-string");
+  const renderToString = await getRenderToStringAsync();
 
   const ErrorBoundary = options.routeModule.ErrorBoundary as any;
   const Shell = shellModule?.Shell;
@@ -947,7 +1003,7 @@ async function renderRouteErrorResponse<TContext>(options: {
     },
     componentTree,
   );
-  const body = await renderToStringAsync(tree);
+  const body = await renderToString(tree);
 
   return htmlResponse(
     buildHtmlDocument({
@@ -1040,23 +1096,37 @@ async function resolveDataFunctions(
   return { loader, loaderFile };
 }
 
+const registrySuffixIndexes = new WeakMap<Record<string, ModuleImporter>, Map<string, string>>();
+
+function getRegistrySuffixIndex(modules: Record<string, ModuleImporter>): Map<string, string> {
+  let index = registrySuffixIndexes.get(modules);
+  if (index) return index;
+
+  index = new Map<string, string>();
+  for (const key of Object.keys(modules)) {
+    indexPathSuffixes(index, key);
+  }
+  registrySuffixIndexes.set(modules, index);
+  return index;
+}
+
 async function resolveRegistryModule<T>(
   modules: Record<string, ModuleImporter> | undefined,
   file: string,
 ): Promise<T | undefined> {
   if (!modules) return undefined;
 
-  // Direct key match
+  // Direct key match (fast path)
   if (file in modules) {
     return modules[file]() as Promise<T>;
   }
 
-  // Suffix match: strip leading ./ and match against registry keys
+  // Indexed suffix match
+  const index = getRegistrySuffixIndex(modules);
   const suffix = file.replace(/^\.\//, "");
-  for (const key of Object.keys(modules)) {
-    if (key.endsWith(`/${suffix}`) || key.endsWith(suffix)) {
-      return modules[key]() as Promise<T>;
-    }
+  const resolved = index.get(suffix) ?? index.get(file);
+  if (resolved) {
+    return modules[resolved]() as Promise<T>;
   }
 
   return undefined;
@@ -1148,13 +1218,11 @@ function buildHtmlDocument(options: {
 }
 
 function htmlResponse(html: string, status = 200): Response {
-  return withRouteResponseHeaders(
-    new Response(html, {
-      status,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    }),
+  const headers = applySecurityAndRouteHeaders(
+    new Headers({ "content-type": "text/html; charset=utf-8" }),
     { isRouteStateRequest: false },
   );
+  return new Response(html, { status, headers });
 }
 
 export function applyDefaultSecurityHeaders(headers: Headers): Headers {
@@ -1180,8 +1248,23 @@ export function applyDefaultSecurityHeaders(headers: Headers): Headers {
   return headers;
 }
 
+function applySecurityAndRouteHeaders(
+  headers: Headers,
+  options?: { isRouteStateRequest: boolean },
+): Headers {
+  applyDefaultSecurityHeaders(headers);
+  if (options) {
+    appendVaryHeader(headers, ROUTE_STATE_REQUEST_HEADER);
+    if (options.isRouteStateRequest && !headers.has("cache-control")) {
+      headers.set("cache-control", ROUTE_STATE_CACHE_CONTROL);
+    }
+  }
+  return headers;
+}
+
 function withDefaultSecurityHeaders(response: Response): Response {
-  const headers = applyDefaultSecurityHeaders(new Headers(response.headers));
+  const headers = new Headers(response.headers);
+  applySecurityAndRouteHeaders(headers);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -1193,13 +1276,8 @@ function withRouteResponseHeaders(
   response: Response,
   options: { isRouteStateRequest: boolean },
 ): Response {
-  const headers = applyDefaultSecurityHeaders(new Headers(response.headers));
-  appendVaryHeader(headers, ROUTE_STATE_REQUEST_HEADER);
-
-  if (options.isRouteStateRequest && !headers.has("cache-control")) {
-    headers.set("cache-control", ROUTE_STATE_CACHE_CONTROL);
-  }
-
+  const headers = new Headers(response.headers);
+  applySecurityAndRouteHeaders(headers, options);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
@@ -1266,6 +1344,8 @@ export interface PrerenderAppOptions {
   clientEntryUrl?: string;
   /** Per-source-file CSS map produced by the vite plugin (preferred over cssUrls). */
   cssManifest?: Record<string, string[]>;
+  /** Per-source-file JS map produced by the vite plugin for modulepreload hints. */
+  jsManifest?: Record<string, string[]>;
   /** @deprecated Pass cssManifest instead for per-page CSS resolution. */
   cssUrls?: string[];
 }
@@ -1282,35 +1362,54 @@ export async function prerenderApp(
   const results: PrerenderResult[] = [];
   const isgManifest: Record<string, ISGManifestEntry> = {};
 
+  // Collect all work items first, then render in parallel batches
+  const work: {
+    pathname: string;
+    render: string;
+    revalidate?: import("./types.ts").RouteRevalidate;
+  }[] = [];
   for (const route of resolved.routes) {
     if (route.render !== "ssg" && route.render !== "isg") continue;
-
     const paths = await collectSSGPaths(route, options.registry);
-
     for (const pathname of paths) {
-      const url = new URL(pathname, "http://localhost");
-      const request = new Request(url, { method: "GET" });
+      work.push({ pathname, render: route.render, revalidate: route.revalidate });
+    }
+  }
 
-      const response = await handlePrachtRequest({
-        app: options.app,
-        request,
-        registry: options.registry,
-        clientEntryUrl: options.clientEntryUrl,
-        cssManifest: options.cssManifest,
-      });
+  const CONCURRENCY = 10;
+  for (let i = 0; i < work.length; i += CONCURRENCY) {
+    const batch = work.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (item) => {
+        const url = new URL(item.pathname, "http://localhost");
+        const request = new Request(url, { method: "GET" });
 
-      if (response.status !== 200) {
-        console.warn(
-          `  Warning: ${route.render!.toUpperCase()} route "${pathname}" returned status ${response.status}, skipping.`,
-        );
-        continue;
-      }
+        const response = await handlePrachtRequest({
+          app: options.app,
+          request,
+          registry: options.registry,
+          clientEntryUrl: options.clientEntryUrl,
+          cssManifest: options.cssManifest,
+          jsManifest: options.jsManifest,
+        });
 
-      const html = await response.text();
-      results.push({ path: pathname, html });
+        if (response.status !== 200) {
+          console.warn(
+            `  Warning: ${item.render.toUpperCase()} route "${item.pathname}" returned status ${response.status}, skipping.`,
+          );
+          return null;
+        }
 
-      if (route.render === "isg" && route.revalidate) {
-        isgManifest[pathname] = { revalidate: route.revalidate };
+        const html = await response.text();
+        return { item, html };
+      }),
+    );
+
+    for (const result of batchResults) {
+      if (!result) continue;
+      results.push({ path: result.item.pathname, html: result.html });
+      if (result.item.render === "isg" && result.item.revalidate) {
+        isgManifest[result.item.pathname] = { revalidate: result.item.revalidate };
       }
     }
   }

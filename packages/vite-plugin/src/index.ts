@@ -580,8 +580,10 @@ function readClientBuildAssets(root = process.cwd()): {
   cssManifest: Record<string, string[]>;
   jsManifest: Record<string, string[]>;
 } {
-  const manifestPath = resolve(root, "dist/client/.vite/manifest.json");
-  if (!existsSync(manifestPath)) {
+  const manifestPath = ["dist/client/.vite/manifest.json", "dist/.vite/manifest.json"]
+    .map((candidate) => resolve(root, candidate))
+    .find((candidate) => existsSync(candidate));
+  if (!manifestPath) {
     return { clientEntryUrl: null, cssManifest: {}, jsManifest: {} };
   }
 

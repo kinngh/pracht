@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, statSync, writeFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { dirname, extname, join } from "node:path";
 
@@ -117,7 +116,7 @@ export function createNodeRequestHandler<TContext = unknown>(
     // --- Serve static assets from the client build directory ---
     // Skip index.html resolution for ISG routes (handled below with staleness logic).
     if (staticDir && request.method === "GET") {
-      const staticResult = resolveStaticFile(staticDir, url.pathname, isgManifest);
+      const staticResult = await resolveStaticFile(staticDir, url.pathname, isgManifest);
       if (staticResult) {
         const body = await readFile(staticResult.filePath);
         res.statusCode = 200;
@@ -148,9 +147,9 @@ export function createNodeRequestHandler<TContext = unknown>(
           ? join(staticDir, "index.html")
           : join(staticDir, url.pathname, "index.html");
 
-      if (existsSync(htmlPath)) {
-        const stat = statSync(htmlPath);
-        const ageMs = Date.now() - stat.mtimeMs;
+      const fileStat = await stat(htmlPath).catch(() => null);
+      if (fileStat?.isFile()) {
+        const ageMs = Date.now() - fileStat.mtimeMs;
         const isStale = entry.revalidate.kind === "time" && ageMs > entry.revalidate.seconds * 1000;
 
         // Serve the cached file
@@ -209,8 +208,8 @@ export function createNodeRequestHandler<TContext = unknown>(
         url.pathname === "/"
           ? join(staticDir, "index.html")
           : join(staticDir, url.pathname, "index.html");
-      mkdirSync(dirname(htmlPath), { recursive: true });
-      writeFileSync(htmlPath, html, "utf-8");
+      await mkdir(dirname(htmlPath), { recursive: true });
+      await writeFile(htmlPath, html, "utf-8");
     }
 
     await writeWebResponse(res, response);
@@ -236,8 +235,8 @@ async function regenerateISGPage<TContext>(
 
   if (response.status === 200) {
     const html = await response.text();
-    mkdirSync(dirname(htmlPath), { recursive: true });
-    writeFileSync(htmlPath, html, "utf-8");
+    await mkdir(dirname(htmlPath), { recursive: true });
+    await writeFile(htmlPath, html, "utf-8");
   }
 }
 
@@ -454,28 +453,25 @@ interface StaticFileResult {
  * to `{pathname}/index.html` for clean-URL pages (e.g. `/about` →
  * `about/index.html`).  Returns `null` when no matching file is found.
  */
-function resolveStaticFile(
+async function resolveStaticFile(
   staticDir: string,
   pathname: string,
   isgManifest: Record<string, ISGManifestEntry> = {},
-): StaticFileResult | null {
+): Promise<StaticFileResult | null> {
   // Try exact file path
   const exactPath = join(staticDir, pathname);
   if (!exactPath.startsWith(staticDir + "/") && exactPath !== staticDir) {
     return null; // Directory traversal
   }
 
-  try {
-    if (statSync(exactPath).isFile()) {
-      const ext = extname(exactPath);
-      return {
-        filePath: exactPath,
-        contentType: MIME_TYPES[ext] || "application/octet-stream",
-        cacheControl: getCacheControl(pathname),
-      };
-    }
-  } catch {
-    // Not found, try index.html fallback
+  const exactStat = await stat(exactPath).catch(() => null);
+  if (exactStat?.isFile()) {
+    const ext = extname(exactPath);
+    return {
+      filePath: exactPath,
+      contentType: MIME_TYPES[ext] || "application/octet-stream",
+      cacheControl: getCacheControl(pathname),
+    };
   }
 
   // ISG routes need staleness checks — let the ISG handler below deal with them.
@@ -491,16 +487,13 @@ function resolveStaticFile(
     return null;
   }
 
-  try {
-    if (statSync(indexPath).isFile()) {
-      return {
-        filePath: indexPath,
-        contentType: "text/html; charset=utf-8",
-        cacheControl: "public, max-age=0, must-revalidate",
-      };
-    }
-  } catch {
-    // Not found
+  const indexStat = await stat(indexPath).catch(() => null);
+  if (indexStat?.isFile()) {
+    return {
+      filePath: indexPath,
+      contentType: "text/html; charset=utf-8",
+      cacheControl: "public, max-age=0, must-revalidate",
+    };
   }
 
   return null;
