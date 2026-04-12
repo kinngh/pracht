@@ -9,6 +9,8 @@ export function Shell({ children }: ShellProps) {
           <a href="/">Home</a>
           <a href="/about">About</a>
           <a href="/blog/hello-world">Blog</a>
+          <a href="/api/health">API: Health</a>
+          <a href="/api/me">API: Me (auth)</a>
         </nav>
       </header>
       <main>{children}</main>
