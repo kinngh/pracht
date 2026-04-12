@@ -5,6 +5,7 @@ import {
   PrachtHttpError,
   defineApp,
   handlePrachtRequest,
+  prerenderApp,
   resolveApiRoutes,
   route,
   useParams,
@@ -400,6 +401,76 @@ describe("handlePrachtRequest SPA shell fallback", () => {
     expect(html).toContain("Loading settings...");
     expect(html).toContain('"pending":true');
     expect(html).not.toContain("secret-user");
+  });
+});
+
+describe("prerenderApp", () => {
+  it("injects the production client entry and modulepreload hints into prerendered HTML", async () => {
+    const app = defineApp({
+      routes: [route("/pricing", "./routes/pricing.tsx", { render: "ssg", shell: "public" })],
+      shells: {
+        public: "./shells/public.tsx",
+      },
+    });
+
+    const [page] = await prerenderApp({
+      app,
+      clientEntryUrl: "/assets/client-abc123.js",
+      jsManifest: {
+        "src/routes/pricing.tsx": ["/assets/pricing-abc123.js", "/assets/vendor-abc123.js"],
+        "src/shells/public.tsx": ["/assets/public-abc123.js", "/assets/vendor-abc123.js"],
+      },
+      registry: {
+        routeModules: {
+          "/src/routes/pricing.tsx": async () => ({
+            Component: ({ data }) => h("main", null, (data as { plan: string }).plan),
+            loader: async () => ({ plan: "MVP" }),
+          }),
+        },
+        shellModules: {
+          "/src/shells/public.tsx": async () => ({
+            Shell: ({ children }) => h("section", null, children),
+          }),
+        },
+      },
+    });
+
+    expect(page.path).toBe("/pricing");
+    expect(page.html).toContain('<script type="module" src="/assets/client-abc123.js"></script>');
+    expect(page.html).toContain('<link rel="modulepreload" href="/assets/public-abc123.js">');
+    expect(page.html).toContain('<link rel="modulepreload" href="/assets/pricing-abc123.js">');
+    expect(page.html).toContain('<link rel="modulepreload" href="/assets/vendor-abc123.js">');
+  });
+
+  it("renders multiple static paths concurrently", async () => {
+    const app = defineApp({
+      routes: [route("/products/:id", "./routes/product.tsx", { render: "ssg" })],
+    });
+
+    let activeLoaders = 0;
+    let maxConcurrentLoaders = 0;
+
+    const pages = await prerenderApp({
+      app,
+      registry: {
+        routeModules: {
+          "/src/routes/product.tsx": async () => ({
+            Component: ({ data }) => h("main", null, (data as { id: string }).id),
+            getStaticPaths: () => [{ id: "1" }, { id: "2" }, { id: "3" }, { id: "4" }],
+            loader: async ({ params }) => {
+              activeLoaders += 1;
+              maxConcurrentLoaders = Math.max(maxConcurrentLoaders, activeLoaders);
+              await new Promise((resolveDelay) => setTimeout(resolveDelay, 20));
+              activeLoaders -= 1;
+              return { id: params.id };
+            },
+          }),
+        },
+      },
+    });
+
+    expect(pages).toHaveLength(4);
+    expect(maxConcurrentLoaders).toBeGreaterThan(1);
   });
 });
 

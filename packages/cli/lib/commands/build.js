@@ -50,12 +50,13 @@ export async function buildCommand() {
   if (existsSync(serverEntry)) {
     const serverMod = await import(serverEntry);
     const { prerenderApp } = serverMod;
-    const { clientEntryUrl, cssManifest } = readClientBuildAssets(root);
+    const { clientEntryUrl, cssManifest, jsManifest } = readClientBuildAssets(root);
 
     const { pages, isgManifest } = await prerenderApp({
       app: serverMod.resolvedApp,
       clientEntryUrl: clientEntryUrl ?? undefined,
       cssManifest,
+      jsManifest,
       registry: serverMod.registry,
       withISGManifest: true,
     });
