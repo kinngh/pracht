@@ -30,6 +30,7 @@ export { initClientRouter, useNavigate } from "./router.ts";
 export { PrachtHttpError } from "./types.ts";
 export type {
   ApiConfig,
+  ApiRouteArgs,
   ApiRouteHandler,
   Register,
   ApiRouteMatch,

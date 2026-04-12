@@ -1,6 +1,6 @@
 ---
 title: API Routes
-lead: Standalone server endpoints that live alongside your pages. Export named HTTP method handlers and return <code>Response</code> objects directly.
+lead: Standalone server endpoints that live alongside your pages. Export named HTTP method handlers or one default handler, then return <code>Response</code> objects directly.
 breadcrumb: API Routes
 prev:
   href: /docs/data-loading
@@ -27,19 +27,38 @@ API routes live in `src/api/`. The file path maps to the URL:
 Export named functions for each HTTP method you want to handle. Unhandled methods return 405.
 
 ```ts [src/api/users.ts]
-import type { LoaderArgs } from "@pracht/core";
+import type { ApiRouteArgs } from "@pracht/core";
 
-export function GET({ request }: LoaderArgs) {
+export function GET({ request }: ApiRouteArgs) {
   return Response.json([
     { id: 1, name: "Alice" },
     { id: 2, name: "Bob" },
   ]);
 }
 
-export async function POST({ request }: LoaderArgs) {
+export async function POST({ request }: ApiRouteArgs) {
   const body = await request.json();
   // Create user...
   return Response.json({ id: 3, ...body }, { status: 201 });
+}
+```
+
+You can also export one default handler and branch on `request.method` yourself:
+
+```ts [src/api/users.ts]
+import type { ApiRouteArgs } from "@pracht/core";
+
+export default async function handler({ request }: ApiRouteArgs) {
+  if (request.method === "GET") {
+    return Response.json([{ id: 1, name: "Alice" }]);
+  }
+
+  if (request.method === "POST") {
+    const body = await request.json();
+    return Response.json({ id: 2, ...body }, { status: 201 });
+  }
+
+  return new Response("Method not allowed", { status: 405 });
 }
 ```
 

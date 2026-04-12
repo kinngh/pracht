@@ -89,6 +89,72 @@ describe("handlePrachtRequest API middleware", () => {
   });
 });
 
+describe("handlePrachtRequest API default handlers", () => {
+  it("falls back to a default export that branches on request.method", async () => {
+    const app = defineApp({
+      routes: [route("/", "./routes/home.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      apiRoutes: resolveApiRoutes(["/src/api/widgets/[id].ts"]),
+      app,
+      context: { traceId: "ctx-1" },
+      registry: {
+        apiModules: {
+          "/src/api/widgets/[id].ts": async () => ({
+            default: async ({ context, params, request, route }) => {
+              if (request.method === "PATCH") {
+                return Response.json({
+                  id: params.id,
+                  method: request.method,
+                  routePath: route.path,
+                  traceId: context.traceId,
+                });
+              }
+
+              return new Response("Method not allowed", { status: 405 });
+            },
+          }),
+        },
+      },
+      request: new Request("http://localhost/api/widgets/42", {
+        method: "PATCH",
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      id: "42",
+      method: "PATCH",
+      routePath: "/api/widgets/:id",
+      traceId: "ctx-1",
+    });
+  });
+
+  it("prefers named HTTP method handlers over a default export", async () => {
+    const app = defineApp({
+      routes: [route("/", "./routes/home.tsx")],
+    });
+
+    const response = await handlePrachtRequest({
+      apiRoutes: resolveApiRoutes(["/src/api/health.ts"]),
+      app,
+      registry: {
+        apiModules: {
+          "/src/api/health.ts": async () => ({
+            default: async () => new Response("default"),
+            GET: async () => new Response("named"),
+          }),
+        },
+      },
+      request: new Request("http://localhost/api/health"),
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("named");
+  });
+});
+
 describe("handlePrachtRequest API errors", () => {
   it("returns structured api diagnostics when debugErrors is enabled", async () => {
     const app = defineApp({

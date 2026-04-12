@@ -84,7 +84,8 @@ is specified in the config, it takes precedence over inline exports.
 Standalone server endpoints independent of the page rendering pipeline:
 
 - Defined in `src/api/` with file-based path mapping (e.g. `src/api/health.ts` → `/api/health`).
-- Export named HTTP method handlers: `export function GET(args)`, `POST(args)`, etc.
+- Export named HTTP method handlers (`export function GET(args)`, `POST(args)`, etc.)
+  or one default handler that branches on `args.request.method`.
 - Receive the same `LoaderArgs`-style context (request, params, context, signal).
 - Return `Response` objects directly — full control over status, headers, body.
 - API routes are independent of page-route middleware by default. Shared API

@@ -80,8 +80,9 @@ Work through these in order, stopping when you find the root cause:
 - API routes live in `src/api/` and are auto-discovered (no manifest entry needed).
 - For machine-readable API inventory, run `pracht inspect api --json`.
 - File path maps to URL: `src/api/health.ts` → `/api/health`, `src/api/users/[id].ts` → `/api/users/:id`.
-- Each file exports named HTTP method handlers (`GET`, `POST`, etc.).
-- Missing method handler → 405 response.
+- Each file exports named HTTP method handlers (`GET`, `POST`, etc.) or one default handler.
+- Missing method handler → 405 response when there is no default handler.
+- Default handlers receive the same route args and can branch on `request.method`.
 - Handlers must return `Response` objects.
 
 ### 6. Vite plugin / HMR issues

@@ -293,7 +293,7 @@ group({ middleware: ["auth"], shell: "app" }, [
 
 ## API Routes
 
-Both frameworks use file-based API routes with named HTTP method exports:
+Both frameworks use file-based API routes. Named HTTP method exports map directly:
 
 ```ts
 // Next.js — app/api/posts/route.ts
