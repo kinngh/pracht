@@ -627,43 +627,38 @@ export async function handlePrachtRequest<TContext>(
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function buildManifestSuffixIndex(manifest: Record<string, string[]>): Map<string, string> {
+/** Strip leading `./` and `/` so all module paths share one canonical form. */
+function normalizeModulePath(path: string): string {
+  return path.replace(/^\.?\//, "");
+}
+
+function buildSuffixIndex<T>(manifest: Record<string, T>): Map<string, string> {
   const index = new Map<string, string>();
   for (const key of Object.keys(manifest)) {
-    indexPathSuffixes(index, key);
+    const normalized = normalizeModulePath(key);
+    if (!normalized) continue;
+
+    if (!index.has(normalized)) {
+      index.set(normalized, key);
+    }
+
+    for (let i = normalized.indexOf("/"); i !== -1; i = normalized.indexOf("/", i + 1)) {
+      const suffix = normalized.slice(i + 1);
+      if (suffix && !index.has(suffix)) {
+        index.set(suffix, key);
+      }
+    }
   }
   return index;
 }
 
-function indexPathSuffixes(index: Map<string, string>, key: string): void {
-  const variants = new Set<string>([key]);
-  const stripped = key.replace(/^\.\//, "");
-  variants.add(stripped);
-  variants.add(stripped.replace(/^\//, ""));
+const suffixIndexCache = new WeakMap<object, Map<string, string>>();
 
-  for (const variant of variants) {
-    if (!variant) continue;
-    if (!index.has(variant)) {
-      index.set(variant, key);
-    }
-
-    for (let slashIndex = variant.indexOf("/"); slashIndex !== -1; ) {
-      const suffix = variant.slice(slashIndex + 1);
-      if (suffix && !index.has(suffix)) {
-        index.set(suffix, key);
-      }
-      slashIndex = variant.indexOf("/", slashIndex + 1);
-    }
-  }
-}
-
-const manifestSuffixIndexes = new WeakMap<Record<string, string[]>, Map<string, string>>();
-
-function getManifestSuffixIndex(manifest: Record<string, string[]>): Map<string, string> {
-  let index = manifestSuffixIndexes.get(manifest);
+function getSuffixIndex<T>(manifest: Record<string, T>): Map<string, string> {
+  let index = suffixIndexCache.get(manifest);
   if (index) return index;
-  index = buildManifestSuffixIndex(manifest);
-  manifestSuffixIndexes.set(manifest, index);
+  index = buildSuffixIndex(manifest);
+  suffixIndexCache.set(manifest, index);
   return index;
 }
 
@@ -673,9 +668,7 @@ function resolveManifestEntries(
 ): string[] | undefined {
   if (file in manifest) return manifest[file];
 
-  const index = getManifestSuffixIndex(manifest);
-  const suffix = file.replace(/^\.\//, "");
-  const resolved = index.get(suffix) ?? index.get(file);
+  const resolved = getSuffixIndex(manifest).get(normalizeModulePath(file));
   if (resolved) return manifest[resolved];
   return undefined;
 }
@@ -1096,20 +1089,6 @@ async function resolveDataFunctions(
   return { loader, loaderFile };
 }
 
-const registrySuffixIndexes = new WeakMap<Record<string, ModuleImporter>, Map<string, string>>();
-
-function getRegistrySuffixIndex(modules: Record<string, ModuleImporter>): Map<string, string> {
-  let index = registrySuffixIndexes.get(modules);
-  if (index) return index;
-
-  index = new Map<string, string>();
-  for (const key of Object.keys(modules)) {
-    indexPathSuffixes(index, key);
-  }
-  registrySuffixIndexes.set(modules, index);
-  return index;
-}
-
 async function resolveRegistryModule<T>(
   modules: Record<string, ModuleImporter> | undefined,
   file: string,
@@ -1122,9 +1101,7 @@ async function resolveRegistryModule<T>(
   }
 
   // Indexed suffix match
-  const index = getRegistrySuffixIndex(modules);
-  const suffix = file.replace(/^\.\//, "");
-  const resolved = index.get(suffix) ?? index.get(file);
+  const resolved = getSuffixIndex(modules).get(normalizeModulePath(file));
   if (resolved) {
     return modules[resolved]() as Promise<T>;
   }
