@@ -124,6 +124,36 @@ test("route state request returns JSON for pages", async ({ request }) => {
 });
 
 // ---------------------------------------------------------------------------
+// API routes & HOF middleware
+// ---------------------------------------------------------------------------
+
+test("GET /api/health returns JSON", async ({ request }) => {
+  const response = await request.get("/api/health");
+  expect(response.status()).toBe(200);
+
+  const json = await response.json();
+  expect(json).toMatchObject({ status: "ok" });
+});
+
+test("GET /api/me without session returns 401", async ({ request }) => {
+  const response = await request.get("/api/me");
+  expect(response.status()).toBe(401);
+
+  const json = await response.json();
+  expect(json).toMatchObject({ error: "Unauthorized" });
+});
+
+test("GET /api/me with session cookie returns user", async ({ request }) => {
+  const response = await request.get("/api/me", {
+    headers: { cookie: "session=abc123" },
+  });
+  expect(response.status()).toBe(200);
+
+  const json = await response.json();
+  expect(json).toMatchObject({ user: "Alice" });
+});
+
+// ---------------------------------------------------------------------------
 // 404 handling
 // ---------------------------------------------------------------------------
 
