@@ -430,10 +430,11 @@ function createDevSSRMiddleware(
 ): Connect.NextHandleFunction {
   return async (req: IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
     const url = req.url ?? "/";
+    const pathname = new URL(url, "http://localhost").pathname;
 
-    // Let Vite handle assets (have file extensions) and node_modules.
-    // Page routes are clean URLs without dots.
-    if (url.includes(".") || url.startsWith("/node_modules/")) {
+    // Let Vite handle assets by pathname. Query params may contain dotted
+    // domains or tokens, but they should not opt the route out of SSR.
+    if (pathname.includes(".") || pathname.startsWith("/node_modules/")) {
       return next();
     }
 
