@@ -81,6 +81,50 @@ API middleware runs before the handler, just like page middleware runs before lo
 
 ---
 
+## Middleware Without a Manifest (Higher-Order Functions)
+
+When using the **pages router** or any setup without a `routes.ts` manifest, you can apply middleware to individual API routes with a plain higher-order function — no framework API required:
+
+```ts [src/lib/with-auth.ts]
+import type { ApiRouteArgs, ApiRouteHandler } from "@pracht/core";
+
+export function withAuth(handler: ApiRouteHandler): ApiRouteHandler {
+  return async (args: ApiRouteArgs) => {
+    const session = args.request.headers.get("cookie")?.includes("session=");
+    if (!session) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return handler(args);
+  };
+}
+```
+
+Then wrap any handler export:
+
+```ts [src/api/me.ts]
+import { withAuth } from "../lib/with-auth";
+
+export const GET = withAuth(({ request }) => {
+  return Response.json({ user: "Alice" });
+});
+```
+
+You can compose multiple wrappers for stacking:
+
+```ts [src/api/admin.ts]
+import { withAuth } from "../lib/with-auth";
+import { withRateLimit } from "../lib/with-rate-limit";
+
+export const POST = withAuth(withRateLimit(async ({ request }) => {
+  const body = await request.json();
+  return Response.json({ ok: true });
+}));
+```
+
+This pattern works with both the pages router and the manifest router — it's just JavaScript.
+
+---
+
 ## Full Control
 
 API handlers receive the same `LoaderArgs` context (request, params, context, signal) and return standard `Response` objects. You have full control over status codes, headers, and body format.
