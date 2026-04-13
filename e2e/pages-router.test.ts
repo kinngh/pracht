@@ -109,6 +109,18 @@ test("pages include hydration state", async ({ request }) => {
   expect(html).toContain("Welcome to pracht with file-system routing");
 });
 
+test("page routes tolerate dotted query strings", async ({ request }) => {
+  const response = await request.get(
+    "/?shop=test-shop.myshopify.com&id_token=header.payload.signature",
+  );
+
+  expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("text/html");
+
+  const html = await response.text();
+  expect(html).toContain("Welcome to pracht with file-system routing");
+});
+
 // ---------------------------------------------------------------------------
 // Route state JSON (client-side navigation data)
 // ---------------------------------------------------------------------------
