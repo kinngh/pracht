@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/*.md", "**/package.json", "**/LICENSE", "**/NOTICE"]
+  "ignorePatterns": ["**/*.md", "**/package.json", "**/LICENSE"]
 }
