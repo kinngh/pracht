@@ -200,13 +200,14 @@ export function useRouteData<TData = unknown>(): TData {
 
 export interface Location {
   pathname: string;
+  search: string;
 }
 
 export function useLocation(): Location {
   const url =
     useContext(RouteDataContext)?.url ??
-    (typeof window !== "undefined" ? window.location.pathname : "/");
-  return { pathname: url };
+    (typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
+  return parseLocation(url);
 }
 
 export function useParams(): RouteParams {
@@ -334,6 +335,7 @@ export async function handlePrachtRequest<TContext>(
   options: HandlePrachtRequestOptions<TContext>,
 ): Promise<Response> {
   const url = new URL(options.request.url);
+  const requestPath = getRequestPath(url);
   const registry = options.registry ?? {};
   const isRouteStateRequest = options.request.headers.get(ROUTE_STATE_REQUEST_HEADER) === "1";
   const exposeDiagnostics = shouldExposeServerErrors(options);
@@ -562,7 +564,7 @@ export async function handlePrachtRequest<TContext>(
           head,
           body,
           hydrationState: {
-            url: url.pathname,
+            url: requestPath,
             routeId: match.route.id ?? "",
             data: null,
             error: null,
@@ -598,7 +600,7 @@ export async function handlePrachtRequest<TContext>(
         data,
         params: match.params,
         routeId: match.route.id ?? "",
-        url: url.pathname,
+        url: requestPath,
       },
       componentTree,
     );
@@ -610,7 +612,7 @@ export async function handlePrachtRequest<TContext>(
         head,
         body: ssrContent,
         hydrationState: {
-          url: url.pathname,
+          url: requestPath,
           routeId: match.route.id ?? "",
           data,
           error: null,
@@ -634,9 +636,28 @@ export async function handlePrachtRequest<TContext>(
       routeModule,
       shellFile: match.route.shellFile,
       shellModule,
-      urlPathname: url.pathname,
+      requestPath,
     });
   }
+}
+
+function parseLocation(value: string): Location {
+  try {
+    const url = new URL(value, "http://pracht.local");
+    return {
+      pathname: url.pathname,
+      search: url.search,
+    };
+  } catch {
+    return {
+      pathname: value || "/",
+      search: "",
+    };
+  }
+}
+
+function getRequestPath(url: URL): string {
+  return `${url.pathname}${url.search}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -965,7 +986,7 @@ async function renderRouteErrorResponse<TContext>(options: {
   routeModule: RouteModule | undefined;
   shellFile: string | undefined;
   shellModule: ShellModule | undefined;
-  urlPathname: string;
+  requestPath: string;
 }): Promise<Response> {
   const exposeDetails = shouldExposeServerErrors(options.options);
   const routeError = normalizeRouteError(options.error, {
@@ -1044,7 +1065,7 @@ async function renderRouteErrorResponse<TContext>(options: {
     {
       data: null,
       routeId: options.routeId,
-      url: options.urlPathname,
+      url: options.requestPath,
     },
     componentTree,
   );
@@ -1055,7 +1076,7 @@ async function renderRouteErrorResponse<TContext>(options: {
       head,
       body,
       hydrationState: {
-        url: options.urlPathname,
+        url: options.requestPath,
         routeId: options.routeId,
         data: null,
         error: routeErrorWithDiagnostics,
