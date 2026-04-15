@@ -1,6 +1,7 @@
 {
   "name": "@pracht/adapter-cloudflare",
   "version": "0.1.1",
+  "license": "MIT",
   "homepage": "https://github.com/JoviDeCroock/pracht/tree/main/packages/adapter-cloudflare",
   "bugs": {
     "url": "https://github.com/JoviDeCroock/pracht/issues"
