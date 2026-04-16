@@ -1,5 +1,5 @@
 ---
-"@pract/core": patch
+"@pracht/core": patch
 "@pracht/adapter-node": patch
 ---
 
