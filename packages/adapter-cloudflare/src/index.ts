@@ -46,6 +46,7 @@ export interface CloudflareAdapterOptions<
 
 export interface CloudflareServerEntryModuleOptions {
   assetsBinding?: string;
+  workerExportsFrom?: string;
 }
 
 export function createCloudflareFetchHandler<
@@ -93,6 +94,9 @@ export function createCloudflareServerEntryModule(
   options: CloudflareServerEntryModuleOptions = {},
 ): string {
   const assetsBinding = options.assetsBinding ?? "ASSETS";
+  const workerExports = options.workerExportsFrom
+    ? [`export * from ${JSON.stringify(options.workerExportsFrom)};`]
+    : [];
 
   return [
     `export const cloudflareAssetsBinding = ${JSON.stringify(assetsBinding)};`,
@@ -166,6 +170,8 @@ export function createCloudflareServerEntryModule(
     "",
     "export default { fetch };",
     "",
+    ...workerExports,
+    "",
   ].join("\n");
 }
 
@@ -230,7 +236,7 @@ function isFetcher(value: unknown): value is CloudflareFetcher {
  *
  * ```ts
  * import { cloudflareAdapter } from "@pracht/adapter-cloudflare";
- * pracht({ adapter: cloudflareAdapter() })
+ * pracht({ adapter: cloudflareAdapter({ workerExportsFrom: "/src/cloudflare.ts" }) })
  * ```
  */
 export function cloudflareAdapter(options: CloudflareServerEntryModuleOptions = {}): PrachtAdapter {

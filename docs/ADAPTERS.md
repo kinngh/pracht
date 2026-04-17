@@ -182,6 +182,38 @@ the executable production server entry.
   routes and loaders have full access to Cloudflare bindings (KV, D1, R2,
   Queues, etc.) during development.
 
+### Exporting Cloudflare primitives (Workflows, Durable Objects, etc.)
+
+Wrangler requires named exports from the worker entry for Workflows, Durable
+Objects, Queues, and other Cloudflare primitives. Use the
+`workerExportsFrom` option to point the adapter at a dedicated module that
+re-exports them:
+
+```typescript
+cloudflareAdapter({
+  workerExportsFrom: "/src/cloudflare.ts",
+});
+```
+
+```typescript
+// src/cloudflare.ts
+export { Counter } from "./workers/counter.ts";
+export { MyWorkflow } from "./workers/my-workflow.ts";
+```
+
+This generates `export * from "/src/cloudflare.ts"` in the built worker entry,
+which is what Wrangler needs to discover and register the classes. Keep the
+module focused on Cloudflare primitives so the generated worker entry stays
+explicit. Pair this with the corresponding `wrangler.jsonc` bindings:
+
+```jsonc
+{
+  "durable_objects": {
+    "bindings": [{ "name": "COUNTER", "class_name": "Counter" }],
+  },
+}
+```
+
 ### Using Cloudflare bindings in dev
 
 The adapter handles everything — just declare bindings in `wrangler.jsonc`:
