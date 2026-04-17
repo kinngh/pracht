@@ -7,7 +7,7 @@ import { sitemap } from "./vite-plugin-sitemap";
 import { agentSkills } from "./vite-plugin-agent-skills";
 import { llmsTxt } from "./vite-plugin-llms-txt";
 
-const SITE_ORIGIN = "https://pracht.dev";
+const SITE_ORIGIN = "https://pracht.resynapse.dev";
 const routesFile = fileURLToPath(new URL("./src/routes.ts", import.meta.url));
 const skillsDir = fileURLToPath(new URL("../../skills", import.meta.url));
 
