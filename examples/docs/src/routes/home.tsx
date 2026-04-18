@@ -119,7 +119,7 @@ const GET_STARTED_LINKS: { href: string; Icon: Icon; title: string; sub: string 
   },
 ];
 
-export function Component({ data }: RouteComponentProps<typeof loader>) {
+export function Component(_props: RouteComponentProps<typeof loader>) {
   return (
     <div>
       {/* ─── Hero ─────────────────────────────────────────────── */}
