@@ -127,12 +127,6 @@ export function Component({ data }: RouteComponentProps<typeof loader>) {
         <div class="hero-bg" />
         <div class="hero-grid" />
         <div class="hero-inner">
-          <div class="hero-badge">
-            <span class="badge">
-              <span class="badge-dot" />v{data.version} · Cloudflare-ready
-            </span>
-          </div>
-
           <h1 class="hero-title">
             Build with Preact.
             <br />

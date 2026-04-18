@@ -22,7 +22,7 @@ All six routes live in one `routes.ts` manifest, one build output, one deploymen
 ```bash
 pnpm pracht dev          # start dev server
 pnpm pracht build        # production build → .vercel/output/
-npx vercel deploy --prebuilt  # deploy to Vercel
+pnpx vercel deploy --prebuilt  # deploy to Vercel
 ```
 
 ## Key files
